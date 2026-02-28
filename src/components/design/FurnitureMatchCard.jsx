@@ -104,9 +104,9 @@ export default function FurnitureMatchCard({ item, onItemUpdate }) {
         )}
       </div>
 
-      {/* Affiliate disclosure */}
+      {/* Affiliate disclosure (German legal requirement) */}
       <p className="text-white/20 text-xs mt-2 leading-relaxed border-t border-white/5 pt-3">
-        As an Amazon Associate we earn from qualifying purchases. IKEA links are provided via the Partnerize affiliate network. Prices shown are indicative and may vary.
+        *Bei diesen Links handelt es sich um Affiliate-Links. Wenn Sie darüber kaufen, erhalten wir eine kleine Provision. Preise sind unverbindlich und können sich ändern.
       </p>
     </div>
   );
