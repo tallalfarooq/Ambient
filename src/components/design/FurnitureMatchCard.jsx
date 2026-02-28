@@ -76,17 +76,15 @@ export default function FurnitureMatchCard({ item, onItemUpdate }) {
               </div>
             </div>
 
-            {match.url && (
-              <a
-                href={match.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="mt-3 flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors"
-              >
-                <ExternalLink className="w-3 h-3" /> View listing
-              </a>
-            )}
+            <a
+              href={match.url || `https://www.amazon.co.uk/s?k=${encodeURIComponent(match.title)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="mt-3 flex items-center gap-1.5 text-xs text-violet-400/60 hover:text-violet-400 transition-colors font-medium"
+            >
+              <ExternalLink className="w-3 h-3" /> Shop this product →
+            </a>
           </button>
         ))}
 
