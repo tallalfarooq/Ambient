@@ -1,7 +1,10 @@
-const AMAZON_TAG = "projectambient-21"; // UK Associates tag
+const AMAZON_TAG = "projectambient-21";
+const EBAY_DE_MKRID = "707-53477-19255-0";
+const EBAY_CAMPID = "YOUR_EBAY_CAMP_ID"; // Replace with your eBay Partner Network campaign ID
+const IKEA_DE_CAMREF = "YOUR_DE_CAMREF";  // Replace with your Partnerize DE camref
 
 /**
- * Takes a match object and returns an affiliate-ready URL.
+ * Takes a match object and returns an affiliate-ready URL for the German market.
  */
 export function buildAffiliateUrl(match) {
   const { title, source, url } = match;
@@ -9,31 +12,34 @@ export function buildAffiliateUrl(match) {
 
   switch (source) {
     case "Amazon": {
-      if (url && url.includes("amazon")) {
-        try {
-          const u = new URL(url);
-          u.searchParams.set("tag", AMAZON_TAG);
-          return u.toString();
-        } catch {
-          // fall through
-        }
+      const baseUrl = url && url.includes("amazon")
+        ? url.replace("amazon.co.uk", "amazon.de").replace("amazon.com", "amazon.de")
+        : `https://www.amazon.de/s?k=${encoded}`;
+      try {
+        const u = new URL(baseUrl);
+        u.searchParams.set("tag", AMAZON_TAG);
+        return u.toString();
+      } catch {
+        return `https://www.amazon.de/s?k=${encoded}&tag=${AMAZON_TAG}`;
       }
-      return `https://www.amazon.co.uk/s?k=${encoded}&tag=${AMAZON_TAG}`;
     }
 
     case "IKEA": {
-      const ikeaTarget = url || `https://www.ikea.com/gb/en/search/?q=${encoded}`;
-      // Partnerize deep-link wrapper
-      return `https://prf.hn/click/camref:1100lqLXl/destination:${encodeURIComponent(ikeaTarget)}`;
+      const ikeaTarget = url
+        ? url.replace("/gb/en/", "/de/de/")
+        : `https://www.ikea.com/de/de/search/?q=${encoded}`;
+      return `https://prf.hn/click/camref:${IKEA_DE_CAMREF}/destination:${encodeURIComponent(ikeaTarget)}`;
     }
 
     case "eBay": {
-      const base = url && url.includes("ebay") ? url : `https://www.ebay.co.uk/sch/i.html?_nkw=${encoded}`;
-      return base;
+      const base = url && url.includes("ebay")
+        ? url.replace("ebay.co.uk", "ebay.de")
+        : `https://www.ebay.de/sch/i.html?_nkw=${encoded}`;
+      return `${base}&mkevt=1&mkcid=1&mkrid=${EBAY_DE_MKRID}&campid=${EBAY_CAMPID}&toolid=10050`;
     }
 
     default:
-      return url || `https://www.amazon.co.uk/s?k=${encoded}&tag=${AMAZON_TAG}`;
+      return `https://www.amazon.de/s?k=${encoded}&tag=${AMAZON_TAG}`;
   }
 }
 
