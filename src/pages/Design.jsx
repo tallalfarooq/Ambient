@@ -34,17 +34,25 @@ export default function Design() {
     if (!design) return;
     setDetecting(true);
     const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are analyzing an AI-generated interior design render in the ${design.style} style.
-Identify 4-6 distinct furniture or decor items visible in this room render.
-For each item, provide:
-- A descriptive label (e.g. "Japandi floor lamp", "Low-profile linen sofa")
-- style_tags array (2-3 tags like ["minimalist", "natural", "wood"])
-- Approximate pixel position as percentage: position_x (0-100), position_y (0-100)
+      prompt: `You are a visual product search engine analyzing an AI-generated interior design render in the ${design.style} style.
 
-Also suggest 3 realistic product matches for each item from Amazon/IKEA/eBay within £${design.budget_min}–£${design.budget_max} budget.
-${design.sustainability_mode ? "Prioritise second-hand/pre-loved options where possible." : ""}
+TASK: Identify 4-6 distinct furniture or decor items visible in this room render. For each item, you MUST provide real, shoppable product matches.
 
-Return as JSON.`,
+For each item provide:
+- label: descriptive name (e.g. "Low-profile linen sofa", "Rattan pendant light")
+- style_tags: 2-3 tags (e.g. ["minimalist", "natural wood", "japandi"])
+- position_x, position_y: percentage position on the image (0-100) where the item appears
+- matches: EXACTLY 3 real products. For EACH match you MUST provide:
+  * title: real product name (be specific, include material, color, dimensions if known)
+  * price: realistic price IN POUNDS within £${design.budget_min}–£${design.budget_max}
+  * source: one of "Amazon", "IKEA", "eBay"${design.sustainability_mode ? ', prefer "eBay" for pre-loved items' : ""}
+  * url: a REAL, working product URL. For Amazon use: https://www.amazon.co.uk/s?k=[search+terms]. For IKEA use: https://www.ikea.com/gb/en/search/?q=[search+terms]. For eBay use: https://www.ebay.co.uk/sch/i.html?_nkw=[search+terms]. Replace [search+terms] with URL-encoded product keywords.
+  * is_preloved: true only for eBay second-hand items
+  * similarity_score: 0.0-1.0 visual similarity confidence
+
+${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand eBay options where possible." : ""}
+
+CRITICAL: Every match URL must be a real search URL the user can click to find the product. Never leave URLs empty or as placeholders.`,
       file_urls: [design.generated_render_url].filter(Boolean),
       response_json_schema: {
         type: "object",
