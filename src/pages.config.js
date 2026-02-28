@@ -50,12 +50,14 @@
 import Home from './pages/Home';
 import Studio from './pages/Studio';
 import Design from './pages/Design';
+import Projects from './pages/Projects';
 
 
 export const PAGES = {
     "Home": Home,
     "Studio": Studio,
     "Design": Design,
+    "Projects": Projects,
 }
 
 export const pagesConfig = {
