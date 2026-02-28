@@ -3,10 +3,10 @@ import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import StepUpload from "../components/studio/StepUpload";
-import StepStyle from "../components/studio/StepStyle";
-import StepBudget from "../components/studio/StepBudget";
-import StepGenerate from "../components/studio/StepGenerate";
+import StepUpload from "@/components/studio/StepUpload";
+import StepStyle from "@/components/studio/StepStyle";
+import StepBudget from "@/components/studio/StepBudget";
+import StepGenerate from "@/components/studio/StepGenerate";
 
 const STEPS = ["Upload Room", "Choose Style", "Set Budget", "Generate"];
 

@@ -4,8 +4,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Loader2, ShoppingBag, Sparkles, ArrowLeft, Recycle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import FurnitureMatchCard from "../components/design/FurnitureMatchCard";
-import ItemDetector from "../components/design/ItemDetector";
+import FurnitureMatchCard from "@/components/design/FurnitureMatchCard";
 
 export default function Design() {
   const params = new URLSearchParams(window.location.search);
