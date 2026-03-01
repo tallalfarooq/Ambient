@@ -7,14 +7,20 @@ const IKEA_DE_CAMREF = "YOUR_DE_CAMREF";  // Replace with your Partnerize DE cam
  * Takes a match object and returns an affiliate-ready URL for the German market.
  */
 export function buildAffiliateUrl(match) {
-  const { title, source, url } = match;
+  const { title, source, url, asin, article_number } = match;
   const encoded = encodeURIComponent(title);
 
   switch (source) {
     case "Amazon": {
-      const baseUrl = url && url.includes("amazon")
-        ? url.replace("amazon.co.uk", "amazon.de").replace("amazon.com", "amazon.de")
-        : `https://www.amazon.de/s?k=${encoded}`;
+      // Use ASIN for direct product link if available
+      let baseUrl;
+      if (asin && asin.length === 10) {
+        baseUrl = `https://www.amazon.de/dp/${asin}`;
+      } else if (url && url.includes("amazon")) {
+        baseUrl = url.replace("amazon.co.uk", "amazon.de").replace("amazon.com", "amazon.de");
+      } else {
+        baseUrl = `https://www.amazon.de/s?k=${encoded}`;
+      }
       try {
         const u = new URL(baseUrl);
         u.searchParams.set("tag", AMAZON_TAG);
@@ -25,9 +31,16 @@ export function buildAffiliateUrl(match) {
     }
 
     case "IKEA": {
-      const ikeaTarget = url
-        ? url.replace("/gb/en/", "/de/de/")
-        : `https://www.ikea.com/de/de/search/?q=${encoded}`;
+      // Use article number for direct product link if available
+      let ikeaTarget;
+      if (article_number) {
+        const slug = article_number.replace(/\./g, "");
+        ikeaTarget = `https://www.ikea.com/de/de/p/-${slug}/`;
+      } else if (url) {
+        ikeaTarget = url.replace("/gb/en/", "/de/de/");
+      } else {
+        ikeaTarget = `https://www.ikea.com/de/de/search/?q=${encoded}`;
+      }
       return `https://prf.hn/click/camref:${IKEA_DE_CAMREF}/destination:${encodeURIComponent(ikeaTarget)}`;
     }
 
