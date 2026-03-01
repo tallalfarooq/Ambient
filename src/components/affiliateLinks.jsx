@@ -1,55 +1,24 @@
 const AMAZON_TAG = "ambient019-21";
-const EBAY_DE_MKRID = "707-53477-19255-0";
-const EBAY_CAMPID = "YOUR_EBAY_CAMP_ID"; // Replace with your eBay Partner Network campaign ID
-const IKEA_DE_CAMREF = "YOUR_DE_CAMREF";  // Replace with your Partnerize DE camref
 
 /**
- * Takes a match object and returns an affiliate-ready URL for the German market.
+ * Takes a match object and returns a working URL for the German market.
+ * Always uses search-based links to avoid broken ASIN/article number links from AI hallucinations.
  */
 export function buildAffiliateUrl(match) {
-  const { title, source, url, asin, article_number } = match;
+  const { title, source } = match;
   const encoded = encodeURIComponent(title);
 
   switch (source) {
-    case "Amazon": {
-      // Use ASIN for direct product link if available
-      let baseUrl;
-      if (asin && asin.length === 10) {
-        baseUrl = `https://www.amazon.de/dp/${asin}`;
-      } else if (url && url.includes("amazon")) {
-        baseUrl = url.replace("amazon.co.uk", "amazon.de").replace("amazon.com", "amazon.de");
-      } else {
-        baseUrl = `https://www.amazon.de/s?k=${encoded}`;
-      }
-      try {
-        const u = new URL(baseUrl);
-        u.searchParams.set("tag", AMAZON_TAG);
-        return u.toString();
-      } catch {
-        return `https://www.amazon.de/s?k=${encoded}&tag=${AMAZON_TAG}`;
-      }
-    }
+    case "Amazon":
+      // Always use search — AI-generated ASINs are unreliable and cause 404s
+      return `https://www.amazon.de/s?k=${encoded}&tag=${AMAZON_TAG}`;
 
-    case "IKEA": {
-      // Use article number for direct product link if available
-      let ikeaTarget;
-      if (article_number) {
-        const slug = article_number.replace(/\./g, "");
-        ikeaTarget = `https://www.ikea.com/de/de/p/-${slug}/`;
-      } else if (url) {
-        ikeaTarget = url.replace("/gb/en/", "/de/de/");
-      } else {
-        ikeaTarget = `https://www.ikea.com/de/de/search/?q=${encoded}`;
-      }
-      return `https://prf.hn/click/camref:${IKEA_DE_CAMREF}/destination:${encodeURIComponent(ikeaTarget)}`;
-    }
+    case "IKEA":
+      // Direct IKEA search — no affiliate redirect until a real camref is configured
+      return `https://www.ikea.com/de/de/search/?q=${encoded}`;
 
-    case "eBay": {
-      const base = url && url.includes("ebay")
-        ? url.replace("ebay.co.uk", "ebay.de")
-        : `https://www.ebay.de/sch/i.html?_nkw=${encoded}`;
-      return `${base}&mkevt=1&mkcid=1&mkrid=${EBAY_DE_MKRID}&campid=${EBAY_CAMPID}&toolid=10050`;
-    }
+    case "eBay":
+      return `https://www.ebay.de/sch/i.html?_nkw=${encoded}`;
 
     default:
       return `https://www.amazon.de/s?k=${encoded}&tag=${AMAZON_TAG}`;
