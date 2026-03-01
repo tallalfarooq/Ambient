@@ -1,4 +1,4 @@
-const AMAZON_TAG = "projectambient-21";
+const AMAZON_TAG = "ambient019-21";
 const EBAY_DE_MKRID = "707-53477-19255-0";
 const EBAY_CAMPID = "YOUR_EBAY_CAMP_ID"; // Replace with your eBay Partner Network campaign ID
 const IKEA_DE_CAMREF = "YOUR_DE_CAMREF";  // Replace with your Partnerize DE camref
