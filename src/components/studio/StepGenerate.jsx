@@ -77,6 +77,47 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         )}
       </div>
 
+      {/* Feedback */}
+      {generated && !loading && (
+        <div className="mb-6 p-4 rounded-2xl bg-white/3 border border-white/8">
+          <p className="text-xs text-white/40 mb-3">How does this look?</p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setFeedback(feedback === "like" ? null : "like")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs transition-all ${
+                feedback === "like"
+                  ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
+                  : "border-white/10 text-white/40 hover:border-white/20"
+              }`}
+            >
+              <ThumbsUp className="w-3.5 h-3.5" /> Love it
+            </button>
+            <button
+              onClick={() => setFeedback(feedback === "dislike" ? null : "dislike")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs transition-all ${
+                feedback === "dislike"
+                  ? "border-red-500 bg-red-500/10 text-red-400"
+                  : "border-white/10 text-white/40 hover:border-white/20"
+              }`}
+            >
+              <ThumbsDown className="w-3.5 h-3.5" /> Not quite
+            </button>
+          </div>
+          {feedback === "dislike" && (
+            <div className="mt-3">
+              <input
+                type="text"
+                placeholder="What didn't you like? (e.g. too dark, too many plants)"
+                value={feedbackNote}
+                onChange={(e) => setFeedbackNote(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white/70 placeholder-white/25 focus:outline-none focus:border-violet-500/50"
+              />
+              <p className="text-white/25 text-xs mt-1.5">Regenerate to apply your feedback ↓</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Buttons */}
       <div className="flex gap-3">
         <button onClick={onBack} className="bg-white/5 border border-white/10 text-white/70 px-6 py-4 rounded-2xl hover:bg-white/8 transition-colors font-medium">
