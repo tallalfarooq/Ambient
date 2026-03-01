@@ -19,6 +19,7 @@ export default function Studio() {
     room_file_url: null,
     style: null,
     color_palette: "",
+    vibes: [],
     budget_min: 500,
     budget_max: 3000,
     sustainability_mode: false,
