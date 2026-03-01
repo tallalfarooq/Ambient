@@ -20,13 +20,19 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
 
   const generate = async () => {
     setLoading(true);
+    setFeedback(null);
+    setFeedbackNote("");
     const fileUrls = [data.room_image_url].filter(Boolean);
+    // Append dislike context to prompt for refinement
+    const refinedPrompt = feedback === "dislike" && feedbackNote
+      ? `${prompt}, avoid: ${feedbackNote}`
+      : prompt;
     const result = await base44.integrations.Core.GenerateImage({
-      prompt,
+      prompt: refinedPrompt,
       existing_image_urls: fileUrls.length > 0 ? fileUrls : undefined,
     });
     setGenerated(result.url);
-    update({ generated_render_url: result.url, generation_prompt: prompt });
+    update({ generated_render_url: result.url, generation_prompt: refinedPrompt });
     setLoading(false);
   };
 
