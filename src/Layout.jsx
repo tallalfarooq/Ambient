@@ -1,6 +1,11 @@
+import { useState, useEffect, createContext, useContext } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Sparkles, FolderOpen, Home } from "lucide-react";
+import CookieBanner from "@/components/consent/CookieBanner";
+
+export const ConsentContext = createContext({ necessary: true, functional: false, marketing: false });
+export const useConsent = () => useContext(ConsentContext);
 
 const NAV = [
   { label: "Home", page: "Home", icon: Home },
