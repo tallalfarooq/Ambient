@@ -15,6 +15,8 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(data.generated_render_url || null);
   const [prompt, setPrompt] = useState(buildPrompt(data));
+  const [feedback, setFeedback] = useState(null); // "like" | "dislike"
+  const [feedbackNote, setFeedbackNote] = useState("");
 
   const generate = async () => {
     setLoading(true);
