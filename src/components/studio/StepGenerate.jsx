@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { Sparkles, Loader2, RefreshCw } from "lucide-react";
+import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown } from "lucide-react";
 
 const buildPrompt = (data) => {
   const dims = data.room_dimensions;
-  return `Interior design photograph, ${data.style} style, ${data.color_palette} color palette, ` +
+  const vibeStr = data.vibes?.length ? `, ${data.vibes.join(", ")} atmosphere` : "";
+  return `Interior design photograph, ${data.style} style, ${data.color_palette} color palette${vibeStr}, ` +
     `photorealistic room render, ${dims.width}m x ${dims.length}m x ${dims.height}m room, ` +
     `natural lighting, high-end furniture, ultra-detailed, 8K, architectural photography style, ` +
     `ControlNet depth guidance, layered furniture placement, magazine quality`;
