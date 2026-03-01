@@ -40,8 +40,25 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     setLoading(false);
   };
 
-  const handleProceed = () => {
-    onComplete({ generated_render_url: generated, generation_prompt: prompt, status: "ready" });
+  const handleSaveAndShop = async () => {
+    setSaving(true);
+    const record = await base44.entities.RoomDesign.create({
+      name: data.name || "My Room Design",
+      style: data.style,
+      color_palette: data.color_palette,
+      vibes: data.vibes,
+      budget_min: data.budget_min,
+      budget_max: data.budget_max,
+      sustainability_mode: data.sustainability_mode,
+      room_image_url: data.room_image_url,
+      room_file_url: data.room_file_url,
+      room_dimensions: data.room_dimensions,
+      generated_render_url: generated,
+      generation_prompt: prompt,
+      status: "ready",
+    });
+    setSaving(false);
+    navigate(createPageUrl(`MyDesigns`));
   };
 
   return (
