@@ -14,7 +14,9 @@ const buildPrompt = (data) => {
 };
 
 export default function StepGenerate({ data, update, onBack, onComplete }) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [generated, setGenerated] = useState(data.generated_render_url || null);
   const [prompt, setPrompt] = useState(buildPrompt(data));
   const [feedback, setFeedback] = useState(null); // "like" | "dislike"
