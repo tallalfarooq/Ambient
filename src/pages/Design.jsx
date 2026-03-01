@@ -46,7 +46,9 @@ For each item provide:
   * title: real product name (be specific, include material, color, dimensions if known)
   * price: realistic price IN POUNDS within £${design.budget_min}–£${design.budget_max}
   * source: one of "Amazon", "IKEA", "eBay"${design.sustainability_mode ? ', prefer "eBay" for pre-loved items' : ""}
-  * url: a REAL, working product URL. For Amazon use: https://www.amazon.co.uk/s?k=[search+terms]. For IKEA use: https://www.ikea.com/gb/en/search/?q=[search+terms]. For eBay use: https://www.ebay.co.uk/sch/i.html?_nkw=[search+terms]. Replace [search+terms] with URL-encoded product keywords.
+  * asin: For Amazon products, provide the real ASIN (10-character alphanumeric ID, e.g. "B08N5WRWNW"). Leave empty for non-Amazon.
+  * article_number: For IKEA products, provide the real IKEA article number (e.g. "903.600.27"). Leave empty for non-IKEA.
+  * url: a REAL, working product URL. For Amazon with ASIN use: https://www.amazon.co.uk/dp/[ASIN]. For IKEA with article number use: https://www.ikea.com/gb/en/p/-[article-number-no-dots]/. For eBay use: https://www.ebay.co.uk/sch/i.html?_nkw=[search+terms]. If unsure of exact ID, use search: Amazon: https://www.amazon.co.uk/s?k=[search+terms], IKEA: https://www.ikea.com/gb/en/search/?q=[search+terms].
   * is_preloved: true only for eBay second-hand items
   * similarity_score: 0.0-1.0 visual similarity confidence
 
