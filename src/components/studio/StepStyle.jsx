@@ -56,8 +56,8 @@ export default function StepStyle({ data, update, onNext, onBack }) {
       </div>
 
       {/* Color palette override */}
-      <div className="mb-8">
-        <label className="text-xs text-white/40 block mb-3">Override color palette (optional)</label>
+      <div className="mb-6">
+        <label className="text-xs text-white/40 block mb-3">Color palette (optional override)</label>
         <div className="flex flex-wrap gap-2">
           {PALETTES.map((p) => (
             <button
@@ -72,6 +72,29 @@ export default function StepStyle({ data, update, onNext, onBack }) {
               {p}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Vibe / mood tags */}
+      <div className="mb-8">
+        <label className="text-xs text-white/40 block mb-3">Add vibes / mood (optional, multi-select)</label>
+        <div className="flex flex-wrap gap-2">
+          {VIBES.map((v) => {
+            const active = (data.vibes || []).includes(v);
+            return (
+              <button
+                key={v}
+                onClick={() => toggleVibe(v)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                  active
+                    ? "border-pink-500 text-pink-400 bg-pink-500/10"
+                    : "border-white/10 text-white/40 hover:border-white/20"
+                }`}
+              >
+                {v}
+              </button>
+            );
+          })}
         </div>
       </div>
 
