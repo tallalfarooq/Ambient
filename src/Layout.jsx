@@ -13,8 +13,23 @@ const NAV = [
   { label: "Projects", page: "Projects", icon: FolderOpen },
 ];
 
+const CONSENT_KEY = "ambient_consent";
+
 export default function Layout({ children, currentPageName }) {
+  const [consent, setConsent] = useState(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(CONSENT_KEY);
+    if (stored) setConsent(JSON.parse(stored));
+  }, []);
+
+  const handleConsent = (prefs) => {
+    localStorage.setItem(CONSENT_KEY, JSON.stringify(prefs));
+    setConsent(prefs);
+  };
+
   return (
+    <ConsentContext.Provider value={consent || { necessary: true, functional: false, marketing: false }}>
     <div className="min-h-screen bg-[#0A0A0B]">
       <style>{`
         * { box-sizing: border-box; }
