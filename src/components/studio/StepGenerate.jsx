@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
-import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck } from "lucide-react";
 
 const buildPrompt = (data) => {
   const dims = data.room_dimensions;
