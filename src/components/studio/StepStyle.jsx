@@ -24,6 +24,12 @@ const VIBES = [
 ];
 
 export default function StepStyle({ data, update, onNext, onBack }) {
+  const toggleVibe = (vibe) => {
+    const current = data.vibes || [];
+    const next = current.includes(vibe) ? current.filter(v => v !== vibe) : [...current, vibe];
+    update({ vibes: next });
+  };
+
   return (
     <div>
       <h2 className="text-2xl font-bold mb-2">Choose your style</h2>
