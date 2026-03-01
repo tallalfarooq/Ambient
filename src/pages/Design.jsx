@@ -36,7 +36,7 @@ export default function Design() {
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are a visual product search engine analyzing an AI-generated interior design render in the ${design.style} style.
 
-TASK: Identify 4-6 distinct furniture or decor items visible in this room render. For each item, you MUST provide real, shoppable product matches.
+TASK: Identify 8-12 distinct furniture or decor items visible in this room render. For each item, you MUST provide real, shoppable product matches.
 
 For each item provide:
 - label: descriptive name (e.g. "Low-profile linen sofa", "Rattan pendant light")
