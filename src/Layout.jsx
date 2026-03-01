@@ -10,6 +10,7 @@ export const useConsent = () => useContext(ConsentContext);
 const NAV = [
   { label: "Home", page: "Home", icon: Home },
   { label: "Studio", page: "Studio", icon: Sparkles },
+  { label: "My Designs", page: "MyDesigns", icon: BookImage },
   { label: "Projects", page: "Projects", icon: FolderOpen },
 ];
 
