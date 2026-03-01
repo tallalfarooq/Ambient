@@ -72,6 +72,16 @@ export default function Layout({ children, currentPageName }) {
       <div className="pt-14">
         {children}
       </div>
+
+      {/* Footer links */}
+      <div className="border-t border-white/6 py-4 px-6 flex items-center justify-center gap-6">
+        <Link to={createPageUrl("Impressum")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Impressum</Link>
+        <Link to={createPageUrl("Datenschutz")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Datenschutz</Link>
+      </div>
+
+      {/* Cookie banner (shown until consent given) */}
+      {!consent && <CookieBanner onConsent={handleConsent} />}
     </div>
+    </ConsentContext.Provider>
   );
 }
