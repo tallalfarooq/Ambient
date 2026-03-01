@@ -18,6 +18,11 @@ const PALETTES = [
   "Pastel Soft",
 ];
 
+const VIBES = [
+  "Cosy", "Airy", "Dark & moody", "Light-filled", "Luxurious",
+  "Rustic", "Futuristic", "Romantic", "Playful", "Zen",
+];
+
 export default function StepStyle({ data, update, onNext, onBack }) {
   return (
     <div>
