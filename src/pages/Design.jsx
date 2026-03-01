@@ -73,12 +73,14 @@ CRITICAL: Every match URL must be a real search URL the user can click to find t
                   items: {
                     type: "object",
                     properties: {
-                      title: { type: "string" },
-                      price: { type: "number" },
-                      source: { type: "string" },
-                      url: { type: "string" },
-                      is_preloved: { type: "boolean" },
-                      similarity_score: { type: "number" }
+                    title: { type: "string" },
+                    price: { type: "number" },
+                    source: { type: "string" },
+                    asin: { type: "string" },
+                    article_number: { type: "string" },
+                    url: { type: "string" },
+                    is_preloved: { type: "boolean" },
+                    similarity_score: { type: "number" }
                     }
                   }
                 }
