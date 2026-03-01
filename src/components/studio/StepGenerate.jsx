@@ -153,10 +153,12 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         </button>
         {generated && (
           <button
-            onClick={handleProceed}
-            className="flex-1 bg-gradient-to-r from-violet-500 to-pink-500 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition-opacity"
+            onClick={handleSaveAndShop}
+            disabled={saving}
+            className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-violet-500 to-pink-500 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-60"
           >
-            Shop this look →
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookmarkCheck className="w-4 h-4" />}
+            {saving ? "Saving…" : "Save & Shop this look"}
           </button>
         )}
       </div>
