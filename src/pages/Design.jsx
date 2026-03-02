@@ -124,7 +124,7 @@ CRITICAL: Always use search URLs. Never guess ASINs or article numbers — they 
           </Link>
           <div>
             <h1 className="font-semibold text-sm">{design.name}</h1>
-            <p className="text-white/35 text-xs">{design.style} · £{design.budget_min?.toLocaleString()}–£{design.budget_max?.toLocaleString()}</p>
+            <p className="text-white/35 text-xs">{design.style} · €{design.budget_min?.toLocaleString()}–€{design.budget_max?.toLocaleString()}</p>
           </div>
         </div>
         {design.sustainability_mode && (
