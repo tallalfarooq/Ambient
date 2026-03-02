@@ -73,14 +73,21 @@ export default function FurnitureMatchCard({ item, onItemUpdate }) {
                 )}
               </div>
 
+              {/* Product image */}
+              {match.image_url && (
+                <div className="w-full h-28 rounded-xl overflow-hidden bg-white/5 mb-2">
+                  <img src={match.image_url} alt={match.title} className="w-full h-full object-cover" onError={e => { e.target.parentElement.style.display = "none"; }} />
+                </div>
+              )}
+
               {/* Title */}
               <p className="text-sm text-white/80 leading-snug line-clamp-2 mb-2">{match.title}</p>
 
               {/* Price + timestamp */}
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <span className="font-bold text-lg">£{match.price?.toLocaleString()}</span>
-                  <span className="text-white/25 text-xs ml-1.5">as of {priceTimestamp}</span>
+                  <span className="font-bold text-lg">€{match.price?.toLocaleString()}</span>
+                  <span className="text-white/25 text-xs ml-1.5">ca. {priceTimestamp}</span>
                 </div>
                 {isSelected && <CheckCircle2 className="w-4 h-4 text-violet-400" />}
               </div>
