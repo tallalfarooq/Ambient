@@ -36,25 +36,24 @@ export default function Design() {
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are a visual product search engine analyzing an AI-generated interior design render in the ${design.style} style.
 
-TASK: Identify 8-12 distinct furniture or decor items visible in this room render. For each item, you MUST provide real, shoppable product matches.
+TASK: Identify 8-12 distinct furniture or decor items visible in this room render. For each item, provide 3 real product matches available in Germany.
 
 For each item provide:
-- label: descriptive name (e.g. "Low-profile linen sofa", "Rattan pendant light")
-- style_tags: 2-3 tags (e.g. ["minimalist", "natural wood", "japandi"])
+- label: descriptive name (e.g. "Niedriges Leinensofa", "Rattan-Hängeleuchte")
+- style_tags: 2-3 English tags (e.g. ["minimalist", "natural wood", "japandi"])
 - position_x, position_y: percentage position on the image (0-100) where the item appears
-- matches: EXACTLY 3 real products. For EACH match you MUST provide:
-  * title: real product name (be specific, include material, color, dimensions if known)
-  * price: realistic price IN POUNDS within £${design.budget_min}–£${design.budget_max}
+- matches: EXACTLY 3 products. For EACH match you MUST provide:
+  * title: specific product name (include material, color, size if known)
+  * price: realistic price IN EUROS within €${design.budget_min}–€${design.budget_max}
   * source: one of "Amazon", "IKEA", "eBay"${design.sustainability_mode ? ', prefer "eBay" for pre-loved items' : ""}
-  * asin: For Amazon products, provide the real ASIN (10-character alphanumeric ID, e.g. "B08N5WRWNW"). Leave empty for non-Amazon.
-  * article_number: For IKEA products, provide the real IKEA article number (e.g. "903.600.27"). Leave empty for non-IKEA.
-  * url: a REAL, working product URL. For Amazon with ASIN use: https://www.amazon.co.uk/dp/[ASIN]. For IKEA with article number use: https://www.ikea.com/gb/en/p/-[article-number-no-dots]/. For eBay use: https://www.ebay.co.uk/sch/i.html?_nkw=[search+terms]. If unsure of exact ID, use search: Amazon: https://www.amazon.co.uk/s?k=[search+terms], IKEA: https://www.ikea.com/gb/en/search/?q=[search+terms].
+  * image_url: a direct product image URL (e.g. from amazon.de or ikea.com CDN). Leave empty if unsure.
+  * url: use ONLY search URLs — never guessed product IDs. Amazon: https://www.amazon.de/s?k=[german+search+terms], IKEA: https://www.ikea.com/de/de/search/?q=[search+terms], eBay: https://www.ebay.de/sch/i.html?_nkw=[search+terms]
   * is_preloved: true only for eBay second-hand items
   * similarity_score: 0.0-1.0 visual similarity confidence
 
 ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand eBay options where possible." : ""}
 
-CRITICAL: Every match URL must be a real search URL the user can click to find the product. Never leave URLs empty or as placeholders.`,
+CRITICAL: Always use search URLs. Never guess ASINs or article numbers — they cause 404 errors.`,
       file_urls: [design.generated_render_url].filter(Boolean),
       response_json_schema: {
         type: "object",

@@ -51,9 +51,9 @@ import Datenschutz from './pages/Datenschutz';
 import Design from './pages/Design';
 import Home from './pages/Home';
 import Impressum from './pages/Impressum';
+import MyDesigns from './pages/MyDesigns';
 import Projects from './pages/Projects';
 import Studio from './pages/Studio';
-import MyDesigns from './pages/MyDesigns';
 import __Layout from './Layout.jsx';
 
 
@@ -62,9 +62,9 @@ export const PAGES = {
     "Design": Design,
     "Home": Home,
     "Impressum": Impressum,
+    "MyDesigns": MyDesigns,
     "Projects": Projects,
     "Studio": Studio,
-    "MyDesigns": MyDesigns,
 }
 
 export const pagesConfig = {
