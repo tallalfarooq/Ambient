@@ -10,7 +10,7 @@ const SOURCE_BADGE = {
   Thrift: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
 };
 
-const priceTimestamp = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const priceTimestamp = new Date().toLocaleDateString("de-DE", { day: "numeric", month: "short", year: "numeric" });
 
 export default function FurnitureMatchCard({ item, onItemUpdate }) {
   const [selected, setSelected] = useState(item.selected_match_index ?? null);
