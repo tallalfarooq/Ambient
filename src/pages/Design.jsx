@@ -176,17 +176,50 @@ CRITICAL: Always use search URLs. Never guess ASINs or article numbers — they 
 
           {/* Detect / Shop CTA */}
           {design.generated_render_url && items.length === 0 && (
-            <button
-              onClick={detectItems}
-              disabled={detecting}
-              className="mt-4 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-violet-500 to-pink-500 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {detecting ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Detecting furniture…</>
-              ) : (
-                <><Sparkles className="w-4 h-4" /> Detect & match furniture to shop</>
-              )}
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  if (!user) {
+                    setShowLoginPrompt(true);
+                  } else {
+                    detectItems();
+                  }
+                }}
+                disabled={detecting}
+                className="mt-4 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-violet-500 to-pink-500 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {detecting ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Detecting furniture…</>
+                ) : (
+                  <><Sparkles className="w-4 h-4" /> Detect & match furniture to shop</>
+                )}
+              </button>
+
+              <AnimatePresence>
+                {showLoginPrompt && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
+                    className="mt-3 p-5 rounded-2xl border border-violet-500/30 bg-violet-500/8 flex flex-col items-center gap-3 text-center"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
+                      <Lock className="w-5 h-5 text-violet-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">Sign in to unlock product matches</p>
+                      <p className="text-xs text-white/40 mt-1">Create a free account to detect furniture and start shopping.</p>
+                    </div>
+                    <button
+                      onClick={() => base44.auth.redirectToLogin(window.location.href)}
+                      className="bg-violet-500 hover:bg-violet-400 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors"
+                    >
+                      Sign in / Register
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
           )}
 
           {items.length > 0 && (
