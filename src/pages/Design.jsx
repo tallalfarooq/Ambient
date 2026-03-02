@@ -75,8 +75,7 @@ CRITICAL: Always use search URLs. Never guess ASINs or article numbers — they 
                     title: { type: "string" },
                     price: { type: "number" },
                     source: { type: "string" },
-                    asin: { type: "string" },
-                    article_number: { type: "string" },
+                    image_url: { type: "string" },
                     url: { type: "string" },
                     is_preloved: { type: "boolean" },
                     similarity_score: { type: "number" }
