@@ -39,27 +39,19 @@ export default function Design() {
   const detectItems = async () => {
     if (!design) return;
     setDetecting(true);
+    // Step 1: Ask the LLM to identify items + generate search queries
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are a visual product search engine analyzing an AI-generated interior design render in the ${design.style} style.
 
-TASK: Identify 8-12 distinct furniture or decor items visible in this room render. For each item, provide 3 real product matches available in Germany.
+TASK: Identify 8-12 distinct furniture or decor items visible in this room render.
 
 For each item provide:
-- label: descriptive name (e.g. "Niedriges Leinensofa", "Rattan-Hängeleuchte")
+- label: descriptive name in English (e.g. "Low Linen Sofa", "Rattan Pendant Light")
 - style_tags: 2-3 English tags (e.g. ["minimalist", "natural wood", "japandi"])
 - position_x, position_y: percentage position on the image (0-100) where the item appears
-- matches: EXACTLY 3 products. For EACH match you MUST provide:
-  * title: specific product name (include material, color, size if known)
-  * price: realistic price IN EUROS within €${design.budget_min}–€${design.budget_max}
-  * source: one of "Amazon", "IKEA", "eBay"${design.sustainability_mode ? ', prefer "eBay" for pre-loved items' : ""}
-  * image_url: a direct product image URL (e.g. from amazon.de or ikea.com CDN). Leave empty if unsure.
-  * url: use ONLY search URLs — never guessed product IDs. Amazon: https://www.amazon.de/s?k=[german+search+terms], IKEA: https://www.ikea.com/de/de/search/?q=[search+terms], eBay: https://www.ebay.de/sch/i.html?_nkw=[search+terms]
-  * is_preloved: true only for eBay second-hand items
-  * similarity_score: 0.0-1.0 visual similarity confidence
+- search_query: 3-5 keyword search string to find this item on Amazon (e.g. "japandi linen sofa light grey")
 
-${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand eBay options where possible." : ""}
-
-CRITICAL: Always use search URLs. Never guess ASINs or article numbers — they cause 404 errors.`,
+${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand options where possible." : ""}`,
       file_urls: [design.generated_render_url].filter(Boolean),
       response_json_schema: {
         type: "object",
@@ -73,21 +65,7 @@ CRITICAL: Always use search URLs. Never guess ASINs or article numbers — they 
                 style_tags: { type: "array", items: { type: "string" } },
                 position_x: { type: "number" },
                 position_y: { type: "number" },
-                matches: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                    title: { type: "string" },
-                    price: { type: "number" },
-                    source: { type: "string" },
-                    image_url: { type: "string" },
-                    url: { type: "string" },
-                    is_preloved: { type: "boolean" },
-                    similarity_score: { type: "number" }
-                    }
-                  }
-                }
+                search_query: { type: "string" }
               }
             }
           }
@@ -95,8 +73,37 @@ CRITICAL: Always use search URLs. Never guess ASINs or article numbers — they 
       }
     });
 
+    // Step 2: For each item, try local catalog first, fall back to Amazon search URL
+    const itemsWithMatches = await Promise.all(
+      (result.items || []).map(async (item) => {
+        let matches = [];
+        try {
+          const res = await base44.functions.invoke('searchCatalog', {
+            query: item.search_query || item.label,
+            budget_max: design.budget_max,
+            budget_min: design.budget_min,
+            limit: 3
+          });
+          matches = res.data?.matches || [];
+        } catch (_) {}
+
+        // Fallback: generate search-based matches if catalog is empty or returns < 3
+        if (matches.length < 3) {
+          const query = encodeURIComponent(item.search_query || item.label);
+          const fallbacks = [
+            { title: `${item.label} – Amazon Search`, price: null, image_url: null, source: "Amazon", url: `https://www.amazon.com/s?k=${query}&tag=ambient019-21`, is_preloved: false, similarity_score: 0.5 },
+            { title: `${item.label} – IKEA Search`, price: null, image_url: null, source: "IKEA", url: `https://www.ikea.com/de/de/search/?q=${query}`, is_preloved: false, similarity_score: 0.4 },
+            { title: `${item.label} – eBay Search`, price: null, image_url: null, source: "eBay", url: `https://www.ebay.com/sch/i.html?_nkw=${query}`, is_preloved: design.sustainability_mode || false, similarity_score: 0.3 }
+          ];
+          matches = [...matches, ...fallbacks].slice(0, 3);
+        }
+
+        return { ...item, matches };
+      })
+    );
+
     const created = await Promise.all(
-      (result.items || []).map((item) =>
+      itemsWithMatches.map((item) =>
         base44.entities.FurnitureItem.create({ ...item, design_id: designId })
       )
     );
