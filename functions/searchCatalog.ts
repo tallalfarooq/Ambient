@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
       price: p.price_usd ? Math.round(p.price_usd) : null,
       image_url: p.image_url || null,
       source: "Amazon",
-      url: p.affiliate_url || `https://www.amazon.com/dp/${p.asin}?tag=${AMAZON_TAG}`,
+      url: `https://www.amazon.de/dp/${p.asin}?tag=${AMAZON_TAG}`,
       is_preloved: false,
       similarity_score: p._score,
       asin: p.asin
