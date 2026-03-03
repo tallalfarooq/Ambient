@@ -1,27 +1,26 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
 const AMAZON_TAG = "ambient019-21";
-const FURNITURE_CATEGORIES = [
-  "furniture", "sofa", "couch", "chair", "table", "desk", "shelf", "shelving",
+
+const FURNITURE_KEYWORDS = [
+  "sofa", "couch", "chair", "table", "desk", "shelf", "shelving",
   "bookcase", "lamp", "light", "lighting", "rug", "curtain", "pillow", "cushion",
-  "bed", "mattress", "dresser", "cabinet", "wardrobe", "mirror", "wall decor",
-  "wall panel", "acoustic", "plant", "vase", "storage", "ottoman", "bench",
-  "nightstand", "side table", "coffee table", "dining", "stool", "rack",
-  "home decor", "home & kitchen", "tools & home improvement", "patio"
+  "bed", "mattress", "dresser", "cabinet", "wardrobe", "mirror",
+  "plant", "vase", "storage", "ottoman", "bench", "nightstand",
+  "coffee table", "dining", "stool", "rack", "decor", "throw", "blanket",
+  "artwork", "frame", "candle", "basket", "tray", "clock"
 ];
 
-// Score a product based on how well it matches furniture/decor context
-function isFurnitureRelated(product) {
-  const haystack = `${product.title} ${product.categories}`.toLowerCase();
-  return FURNITURE_CATEGORIES.some(kw => haystack.includes(kw));
-}
-
-// Simple keyword overlap score
 function scoreMatch(product, query) {
   const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
-  const haystack = `${product.title} ${product.categories}`.toLowerCase();
+  const haystack = `${product.title || ''} ${product.categories || ''}`.toLowerCase();
   const hits = terms.filter(t => haystack.includes(t)).length;
   return hits / Math.max(terms.length, 1);
+}
+
+function isFurnitureRelated(product) {
+  const haystack = `${product.title || ''} ${product.categories || ''}`.toLowerCase();
+  return FURNITURE_KEYWORDS.some(kw => haystack.includes(kw));
 }
 
 Deno.serve(async (req) => {
@@ -35,14 +34,13 @@ Deno.serve(async (req) => {
 
     if (!query) return Response.json({ error: 'query is required' }, { status: 400 });
 
-    // Fetch all catalog items
-    const all = await base44.asServiceRole.entities.ProductCatalog.list('-created_date', 2000);
+    // Fetch in smaller batches to avoid CPU limit
+    const all = await base44.asServiceRole.entities.ProductCatalog.list('-created_date', 500);
 
-    // Filter to furniture-related items within budget
+    // Filter furniture-related + within budget
     const relevant = all.filter(p => {
       if (!isFurnitureRelated(p)) return false;
       if (budget_max && p.price_usd && p.price_usd > budget_max * 1.1) return false;
-      if (budget_min && p.price_usd && p.price_usd < budget_min * 0.1) return false;
       return true;
     });
 
@@ -53,7 +51,6 @@ Deno.serve(async (req) => {
       .sort((a, b) => b._score - a._score)
       .slice(0, limit);
 
-    // Shape into match format expected by FurnitureMatchCard
     const matches = scored.map(p => ({
       title: p.title,
       price: p.price_usd ? Math.round(p.price_usd) : null,
@@ -61,7 +58,7 @@ Deno.serve(async (req) => {
       source: "Amazon",
       url: `https://www.amazon.de/dp/${p.asin}?tag=${AMAZON_TAG}`,
       is_preloved: false,
-      similarity_score: p._score,
+      similarity_score: Math.min(p._score, 1),
       asin: p.asin
     }));
 
