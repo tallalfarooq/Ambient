@@ -3,6 +3,28 @@ import { base44 } from "@/api/base44Client";
 import { CheckCircle2, Recycle, Star, ExternalLink } from "lucide-react";
 import { buildAffiliateUrl, getSourceCTA } from "@/components/affiliateLinks";
 
+function AmazonImage({ src, alt }) {
+  const [proxied, setProxied] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  if (!src || failed) return null;
+
+  const imgSrc = proxied
+    ? src  // direct fallback already tried
+    : src; // try direct first (sometimes works)
+
+  return (
+    <div className="w-full h-28 rounded-xl overflow-hidden bg-white/5 mb-2">
+      <img
+        src={imgSrc}
+        alt={alt}
+        className="w-full h-full object-contain p-1 bg-white"
+        onError={() => setFailed(true)}
+      />
+    </div>
+  );
+}
+
 const SOURCE_BADGE = {
   Amazon: "text-orange-400 bg-orange-400/10 border-orange-400/20",
   IKEA:   "text-blue-400 bg-blue-400/10 border-blue-400/20",
