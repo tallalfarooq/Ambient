@@ -96,11 +96,7 @@ export default function FurnitureMatchCard({ item, onItemUpdate }) {
               </div>
 
               {/* Product image */}
-              {match.image_url && (
-                <div className="w-full h-28 rounded-xl overflow-hidden bg-white/5 mb-2">
-                  <img src={match.image_url} alt={match.title} className="w-full h-full object-cover" onError={e => { e.target.parentElement.style.display = "none"; }} />
-                </div>
-              )}
+              <AmazonImage src={match.image_url} alt={match.title} />
 
               {/* Title */}
               <p className="text-sm text-white/80 leading-snug line-clamp-2 mb-2">{match.title}</p>
