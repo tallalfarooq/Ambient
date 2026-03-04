@@ -74,29 +74,25 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
       }
     });
 
-    // Step 2: For each item, try local catalog first, fall back to Amazon search URL
+    // Step 2: For each item, fetch real Amazon.de products via SerpAPI
     const itemsWithMatches = await Promise.all(
       (result.items || []).map(async (item) => {
         let matches = [];
         try {
-          const res = await base44.functions.invoke('searchCatalog', {
+          const res = await base44.functions.invoke('getAmazonProducts', {
             query: item.search_query || item.label,
-            budget_max: design.budget_max,
-            budget_min: design.budget_min,
             limit: 3
           });
           matches = res.data?.matches || [];
         } catch (_) {}
 
-        // Fallback: generate search-based matches if catalog is empty or returns < 3
-        if (matches.length < 3) {
+        // Fallback if SerpAPI returns nothing
+        if (matches.length === 0) {
           const query = encodeURIComponent(item.search_query || item.label);
-          const fallbacks = [
-            { title: `${item.label} – Amazon Search`, price: null, image_url: null, source: "Amazon", url: `https://www.amazon.com/s?k=${query}&tag=ambient019-21`, is_preloved: false, similarity_score: 0.5 },
-            { title: `${item.label} – IKEA Search`, price: null, image_url: null, source: "IKEA", url: `https://www.ikea.com/de/de/search/?q=${query}`, is_preloved: false, similarity_score: 0.4 },
-            { title: `${item.label} – eBay Search`, price: null, image_url: null, source: "eBay", url: `https://www.ebay.com/sch/i.html?_nkw=${query}`, is_preloved: design.sustainability_mode || false, similarity_score: 0.3 }
+          matches = [
+            { title: `${item.label}`, price: null, image_url: null, source: "Amazon", url: `https://www.amazon.de/s?k=${query}&tag=ambient019-21&linkCode=ur2`, is_preloved: false, similarity_score: 0.5 },
+            { title: `${item.label}`, price: null, image_url: null, source: "IKEA", url: `https://www.ikea.com/de/de/search/?q=${query}`, is_preloved: false, similarity_score: 0.4 },
           ];
-          matches = [...matches, ...fallbacks].slice(0, 3);
         }
 
         return { ...item, matches };
