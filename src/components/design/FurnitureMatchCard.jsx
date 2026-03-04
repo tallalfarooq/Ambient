@@ -64,7 +64,8 @@ export default function FurnitureMatchCard({ item, onItemUpdate }) {
 
       <div className="space-y-3">
         {(item.matches || []).map((match, idx) => {
-          const affiliateUrl = buildAffiliateUrl(match);
+          // Use url directly from SerpAPI response (has /dp/ASIN?tag=), or build it as fallback
+          const affiliateUrl = match.url || buildAffiliateUrl(match);
           const cta = getSourceCTA(match.source);
           const isSelected = selected === idx;
 
