@@ -41,15 +41,16 @@ export default function Design() {
     setDetecting(true);
     // Step 1: Ask the LLM to identify items + generate search queries
     const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are a visual product search engine analyzing an AI-generated interior design render in the ${design.style} style.
+      prompt: `You are an Amazon.de product search expert analyzing an AI-generated interior design render in the ${design.style} style.
+Budget: €${design.budget_min ?? 0}–€${design.budget_max ?? 5000}.
 
 TASK: Identify 8-12 distinct furniture or decor items visible in this room render.
 
 For each item provide:
 - label: descriptive name in English (e.g. "Low Linen Sofa", "Rattan Pendant Light")
-- style_tags: 2-3 English tags (e.g. ["minimalist", "natural wood", "japandi"])
+- style_tags: 2-3 English style tags (e.g. ["minimalist", "natural wood", "japandi"])
 - position_x, position_y: percentage position on the image (0-100) where the item appears
-- search_query: 3-5 keyword search string to find this item on Amazon (e.g. "japandi linen sofa light grey")
+- search_query: a precise GERMAN Amazon.de search query (4-6 words) that will return real buyable products. Be specific about material, style and colour. Examples: "Stehlampe Wohnzimmer schwarz modern", "3-Sitzer Sofa Stoff grau skandinavisch", "Couchtisch Holz rund hell". Match the budget tier: ${(design.budget_max ?? 1000) < 200 ? 'günstig preiswert' : (design.budget_max ?? 1000) < 800 ? 'mittelklasse' : 'premium hochwertig'}.
 
 ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand options where possible." : ""}`,
       file_urls: [design.generated_render_url].filter(Boolean),

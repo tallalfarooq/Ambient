@@ -5,23 +5,24 @@ const AMAZON_TAG = "ambient019-21";
  * Always uses search-based links to avoid broken ASIN/article number links from AI hallucinations.
  */
 export function buildAffiliateUrl(match) {
-  const { title, source } = match;
+  const { title, source, asin } = match;
   const encoded = encodeURIComponent(title);
 
   switch (source) {
     case "Amazon":
-      // Always use search — AI-generated ASINs are unreliable and cause 404s
-      return `https://www.amazon.de/s?k=${encoded}&tag=${AMAZON_TAG}`;
+      // Use direct /dp/ link when we have a real ASIN — tag stays on product page
+      if (asin) return `https://www.amazon.de/dp/${asin}?tag=${AMAZON_TAG}`;
+      // Fallback to search with tag + linkCode so tag is preserved
+      return `https://www.amazon.de/s?k=${encoded}&tag=${AMAZON_TAG}&linkCode=ur2`;
 
     case "IKEA":
-      // Direct IKEA search — no affiliate redirect until a real camref is configured
       return `https://www.ikea.com/de/de/search/?q=${encoded}`;
 
     case "eBay":
       return `https://www.ebay.de/sch/i.html?_nkw=${encoded}`;
 
     default:
-      return `https://www.amazon.de/s?k=${encoded}&tag=${AMAZON_TAG}`;
+      return `https://www.amazon.de/s?k=${encoded}&tag=${AMAZON_TAG}&linkCode=ur2`;
   }
 }
 

@@ -47,6 +47,7 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import CatalogImport from './pages/CatalogImport';
 import Datenschutz from './pages/Datenschutz';
 import Design from './pages/Design';
 import Home from './pages/Home';
@@ -54,11 +55,11 @@ import Impressum from './pages/Impressum';
 import MyDesigns from './pages/MyDesigns';
 import Projects from './pages/Projects';
 import Studio from './pages/Studio';
-import CatalogImport from './pages/CatalogImport';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "CatalogImport": CatalogImport,
     "Datenschutz": Datenschutz,
     "Design": Design,
     "Home": Home,
@@ -66,7 +67,6 @@ export const PAGES = {
     "MyDesigns": MyDesigns,
     "Projects": Projects,
     "Studio": Studio,
-    "CatalogImport": CatalogImport,
 }
 
 export const pagesConfig = {
