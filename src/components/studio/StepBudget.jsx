@@ -2,10 +2,10 @@ import { useState } from "react";
 import { Recycle, ShoppingBag } from "lucide-react";
 
 const PRESETS = [
-  { label: "Thrifty", min: 200, max: 800 },
-  { label: "Mid-range", min: 800, max: 2500 },
-  { label: "Premium", min: 2500, max: 8000 },
-  { label: "Luxury", min: 8000, max: 25000 },
+  { label: "Thrifty",   min: 200,  max: 800,   perItem: 50,   tier: "budget"  },
+  { label: "Mid-range", min: 800,  max: 2500,  perItem: 200,  tier: "mid"     },
+  { label: "Premium",   min: 2500, max: 8000,  perItem: 600,  tier: "premium" },
+  { label: "Luxury",    min: 8000, max: 25000, perItem: 2000, tier: "luxury"  },
 ];
 
 const SOURCES = [
