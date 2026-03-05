@@ -40,9 +40,18 @@ export default function Design() {
     if (!design) return;
     setDetecting(true);
     // Step 1: Ask the LLM to identify items + generate search queries
+    const tier = design.budget_tier || "mid";
+    const tierKeywords = {
+      budget:  { hint: "günstig preiswert unter 50 Euro", sort: "preiswertest" },
+      mid:     { hint: "gutes Preis-Leistungs-Verhältnis Qualität", sort: "Bestseller" },
+      premium: { hint: "Premium Design hochwertig", sort: "hochwertig" },
+      luxury:  { hint: "Luxus exklusiv Designer High-End", sort: "exklusiv teuer" },
+    };
+    const { hint: budgetHint } = tierKeywords[tier];
+
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are an Amazon.de product search expert analyzing an AI-generated interior design render in the ${design.style} style.
-Budget: €${design.budget_min ?? 0}–€${design.budget_max ?? 5000}.
+Budget: €${design.budget_min ?? 0}–€${design.budget_max ?? 5000} (tier: ${tier}).
 
 TASK: Identify 8-12 distinct furniture or decor items visible in this room render.
 
@@ -50,7 +59,7 @@ For each item provide:
 - label: descriptive name in English (e.g. "Low Linen Sofa", "Rattan Pendant Light")
 - style_tags: 2-3 English style tags (e.g. ["minimalist", "natural wood", "japandi"])
 - position_x, position_y: percentage position on the image (0-100) where the item appears
-- search_query: a precise GERMAN Amazon.de search query (4-6 words) that will return real buyable products. Be specific about material, style and colour. Examples: "Stehlampe Wohnzimmer schwarz modern", "3-Sitzer Sofa Stoff grau skandinavisch", "Couchtisch Holz rund hell". Match the budget tier: ${(design.budget_max ?? 1000) < 200 ? 'günstig preiswert' : (design.budget_max ?? 1000) < 800 ? 'mittelklasse' : 'premium hochwertig'}.
+- search_query: a precise GERMAN Amazon.de search query (4-6 words) that will return real buyable products. Be specific about material, style and colour. CRITICAL: The budget tier is "${tier}" — your query MUST include these German keywords to pull the right price range: "${budgetHint}". Examples for this tier: ${tier === 'budget' ? '"Teppich Wohnzimmer günstig", "Stehlampe günstig preiswert"' : tier === 'mid' ? '"Stehlampe Wohnzimmer modern Qualität", "Sofa Stoff grau Bestseller"' : tier === 'premium' ? '"Designer Stehlampe Premium schwarz", "Sofa hochwertig Leder modern"' : '"Luxus Sofa Leder Designer exklusiv", "Stehlampe High-End exklusiv"'}.
 
 ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand options where possible." : ""}`,
       file_urls: [design.generated_render_url].filter(Boolean),
