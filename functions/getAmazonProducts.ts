@@ -10,11 +10,23 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { query, limit = 3 } = body;
+    const { query, limit = 3, budget_tier = "mid", budget_max } = body;
 
     if (!query) return Response.json({ error: 'query is required' }, { status: 400 });
 
-    const serpUrl = `https://serpapi.com/search.json?engine=amazon&amazon_domain=amazon.de&k=${encodeURIComponent(query)}&api_key=${SERP_API_KEY}`;
+    // Price filters in cents (Amazon uses lowest price * 100)
+    const priceRanges = {
+      budget:  { low: 0,     high: 5000  }, // €0–€50
+      mid:     { low: 2000,  high: 20000 }, // €20–€200
+      premium: { low: 10000, high: 80000 }, // €100–€800
+      luxury:  { low: 50000, high: 0     }, // €500+
+    };
+    const range = priceRanges[budget_tier] || priceRanges.mid;
+    const priceParam = range.high > 0
+      ? `&low-price=${range.low / 100}&high-price=${range.high / 100}`
+      : `&low-price=${range.low / 100}`;
+
+    const serpUrl = `https://serpapi.com/search.json?engine=amazon&amazon_domain=amazon.de&k=${encodeURIComponent(query)}${priceParam}&api_key=${SERP_API_KEY}`;
 
     const response = await fetch(serpUrl);
     const data = await response.json();
