@@ -33,7 +33,7 @@ export default function StepBudget({ data, update, onNext, onBack }) {
         {PRESETS.map((p) => (
           <button
             key={p.label}
-            onClick={() => update({ budget_min: p.min, budget_max: p.max })}
+            onClick={() => update({ budget_min: p.min, budget_max: p.max, budget_tier: p.tier })}
             className={`text-left px-5 py-4 rounded-2xl border transition-all ${
               data.budget_min === p.min && data.budget_max === p.max
                 ? "border-violet-500 bg-violet-500/10"
@@ -42,7 +42,7 @@ export default function StepBudget({ data, update, onNext, onBack }) {
           >
             <div className="font-semibold text-sm">{p.label}</div>
             <div className="text-white/35 text-xs mt-0.5">
-              £{p.min.toLocaleString()} – £{p.max.toLocaleString()}
+              €{p.min.toLocaleString()} – €{p.max.toLocaleString()}
             </div>
           </button>
         ))}
