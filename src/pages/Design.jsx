@@ -158,15 +158,15 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
       <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* Render + hotspots */}
         <div className="lg:col-span-3">
-          <div className="relative rounded-3xl overflow-hidden border border-white/10 bg-white/3">
+          <div className="rounded-3xl overflow-hidden border border-white/10 bg-white/3">
             {design.generated_render_url ? (
-              <>
+              <div className="relative w-full">
                 <img
                   src={design.generated_render_url}
                   alt="Generated room"
-                  className="w-full object-cover"
+                  className="w-full h-auto block"
                 />
-                {/* Hotspot markers */}
+                {/* Hotspot markers — positioned relative to the actual image */}
                 {items.map((item) => (
                   <button
                     key={item.id}
@@ -181,7 +181,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                     <ShoppingBag className="w-3 h-3 text-white" />
                   </button>
                 ))}
-              </>
+              </div>
             ) : (
               <div className="h-80 flex items-center justify-center text-white/25">
                 No render yet
