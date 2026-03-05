@@ -90,7 +90,9 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
         try {
           const res = await base44.functions.invoke('getAmazonProducts', {
             query: item.search_query || item.label,
-            limit: 3
+            limit: 3,
+            budget_tier: tier,
+            budget_max: design.budget_max
           });
           matches = res.data?.matches || [];
         } catch (_) {}
