@@ -1,4 +1,6 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, createContext } from "react";
+
+const ConsentContext = createContext(null);
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Sparkles, Home, BookImage, LogIn, LogOut, User } from "lucide-react";
