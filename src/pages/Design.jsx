@@ -150,11 +150,25 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
             <p className="text-white/35 text-xs">{design.style} · €{design.budget_min?.toLocaleString()}–€{design.budget_max?.toLocaleString()}</p>
           </div>
         </div>
-        {design.sustainability_mode && (
-          <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full text-xs text-emerald-400">
-            <Recycle className="w-3 h-3" /> Pre-Loved mode
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {design.sustainability_mode && (
+            <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full text-xs text-emerald-400">
+              <Recycle className="w-3 h-3" /> Pre-Loved mode
+            </div>
+          )}
+          <button
+            onClick={() => setCartOpen(true)}
+            className="relative flex items-center gap-1.5 bg-violet-500/15 border border-violet-500/30 hover:bg-violet-500/25 text-violet-300 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+          >
+            <ShoppingCart className="w-3.5 h-3.5" />
+            Cart
+            {items.filter(i => i.selected_match_index != null).length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-violet-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {items.filter(i => i.selected_match_index != null).length}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-5 gap-8">
