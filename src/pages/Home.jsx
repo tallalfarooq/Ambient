@@ -96,13 +96,13 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              to={createPageUrl("Studio")}
+            <button
+              onClick={handleStartDesigning}
               className="group flex items-center gap-2 bg-white text-black font-semibold px-8 py-4 rounded-2xl hover:bg-white/90 transition-all duration-200 text-sm"
             >
               Start designing free
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Link>
+            </button>
             <Link
               to={createPageUrl("Projects")}
               className="flex items-center gap-2 bg-white/5 border border-white/10 text-white/80 font-medium px-8 py-4 rounded-2xl hover:bg-white/10 transition-all duration-200 text-sm"
