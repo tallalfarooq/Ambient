@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Loader2, ShoppingBag, Sparkles, ArrowLeft, Recycle, Lock } from "lucide-react";
+import { Loader2, ShoppingBag, Sparkles, ArrowLeft, Recycle, Lock, ShoppingCart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import FurnitureMatchCard from "@/components/design/FurnitureMatchCard";
+import CartDrawer from "@/components/design/CartDrawer";
 
 export default function Design() {
   const params = new URLSearchParams(window.location.search);
