@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Sparkles, Home, BookImage, LogIn, LogOut, User } from "lucide-react";
 import CookieBanner from "@/components/consent/CookieBanner";
-...
+
 const NAV = [
   { label: "Home", page: "Home", icon: Home },
   { label: "Studio", page: "Studio", icon: Sparkles },
