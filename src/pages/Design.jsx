@@ -286,7 +286,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                 <FurnitureMatchCard item={selectedItem} onItemUpdate={(updated) => {
                   setItems((prev) => prev.map((i) => i.id === updated.id ? updated : i));
                   setSelectedItem(updated);
-                }} />
+                }} onCartOpen={() => setCartOpen(true)} />
               </motion.div>
             ) : (
               <motion.div
