@@ -19,10 +19,15 @@ const CONSENT_KEY = "ambient_consent";
 
 export default function Layout({ children, currentPageName }) {
   const [consent, setConsent] = useState(null);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(CONSENT_KEY);
     if (stored) setConsent(JSON.parse(stored));
+  }, []);
+
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => setUser(null));
   }, []);
 
   const handleConsent = (prefs) => {
