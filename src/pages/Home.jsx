@@ -1,7 +1,9 @@
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ArrowRight, Scan, Sparkles, ShoppingBag, Recycle } from "lucide-react";
-import { motion } from "framer-motion";
+import { ArrowRight, Scan, Sparkles, ShoppingBag, Recycle, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { base44 } from "@/api/base44Client";
 
 const features = [
   {
