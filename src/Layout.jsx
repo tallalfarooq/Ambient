@@ -1,7 +1,8 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Sparkles, FolderOpen, Home, BookImage, Database } from "lucide-react";
+import { Sparkles, FolderOpen, Home, BookImage, LogIn, LogOut, User } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 import CookieBanner from "@/components/consent/CookieBanner";
 
 export const ConsentContext = createContext({ necessary: true, functional: false, marketing: false });
