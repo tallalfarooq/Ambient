@@ -71,6 +71,30 @@ export default function Layout({ children, currentPageName }) {
                   <span className="hidden sm:block">{label}</span>
                 </Link>
               ))}
+
+              {user ? (
+                <div className="flex items-center gap-1 ml-2 pl-2 border-l border-white/10">
+                  <div className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-white/50">
+                    <User className="w-3.5 h-3.5" />
+                    <span className="hidden sm:block max-w-[80px] truncate">{user.full_name || user.email}</span>
+                  </div>
+                  <button
+                    onClick={() => base44.auth.logout()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/5 transition-all"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="hidden sm:block">Sign out</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => base44.auth.redirectToLogin(window.location.href)}
+                  className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-violet-500 hover:bg-violet-400 text-white transition-all"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Sign in</span>
+                </button>
+              )}
             </div>
           </div>
         </nav>
