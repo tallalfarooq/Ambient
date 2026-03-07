@@ -308,6 +308,16 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
           </AnimatePresence>
         </div>
       </div>
+      <CartDrawer
+        isOpen={cartOpen}
+        onClose={() => setCartOpen(false)}
+        items={items}
+        onRemove={async (itemId) => {
+          await base44.entities.FurnitureItem.update(itemId, { selected_match_index: null });
+          setItems((prev) => prev.map((i) => i.id === itemId ? { ...i, selected_match_index: null } : i));
+          if (selectedItem?.id === itemId) setSelectedItem((s) => ({ ...s, selected_match_index: null }));
+        }}
+      />
     </div>
   );
 }
