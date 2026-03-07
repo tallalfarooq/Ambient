@@ -234,13 +234,13 @@ export default function Home() {
 
               <div className="flex flex-col gap-3">
                 <button
-                  onClick={() => base44.auth.redirectToLogin(createPageUrl("Studio"))}
+                  onClick={() => base44.auth.redirectToLogin(window.location.origin + createPageUrl("Studio"))}
                   className="w-full bg-gradient-to-r from-violet-500 to-pink-500 text-white font-semibold py-3.5 rounded-2xl hover:opacity-90 transition-opacity text-sm"
                 >
                   Sign up — it's free
                 </button>
                 <button
-                  onClick={() => base44.auth.redirectToLogin(createPageUrl("Studio"))}
+                  onClick={() => base44.auth.redirectToLogin(window.location.origin + createPageUrl("Studio"))}
                   className="w-full bg-white/5 border border-white/10 text-white/70 font-medium py-3.5 rounded-2xl hover:bg-white/10 transition-all text-sm"
                 >
                   Sign in to existing account
