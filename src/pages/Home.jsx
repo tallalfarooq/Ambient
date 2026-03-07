@@ -189,15 +189,69 @@ export default function Home() {
             From "I like this room" to{" "}
             <span className="text-violet-400">everything in my cart</span> — in 5 minutes.
           </h2>
-          <Link
-            to={createPageUrl("Studio")}
+          <button
+            onClick={handleStartDesigning}
             className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-500 to-pink-500 text-white font-semibold px-10 py-4 rounded-2xl hover:opacity-90 transition-opacity text-sm"
           >
             <Sparkles className="w-4 h-4" />
             Open the Studio
-          </Link>
+          </button>
         </motion.div>
       </section>
+
+      {/* Auth Modal */}
+      <AnimatePresence>
+        {showAuthModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowAuthModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md bg-[#111114] border border-white/10 rounded-3xl p-8 text-center shadow-2xl"
+            >
+              <button
+                onClick={() => setShowAuthModal(false)}
+                className="absolute top-4 right-4 text-white/30 hover:text-white/60 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center mx-auto mb-6">
+                <Sparkles className="w-7 h-7 text-white" />
+              </div>
+
+              <h2 className="text-xl font-bold mb-2">Start designing for free</h2>
+              <p className="text-white/45 text-sm mb-8 leading-relaxed">
+                Create a free account to generate AI room designs, detect furniture and shop every piece — all in one place.
+              </p>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => base44.auth.redirectToLogin(createPageUrl("Studio"))}
+                  className="w-full bg-gradient-to-r from-violet-500 to-pink-500 text-white font-semibold py-3.5 rounded-2xl hover:opacity-90 transition-opacity text-sm"
+                >
+                  Sign up — it's free
+                </button>
+                <button
+                  onClick={() => base44.auth.redirectToLogin(createPageUrl("Studio"))}
+                  className="w-full bg-white/5 border border-white/10 text-white/70 font-medium py-3.5 rounded-2xl hover:bg-white/10 transition-all text-sm"
+                >
+                  Sign in to existing account
+                </button>
+              </div>
+
+              <p className="text-white/25 text-xs mt-6">No credit card required. Free to use.</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
