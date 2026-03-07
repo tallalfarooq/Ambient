@@ -46,6 +46,22 @@ const styles = [
 ];
 
 export default function Home() {
+  const [user, setUser] = useState(undefined);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => setUser(null));
+  }, []);
+
+  const handleStartDesigning = () => {
+    if (user) {
+      navigate(createPageUrl("Studio"));
+    } else {
+      setShowAuthModal(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0A0A0B] text-white overflow-hidden">
       {/* Hero */}
