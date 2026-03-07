@@ -1,10 +1,11 @@
 import { useState, useEffect, createContext } from "react";
-
-const ConsentContext = createContext(null);
 import { Link } from "react-router-dom";
+import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
 import { Sparkles, Home, BookImage, LogIn, LogOut, User } from "lucide-react";
 import CookieBanner from "@/components/consent/CookieBanner";
+
+export const ConsentContext = createContext(null);
 
 const NAV = [
   { label: "Home", page: "Home", icon: Home },
