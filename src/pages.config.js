@@ -53,6 +53,7 @@ import Design from './pages/Design';
 import Impressum from './pages/Impressum';
 import Projects from './pages/Projects';
 import Studio from './pages/Studio';
+import Home from './pages/Home';
 import __Layout from './Layout.jsx';
 
 
@@ -63,6 +64,7 @@ export const PAGES = {
     "Impressum": Impressum,
     "Projects": Projects,
     "Studio": Studio,
+    "Home": Home,
 }
 
 export const pagesConfig = {
