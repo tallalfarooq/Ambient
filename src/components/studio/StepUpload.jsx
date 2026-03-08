@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Upload, Image as ImageIcon, Box, Loader2 } from "lucide-react";
+import ScaleCalibrator from "./ScaleCalibrator";
 
 export default function StepUpload({ data, update, onNext }) {
   const [uploading, setUploading] = useState(false);
