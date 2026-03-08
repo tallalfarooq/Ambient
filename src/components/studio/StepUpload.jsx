@@ -80,11 +80,20 @@ export default function StepUpload({ data, update, onNext }) {
         />
       )}
 
-      {/* Or type labels */}
-      <div className="flex gap-3 mt-4">
-        <div className="flex items-center gap-2 bg-white/4 border border-white/8 rounded-xl px-4 py-2.5 text-xs text-white/50">
-          <ImageIcon className="w-3.5 h-3.5" /> Room photo
-        </div>
+      {/* Action chips */}
+      <div className="flex gap-3 mt-4 flex-wrap">
+        <button
+          onClick={() => fileRef.current.click()}
+          className="flex items-center gap-2 bg-white/4 border border-white/8 hover:border-white/20 hover:bg-white/7 rounded-xl px-4 py-2.5 text-xs text-white/50 hover:text-white/70 transition-all"
+        >
+          <ImageIcon className="w-3.5 h-3.5" /> Upload photo
+        </button>
+        <button
+          onClick={() => cameraRef.current.click()}
+          className="flex items-center gap-2 bg-violet-500/10 border border-violet-500/25 hover:bg-violet-500/20 rounded-xl px-4 py-2.5 text-xs text-violet-300 hover:text-violet-200 transition-all"
+        >
+          <Camera className="w-3.5 h-3.5" /> Take a photo
+        </button>
         <div className="flex items-center gap-2 bg-white/4 border border-white/8 rounded-xl px-4 py-2.5 text-xs text-white/50">
           <Box className="w-3.5 h-3.5" /> 3D scan file
         </div>
