@@ -6,7 +6,8 @@ import ScaleCalibrator from "./ScaleCalibrator";
 export default function StepUpload({ data, update, onNext }) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(data.room_image_url);
-  const fileRef = useRef();
+  const fileRef   = useRef();
+  const cameraRef = useRef();
 
   const handleFile = async (file) => {
     if (!file) return;
