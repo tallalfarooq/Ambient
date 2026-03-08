@@ -46,6 +46,15 @@ export default function StepUpload({ data, update, onNext }) {
           accept="image/*,.obj,.gltf,.glb"
           onChange={(e) => handleFile(e.target.files[0])}
         />
+        {/* Camera capture input — opens rear camera on mobile */}
+        <input
+          ref={cameraRef}
+          type="file"
+          className="hidden"
+          accept="image/*"
+          capture="environment"
+          onChange={(e) => handleFile(e.target.files[0])}
+        />
 
         {uploading ? (
           <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
