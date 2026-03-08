@@ -5,7 +5,6 @@ export default function HeroSlider() {
   const [dragging, setDragging] = useState(false);
   const ref = useRef(null);
 
-  // Intro animation: slide 100 → 50 on mount
   useEffect(() => {
     let raf;
     let p = 100;
@@ -54,15 +53,14 @@ export default function HeroSlider() {
         onTouchMove={(e) => { if (dragging) update(e.touches[0].clientX); }}
         onTouchEnd={() => setDragging(false)}
       >
-        {/* BEFORE — dark room */}
+        {/* BEFORE */}
         <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, #1a1208 0%, #2a1e10 40%, #1e1808 100%)" }}>
           <div className="absolute" style={{ bottom: "15%", left: "10%", width: "55%", height: "25%", background: "linear-gradient(180deg, #3d2e1e, #2a1f10)", borderRadius: "6px 6px 0 0" }} />
           <div className="absolute" style={{ bottom: "38%", left: "12%", width: "20%", height: "30%", background: "linear-gradient(180deg, #4a3520, #352515)", borderRadius: 4 }} />
-          <div className="absolute" style={{ top: "5%", right: "8%", width: "28%", height: "48%", background: "rgba(200,160,80,0.06)", border: "1px solid rgba(200,160,80,0.12)", borderRadius: 2 }} />
           <div className="absolute bottom-0 left-0 right-0" style={{ height: "14%", background: "linear-gradient(0deg, #0d0a05, transparent)" }} />
         </div>
 
-        {/* AFTER — Japandi room */}
+        {/* AFTER */}
         <div
           className="absolute inset-0"
           style={{
@@ -70,18 +68,10 @@ export default function HeroSlider() {
             clipPath: `polygon(${pos}% 0%, 100% 0%, 100% 100%, ${pos}% 100%)`,
           }}
         >
-          {/* Wall panel */}
           <div className="absolute right-0 top-0 bottom-0" style={{ width: "38%", background: "linear-gradient(180deg, #e8dcc8, #d8ccb8)" }} />
-          {/* Sofa */}
           <div className="absolute" style={{ bottom: "12%", left: "8%", width: "58%", height: "22%", background: "linear-gradient(180deg, #d4c4a8, #c4b490)", borderRadius: "4px 4px 0 0" }} />
-          {/* Side table */}
           <div className="absolute" style={{ bottom: "32%", left: "11%", width: "10%", height: "18%", background: "linear-gradient(180deg, #b8a888, #a89878)", borderRadius: 2 }} />
-          {/* Floor lamp */}
           <div className="absolute" style={{ bottom: "10%", right: "32%", width: "2%", height: "48%", background: "#c8b898", borderRadius: 100 }} />
-          <div className="absolute" style={{ bottom: "56%", right: "30%", width: "6%", height: "6%", background: "#e0c888", borderRadius: "50% 50% 0 0" }} />
-          {/* Window */}
-          <div className="absolute" style={{ top: "6%", right: "9%", width: "22%", height: "48%", background: "rgba(200,220,255,0.25)", border: "2px solid rgba(180,160,130,0.35)", borderRadius: 2 }} />
-          {/* Floor */}
           <div className="absolute bottom-0 left-0 right-0" style={{ height: "12%", background: "#c8b898" }} />
         </div>
 
@@ -90,10 +80,7 @@ export default function HeroSlider() {
           className="absolute top-0 bottom-0 flex items-center justify-center pointer-events-none"
           style={{ left: `${pos}%`, transform: "translateX(-50%)", width: 2, background: "rgba(255,255,255,0.9)", boxShadow: "0 0 16px rgba(255,255,255,0.6)" }}
         >
-          <div
-            className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-xl text-sm font-bold flex-shrink-0"
-            style={{ color: "#555", boxShadow: "0 4px 16px rgba(0,0,0,0.3)" }}
-          >
+          <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-xl text-sm font-bold flex-shrink-0" style={{ color: "#555", boxShadow: "0 4px 16px rgba(0,0,0,0.3)" }}>
             ⇔
           </div>
         </div>
