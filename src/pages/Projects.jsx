@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -7,10 +7,10 @@ import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 
 const STATUS_CONFIG = {
-  draft:      { label: "Draft",      color: "text-white/40 bg-white/5 border-white/10" },
-  generating: { label: "Generating", color: "text-violet-400 bg-violet-500/10 border-violet-500/20" },
+  draft:      { label: "Draft",      color: "text-white/40 bg-white/5 border-white/10"                 },
+  generating: { label: "Generating", color: "text-violet-400 bg-violet-500/10 border-violet-500/20"    },
   ready:      { label: "Ready",      color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
-  shopping:   { label: "Shopping",   color: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
+  shopping:   { label: "Shopping",   color: "text-amber-400 bg-amber-500/10 border-amber-500/20"       },
 };
 
 function DesignCard({ design, onDelete, deleting }) {
@@ -20,15 +20,18 @@ function DesignCard({ design, onDelete, deleting }) {
   const handleDownload = async () => {
     if (!design.generated_render_url) return;
     setDownloading(true);
-    const res = await fetch(design.generated_render_url);
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${design.name.replace(/\s+/g, "-").toLowerCase()}-render.jpg`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setDownloading(false);
+    try {
+      const res = await fetch(design.generated_render_url);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${design.name.replace(/\s+/g, "-").toLowerCase()}-render.jpg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -37,7 +40,6 @@ function DesignCard({ design, onDelete, deleting }) {
       animate={{ opacity: 1, y: 0 }}
       className="group bg-white/3 border border-white/8 rounded-3xl overflow-hidden hover:border-white/15 transition-all duration-300"
     >
-      {/* Thumbnail */}
       <div className="relative w-full aspect-video bg-white/5 overflow-hidden">
         {design.generated_render_url ? (
           <img src={design.generated_render_url} alt={design.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -49,42 +51,49 @@ function DesignCard({ design, onDelete, deleting }) {
           </div>
         )}
 
-        {/* Overlay actions */}
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-          <Link
-            to={createPageUrl(`Design?id=${design.id}`)}
-            className="flex items-center gap-1.5 bg-white text-black font-semibold px-4 py-2 rounded-xl text-xs hover:bg-white/90 transition-colors"
-          >
-            <ShoppingBag className="w-3.5 h-3.5" /> Shop
-          </Link>
-          <Link
-            to={createPageUrl("Studio")}
-            className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white font-medium px-4 py-2 rounded-xl text-xs hover:bg-white/25 transition-colors"
-          >
-            <Pencil className="w-3.5 h-3.5" /> Redesign
-          </Link>
-        </div>
+        {design.status === "generating" && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
+            <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
+            <p className="text-xs text-violet-300 font-medium">Generating…</p>
+          </div>
+        )}
 
-        {/* Status badge */}
+        {design.status !== "generating" && (
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+            <Link
+              to={createPageUrl(`Design`) + `?id=${design.id}`}
+              className="flex items-center gap-1.5 bg-white text-black font-semibold px-4 py-2 rounded-xl text-xs hover:bg-white/90 transition-colors"
+            >
+              <ShoppingBag className="w-3.5 h-3.5" /> Shop
+            </Link>
+            <Link
+              to={createPageUrl("Studio")}
+              className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white font-medium px-4 py-2 rounded-xl text-xs hover:bg-white/25 transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" /> Redesign
+            </Link>
+          </div>
+        )}
+
         <div className="absolute top-3 left-3">
           <span className={`text-xs px-2.5 py-1 rounded-full border font-medium backdrop-blur-sm ${status.color}`}>
             {status.label}
           </span>
         </div>
 
-        {/* Download button */}
         {design.generated_render_url && (
           <button
             onClick={handleDownload}
             disabled={downloading}
-            className="absolute top-3 right-3 w-8 h-8 rounded-xl bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-black/70 transition-all opacity-0 group-hover:opacity-100"
+            className="absolute top-3 right-3 w-8 h-8 rounded-xl bg-black/50 backdrop-blur-sm border border-white/10
+                       flex items-center justify-center text-white/60 hover:text-white hover:bg-black/70
+                       transition-all opacity-0 group-hover:opacity-100"
           >
             {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
           </button>
         )}
       </div>
 
-      {/* Info */}
       <div className="p-4">
         <div className="flex items-start justify-between gap-2 mb-2">
           <h3 className="font-semibold text-sm text-white truncate">{design.name}</h3>
@@ -97,7 +106,6 @@ function DesignCard({ design, onDelete, deleting }) {
           </button>
         </div>
 
-        {/* Tags */}
         <div className="flex flex-wrap gap-1.5 mb-3">
           {design.style && (
             <span className="text-xs bg-violet-500/10 border border-violet-500/20 text-violet-300 px-2 py-0.5 rounded-full">
@@ -130,30 +138,41 @@ function DesignCard({ design, onDelete, deleting }) {
 }
 
 export default function Projects() {
-  const [designs, setDesigns] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [designs,  setDesigns]  = useState([]);
+  const [loading,  setLoading]  = useState(true);
   const [deleting, setDeleting] = useState(null);
 
-  useEffect(() => { load(); }, []);
-
-  const load = async () => {
-    setLoading(true);
+  const load = useCallback(async () => {
     const data = await base44.entities.RoomDesign.list("-created_date", 50);
     setDesigns(data);
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const hasGenerating = designs.some((d) => d.status === "generating");
+    if (!hasGenerating) return;
+    const timer = setInterval(load, 4000);
+    return () => clearInterval(timer);
+  }, [designs, load]);
 
   const handleDelete = async (id) => {
+    if (!window.confirm("Delete this design? This cannot be undone.")) return;
     setDeleting(id);
-    await base44.entities.RoomDesign.delete(id);
-    setDesigns((prev) => prev.filter((d) => d.id !== id));
-    setDeleting(null);
+    try {
+      await base44.entities.RoomDesign.delete(id);
+      setDesigns((prev) => prev.filter((d) => d.id !== id));
+    } catch {
+      alert("Couldn't delete. Please try again.");
+    } finally {
+      setDeleting(null);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#0A0A0B] text-white px-4 py-12">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="flex items-center justify-between mb-10">
           <div>
             <h1 className="text-2xl font-bold">My Projects</h1>
@@ -186,13 +205,8 @@ export default function Projects() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {designs.map((design, i) => (
-              <DesignCard
-                key={design.id}
-                design={design}
-                onDelete={handleDelete}
-                deleting={deleting === design.id}
-              />
+            {designs.map((design) => (
+              <DesignCard key={design.id} design={design} onDelete={handleDelete} deleting={deleting === design.id} />
             ))}
           </div>
         )}

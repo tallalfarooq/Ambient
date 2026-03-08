@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { ArrowRight, Scan, Sparkles, ShoppingBag, Recycle, X } from "lucide-react";
+import { ArrowRight, Sparkles, ShoppingBag, Recycle, X, Upload } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
 
 const features = [
   {
-    icon: Scan,
-    title: "3D Room Capture",
-    desc: "Upload your Magicplan scan or a simple room photo to create your digital twin.",
+    icon: Upload,
+    title: "Upload Your Room",
+    desc: "Take a photo of any room and upload it — bedroom, living room, kitchen, home office.",
     color: "from-violet-500/10 to-purple-500/10",
     iconColor: "text-violet-500",
   },
@@ -23,7 +23,7 @@ const features = [
   {
     icon: ShoppingBag,
     title: "Visual Match Shopping",
-    desc: "Every AI-generated piece is matched to real Amazon, IKEA & eBay listings by visual similarity.",
+    desc: "Every AI-generated piece is matched to real Amazon listings by visual similarity and budget.",
     color: "from-emerald-500/10 to-teal-500/10",
     iconColor: "text-emerald-500",
   },
@@ -37,12 +37,12 @@ const features = [
 ];
 
 const styles = [
-  { name: "Japandi", emoji: "🪴", desc: "Calm. Natural. Intentional." },
-  { name: "Industrial", emoji: "⚙️", desc: "Raw. Bold. Unfinished." },
-  { name: "Boho", emoji: "🌿", desc: "Layered. Textured. Wanderlust." },
-  { name: "Modern Minimal", emoji: "◻️", desc: "Clean. Purposeful. Airy." },
-  { name: "Cottagecore", emoji: "🌸", desc: "Soft. Nostalgic. Cozy." },
-  { name: "Mid-Century Modern", emoji: "🪑", desc: "Iconic. Warm. Timeless." },
+  { name: "Japandi",            emoji: "🪴", desc: "Calm. Natural. Intentional."   },
+  { name: "Industrial",         emoji: "⚙️", desc: "Raw. Bold. Unfinished."         },
+  { name: "Boho",               emoji: "🌿", desc: "Layered. Textured. Wanderlust." },
+  { name: "Modern Minimal",     emoji: "◻️", desc: "Clean. Purposeful. Airy."      },
+  { name: "Cottagecore",        emoji: "🌸", desc: "Soft. Nostalgic. Cozy."         },
+  { name: "Mid-Century Modern", emoji: "🪑", desc: "Iconic. Warm. Timeless."        },
 ];
 
 export default function Home() {
@@ -66,7 +66,6 @@ export default function Home() {
     <div className="min-h-screen bg-[#0A0A0B] text-white overflow-hidden">
       {/* Hero */}
       <section className="relative flex flex-col items-center justify-center min-h-screen px-6 text-center">
-        {/* Background glow */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-violet-600/10 rounded-full blur-[120px]" />
           <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-amber-500/8 rounded-full blur-[100px]" />
@@ -80,7 +79,7 @@ export default function Home() {
         >
           <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-sm text-white/60 mb-8">
             <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-            Powered by Stable Diffusion 3 Medium
+            Powered by Stable Diffusion
           </div>
 
           <h1 className="text-5xl sm:text-7xl font-bold leading-[1.05] tracking-tight mb-6">
@@ -91,8 +90,7 @@ export default function Home() {
           </h1>
 
           <p className="text-lg sm:text-xl text-white/50 max-w-2xl mx-auto leading-relaxed mb-10">
-            Scan your room. Pick a style. Watch AI design it — then shop every
-            piece from Amazon, IKEA, or thrift stores in one click.
+            Upload a photo. Pick a style. Watch AI redesign it — then shop every piece from Amazon in one click.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -112,7 +110,6 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Scroll hint */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -126,9 +123,7 @@ export default function Home() {
       {/* Features */}
       <section className="px-6 py-24 max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Scan. Design. Shop.
-          </h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Upload. Design. Shop.</h2>
           <p className="text-white/40 text-lg">The entire interior design pipeline, condensed.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -155,7 +150,7 @@ export default function Home() {
       <section className="px-6 py-24 bg-white/[0.02] border-t border-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">6 design worlds to explore</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">8 design worlds to explore</h2>
             <p className="text-white/40">Each style is a fully trained LoRA model.</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -187,7 +182,8 @@ export default function Home() {
         >
           <h2 className="text-3xl sm:text-5xl font-bold mb-6 leading-tight">
             From "I like this room" to{" "}
-            <span className="text-violet-400">everything in my cart</span> — in 5 minutes.
+            <span className="text-violet-400">everything in my cart</span>
+            {" "}— in 5 minutes.
           </h2>
           <button
             onClick={handleStartDesigning}
@@ -222,16 +218,13 @@ export default function Home() {
               >
                 <X className="w-5 h-5" />
               </button>
-
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center mx-auto mb-6">
                 <Sparkles className="w-7 h-7 text-white" />
               </div>
-
               <h2 className="text-xl font-bold mb-2">Start designing for free</h2>
               <p className="text-white/45 text-sm mb-8 leading-relaxed">
                 Create a free account to generate AI room designs, detect furniture and shop every piece — all in one place.
               </p>
-
               <div className="flex flex-col gap-3">
                 <button
                   onClick={() => base44.auth.redirectToLogin(window.location.origin + createPageUrl("Studio"))}
@@ -246,7 +239,6 @@ export default function Home() {
                   Sign in to existing account
                 </button>
               </div>
-
               <p className="text-white/25 text-xs mt-6">No credit card required. Free to use.</p>
             </motion.div>
           </motion.div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -7,62 +7,123 @@ import { motion, AnimatePresence } from "framer-motion";
 import FurnitureMatchCard from "@/components/design/FurnitureMatchCard";
 import CartDrawer from "@/components/design/CartDrawer";
 
+function BeforeAfterSlider({ before, after }) {
+  const [pos, setPos] = useState(50);
+  const [dragging, setDragging] = useState(false);
+  const containerRef = useRef(null);
+
+  const clamp = (v) => Math.max(0, Math.min(100, v));
+  const updateFromClientX = useCallback((clientX) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setPos(clamp(((clientX - rect.left) / rect.width) * 100));
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative w-full select-none cursor-ew-resize"
+      onMouseDown={(e)  => { setDragging(true);  updateFromClientX(e.clientX); }}
+      onMouseMove={(e)  => { if (dragging) updateFromClientX(e.clientX); }}
+      onMouseUp={()     => setDragging(false)}
+      onMouseLeave={()  => setDragging(false)}
+      onTouchStart={(e) => { setDragging(true);  updateFromClientX(e.touches[0].clientX); }}
+      onTouchMove={(e)  => { if (dragging) updateFromClientX(e.touches[0].clientX); }}
+      onTouchEnd={()    => setDragging(false)}
+    >
+      <img src={after} alt="After" draggable={false} className="w-full h-auto block pointer-events-none" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ width: `${pos}%` }}>
+        <img
+          src={before}
+          alt="Before"
+          draggable={false}
+          className="absolute inset-0 h-full object-cover pointer-events-none"
+          style={{ width: containerRef.current?.offsetWidth ?? "100%" }}
+        />
+      </div>
+      <div
+        className="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_10px_rgba(255,255,255,0.7)] pointer-events-none"
+        style={{ left: `${pos}%`, transform: "translateX(-50%)" }}
+      >
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white shadow-xl flex items-center justify-center pointer-events-none">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2.5">
+            <path d="M8 9l-4 3 4 3M16 9l4 3-4 3" />
+          </svg>
+        </div>
+      </div>
+      <span className="absolute top-3 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-white/70 pointer-events-none">Before</span>
+      <span className="absolute top-3 right-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-600/80 backdrop-blur-sm text-white pointer-events-none">After ✦</span>
+    </div>
+  );
+}
+
 export default function Design() {
-  const params = new URLSearchParams(window.location.search);
+  const params   = new URLSearchParams(window.location.search);
   const designId = params.get("id");
 
-  const [design, setDesign] = useState(null);
-  const [items, setItems] = useState([]);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [detecting, setDetecting] = useState(false);
-  const [user, setUser] = useState(null);
+  const [design,          setDesign]          = useState(null);
+  const [items,           setItems]           = useState([]);
+  const [selectedItem,    setSelectedItem]    = useState(null);
+  const [loading,         setLoading]         = useState(true);
+  const [detecting,       setDetecting]       = useState(false);
+  const [user,            setUser]            = useState(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
+  const [cartOpen,        setCartOpen]        = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => setUser(null));
   }, []);
 
-  useEffect(() => {
+  const loadDesign = useCallback(async () => {
     if (!designId) return;
-    loadDesign();
-  }, [designId]);
-
-  const loadDesign = async () => {
-    setLoading(true);
     const d = await base44.entities.RoomDesign.filter({ id: designId });
     if (d.length) setDesign(d[0]);
     const existing = await base44.entities.FurnitureItem.filter({ design_id: designId });
     setItems(existing);
     setLoading(false);
-  };
+  }, [designId]);
+
+  useEffect(() => { loadDesign(); }, [loadDesign]);
+
+  useEffect(() => {
+    if (!design || design.status !== "generating") return;
+    const timer = setInterval(async () => {
+      const d = await base44.entities.RoomDesign.filter({ id: designId });
+      if (d.length) {
+        setDesign(d[0]);
+        if (d[0].status !== "generating") clearInterval(timer);
+      }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [design?.status, designId]);
 
   const detectItems = async () => {
     if (!design) return;
     setDetecting(true);
-    // Step 1: Ask the LLM to identify items + generate search queries
+
     const tier = design.budget_tier || "mid";
     const tierKeywords = {
-      budget:  { hint: "günstig preiswert unter 50 Euro", sort: "preiswertest" },
-      mid:     { hint: "gutes Preis-Leistungs-Verhältnis Qualität", sort: "Bestseller" },
-      premium: { hint: "Premium Design hochwertig", sort: "hochwertig" },
-      luxury:  { hint: "Luxus exklusiv Designer High-End", sort: "exklusiv teuer" },
+      budget:  { hint: "günstig preiswert unter 50 Euro" },
+      mid:     { hint: "gutes Preis-Leistungs-Verhältnis Qualität" },
+      premium: { hint: "Premium Design hochwertig" },
+      luxury:  { hint: "Luxus exklusiv Designer High-End" },
     };
     const { hint: budgetHint } = tierKeywords[tier];
 
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are an Amazon.de product search expert analyzing an AI-generated interior design render in the ${design.style} style.
 Budget: €${design.budget_min ?? 0}–€${design.budget_max ?? 5000} (tier: ${tier}).
-
-TASK: Identify 8-12 distinct furniture or decor items visible in this room render.
-
-For each item provide:
+TASK: Identify 8-12 distinct furniture or decor items visible in this room render. For each item provide:
 - label: descriptive name in English (e.g. "Low Linen Sofa", "Rattan Pendant Light")
 - style_tags: 2-3 English style tags (e.g. ["minimalist", "natural wood", "japandi"])
 - position_x, position_y: percentage position on the image (0-100) where the item appears
-- search_query: a precise GERMAN Amazon.de search query (4-6 words) that will return real buyable products. Be specific about material, style and colour. CRITICAL: The budget tier is "${tier}" — your query MUST include these German keywords to pull the right price range: "${budgetHint}". Examples for this tier: ${tier === 'budget' ? '"Teppich Wohnzimmer günstig", "Stehlampe günstig preiswert"' : tier === 'mid' ? '"Stehlampe Wohnzimmer modern Qualität", "Sofa Stoff grau Bestseller"' : tier === 'premium' ? '"Designer Stehlampe Premium schwarz", "Sofa hochwertig Leder modern"' : '"Luxus Sofa Leder Designer exklusiv", "Stehlampe High-End exklusiv"'}.
-
+- search_query: a precise GERMAN Amazon.de search query (4-6 words) that will return real buyable products. Be specific about material, style and colour.
+CRITICAL: The budget tier is "${tier}" — your query MUST include these German keywords: "${budgetHint}".
+Examples for this tier: ${
+  tier === "budget"  ? '"Teppich Wohnzimmer günstig", "Stehlampe günstig preiswert"' :
+  tier === "mid"     ? '"Stehlampe Wohnzimmer modern Qualität", "Sofa Stoff grau Bestseller"' :
+  tier === "premium" ? '"Designer Stehlampe Premium schwarz", "Sofa hochwertig Leder modern"' :
+                       '"Luxus Sofa Leder Designer exklusiv", "Stehlampe High-End exklusiv"'}.
 ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand options where possible." : ""}`,
       file_urls: [design.generated_render_url].filter(Boolean),
       response_json_schema: {
@@ -73,41 +134,38 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
             items: {
               type: "object",
               properties: {
-                label: { type: "string" },
-                style_tags: { type: "array", items: { type: "string" } },
-                position_x: { type: "number" },
-                position_y: { type: "number" },
-                search_query: { type: "string" }
-              }
-            }
-          }
-        }
-      }
+                label:        { type: "string" },
+                style_tags:   { type: "array", items: { type: "string" } },
+                position_x:   { type: "number" },
+                position_y:   { type: "number" },
+                search_query: { type: "string" },
+              },
+            },
+          },
+        },
+      },
     });
 
-    // Step 2: For each item, fetch real Amazon.de products via SerpAPI
     const itemsWithMatches = await Promise.all(
       (result.items || []).map(async (item) => {
         let matches = [];
         try {
-          const res = await base44.functions.invoke('getAmazonProducts', {
-            query: item.search_query || item.label,
-            limit: 3,
+          const res = await base44.functions.invoke("getAmazonProducts", {
+            query:       item.search_query || item.label,
+            limit:       3,
             budget_tier: tier,
-            budget_max: design.budget_max
+            budget_max:  design.budget_max,
           });
           matches = res.data?.matches || [];
         } catch (_) {}
 
-        // Fallback if SerpAPI returns nothing
         if (matches.length === 0) {
           const query = encodeURIComponent(item.search_query || item.label);
           matches = [
-            { title: `${item.label}`, price: null, image_url: null, source: "Amazon", url: `https://www.amazon.de/s?k=${query}&tag=ambient019-21&linkCode=ur2`, is_preloved: false, similarity_score: 0.5 },
-            { title: `${item.label}`, price: null, image_url: null, source: "IKEA", url: `https://www.ikea.com/de/de/search/?q=${query}`, is_preloved: false, similarity_score: 0.4 },
+            { title: item.label, price: null, image_url: null, source: "Amazon", url: `https://www.amazon.de/s?k=${query}&tag=ambient019-21&linkCode=ur2`, is_preloved: false, similarity_score: 0.5 },
+            { title: item.label, price: null, image_url: null, source: "IKEA",   url: `https://www.ikea.com/de/de/search/?q=${query}`, is_preloved: false, similarity_score: 0.4 },
           ];
         }
-
         return { ...item, matches };
       })
     );
@@ -147,7 +205,9 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
           </Link>
           <div>
             <h1 className="font-semibold text-sm">{design.name}</h1>
-            <p className="text-white/35 text-xs">{design.style} · €{design.budget_min?.toLocaleString()}–€{design.budget_max?.toLocaleString()}</p>
+            <p className="text-white/35 text-xs">
+              {design.style} · €{design.budget_min?.toLocaleString()}–€{design.budget_max?.toLocaleString()}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -162,9 +222,9 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
           >
             <ShoppingCart className="w-3.5 h-3.5" />
             Cart
-            {items.filter(i => i.selected_match_index != null).length > 0 && (
+            {items.filter((i) => i.selected_match_index != null).length > 0 && (
               <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-violet-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                {items.filter(i => i.selected_match_index != null).length}
+                {items.filter((i) => i.selected_match_index != null).length}
               </span>
             )}
           </button>
@@ -175,14 +235,19 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
         {/* Render + hotspots */}
         <div className="lg:col-span-3">
           <div className="rounded-3xl overflow-hidden border border-white/10 bg-white/3">
-            {design.generated_render_url ? (
+            {design.status === "generating" ? (
+              <div className="h-80 flex flex-col items-center justify-center gap-4 text-white/40">
+                <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+                <p className="text-sm">Your design is being generated…</p>
+                <p className="text-xs text-white/25">This usually takes 30–60 seconds</p>
+              </div>
+            ) : design.generated_render_url ? (
               <div className="relative w-full">
-                <img
-                  src={design.generated_render_url}
-                  alt="Generated room"
-                  className="w-full h-auto block"
-                />
-                {/* Hotspot markers — positioned relative to the actual image */}
+                {design.room_image_url ? (
+                  <BeforeAfterSlider before={design.room_image_url} after={design.generated_render_url} />
+                ) : (
+                  <img src={design.generated_render_url} alt="Generated room" className="w-full h-auto block" />
+                )}
                 {items.map((item) => (
                   <button
                     key={item.id}
@@ -199,30 +264,21 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                 ))}
               </div>
             ) : (
-              <div className="h-80 flex items-center justify-center text-white/25">
-                No render yet
-              </div>
+              <div className="h-80 flex items-center justify-center text-white/25">No render yet</div>
             )}
           </div>
 
-          {/* Detect / Shop CTA */}
-          {design.generated_render_url && items.length === 0 && (
+          {design.generated_render_url && items.length === 0 && design.status !== "generating" && (
             <>
               <button
-                onClick={() => {
-                  if (!user) {
-                    setShowLoginPrompt(true);
-                  } else {
-                    detectItems();
-                  }
-                }}
+                onClick={() => { if (!user) { setShowLoginPrompt(true); } else { detectItems(); } }}
                 disabled={detecting}
                 className="mt-4 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-violet-500 to-pink-500 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 {detecting ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Detecting furniture…</>
                 ) : (
-                  <><Sparkles className="w-4 h-4" /> Detect & match furniture to shop</>
+                  <><Sparkles className="w-4 h-4" /> Detect &amp; match furniture to shop</>
                 )}
               </button>
 
@@ -277,44 +333,37 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
         <div className="lg:col-span-2">
           <AnimatePresence mode="wait">
             {selectedItem ? (
-              <motion.div
-                key={selectedItem.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-              >
-                <FurnitureMatchCard item={selectedItem} onItemUpdate={(updated) => {
-                  setItems((prev) => prev.map((i) => i.id === updated.id ? updated : i));
-                  setSelectedItem(updated);
-                }} onCartOpen={() => setCartOpen(true)} />
+              <motion.div key={selectedItem.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <FurnitureMatchCard
+                  item={selectedItem}
+                  onItemUpdate={(updated) => {
+                    setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+                    setSelectedItem(updated);
+                  }}
+                  onCartOpen={() => setCartOpen(true)}
+                />
               </motion.div>
             ) : (
-              <motion.div
-                key="empty"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="h-full flex flex-col items-center justify-center gap-4 text-center py-20"
-              >
+              <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center gap-4 text-center py-20">
                 <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center">
                   <ShoppingBag className="w-6 h-6 text-white/20" />
                 </div>
                 <p className="text-white/30 text-sm max-w-xs">
-                  {items.length > 0
-                    ? "Tap a pin on the render or a chip below to browse matches."
-                    : "Click 'Detect & match furniture' to start shopping."}
+                  {items.length > 0 ? "Tap a pin on the render or a chip below to browse matches." : "Click 'Detect & match furniture' to start shopping."}
                 </p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
+
       <CartDrawer
         isOpen={cartOpen}
         onClose={() => setCartOpen(false)}
         items={items}
         onRemove={async (itemId) => {
           await base44.entities.FurnitureItem.update(itemId, { selected_match_index: null });
-          setItems((prev) => prev.map((i) => i.id === itemId ? { ...i, selected_match_index: null } : i));
+          setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, selected_match_index: null } : i)));
           if (selectedItem?.id === itemId) setSelectedItem((s) => ({ ...s, selected_match_index: null }));
         }}
       />
