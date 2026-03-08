@@ -52,7 +52,6 @@ import Datenschutz from './pages/Datenschutz';
 import Design from './pages/Design';
 import Impressum from './pages/Impressum';
 import Projects from './pages/Projects';
-import Home from './pages/Home';
 import Studio from './pages/Studio';
 import __Layout from './Layout.jsx';
 
@@ -63,12 +62,11 @@ export const PAGES = {
     "Design": Design,
     "Impressum": Impressum,
     "Projects": Projects,
-    "Home": Home,
     "Studio": Studio,
 }
 
 export const pagesConfig = {
-    mainPage: "Home",
+    mainPage: "CatalogImport",
     Pages: PAGES,
     Layout: __Layout,
 };
