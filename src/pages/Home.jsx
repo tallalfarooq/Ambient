@@ -26,14 +26,38 @@ const STEPS = [
 ];
 
 const STYLES = [
-  { name: "Japandi",          desc: "Calm · Natural · Intentional",    badge: "Most Popular", bg: ["#f0ede6", "#c0b095"] },
-  { name: "Industrial",       desc: "Raw · Bold · Unfinished",         badge: "Bold & Raw",   bg: ["#2d2820", "#3a3020"] },
-  { name: "Boho",             desc: "Layered · Textured · Wanderlust", badge: "Wanderlust",   bg: ["#8b6040", "#d0a880"] },
-  { name: "Modern Minimal",   desc: "Clean · Purposeful · Airy",       badge: "Clean Lines",  bg: ["#e8e8e8", "#b0b0b0"] },
-  { name: "Cottagecore",      desc: "Soft · Nostalgic · Cozy",         badge: "Cozy",         bg: ["#7a9060", "#c8d8a8"] },
-  { name: "Mid-Century",      desc: "Iconic · Warm · Timeless",        badge: "Premium",      bg: ["#2a2010", "#4a4030"] },
-  { name: "Scandi",           desc: "Warm · Light · Functional",       badge: "Hygge",        bg: ["#f5f5f0", "#c8c8c0"] },
-  { name: "Art Deco",         desc: "Dramatic · Geometric · Opulent",  badge: "Avant-garde",  bg: ["#1a0a2a", "#501a60"] },
+  {
+    name: "Japandi", desc: "Calm · Natural · Intentional", badge: "Most Popular",
+    img: "https://images.unsplash.com/photo-1618221118493-9cfa1a1c00da?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    name: "Industrial", desc: "Raw · Bold · Unfinished", badge: "Bold & Raw",
+    img: "https://images.unsplash.com/photo-1600585152220-90363fe7e115?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    name: "Boho", desc: "Layered · Textured · Wanderlust", badge: "Wanderlust",
+    img: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    name: "Modern Minimal", desc: "Clean · Purposeful · Airy", badge: "Clean Lines",
+    img: "https://images.unsplash.com/photo-1560448204-603b3fc33ddc?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    name: "Cottagecore", desc: "Soft · Nostalgic · Cozy", badge: "Cozy",
+    img: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    name: "Mid-Century Modern", desc: "Iconic · Warm · Timeless", badge: "Premium",
+    img: "https://images.unsplash.com/photo-1556020685-ae41abfc9365?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    name: "Scandi", desc: "Warm · Light · Functional", badge: "Hygge",
+    img: "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=600&q=80",
+  },
+  {
+    name: "Art Deco", desc: "Dramatic · Geometric · Opulent", badge: "Avant-garde",
+    img: "https://images.unsplash.com/photo-1567016432779-094069958ea5?auto=format&fit=crop&w=600&q=80",
+  },
 ];
 
 const TESTIMONIALS = [

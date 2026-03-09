@@ -50,10 +50,10 @@
 import CatalogImport from './pages/CatalogImport';
 import Datenschutz from './pages/Datenschutz';
 import Design from './pages/Design';
+import Home from './pages/Home';
 import Impressum from './pages/Impressum';
 import Projects from './pages/Projects';
 import Studio from './pages/Studio';
-import Home from './pages/Home';
 import __Layout from './Layout.jsx';
 
 
@@ -61,10 +61,10 @@ export const PAGES = {
     "CatalogImport": CatalogImport,
     "Datenschutz": Datenschutz,
     "Design": Design,
+    "Home": Home,
     "Impressum": Impressum,
     "Projects": Projects,
     "Studio": Studio,
-    "Home": Home,
 }
 
 export const pagesConfig = {
