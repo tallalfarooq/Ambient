@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
+const BEFORE_IMG = "https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1600&q=80";
+const AFTER_IMG  = "https://images.unsplash.com/photo-1618221118493-9cfa1a1c00da?auto=format&fit=crop&w=1600&q=80";
+
 export default function HeroSlider() {
   const [pos, setPos] = useState(100);
   const [dragging, setDragging] = useState(false);
@@ -44,6 +47,7 @@ export default function HeroSlider() {
           border: "1px solid rgba(255,255,255,0.08)",
           boxShadow: "0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(201,169,110,0.08)",
           cursor: "ew-resize",
+          background: "#1a1a1a",
         }}
         onMouseDown={(e) => { setDragging(true); update(e.clientX); }}
         onMouseMove={(e) => { if (dragging) update(e.clientX); }}
@@ -54,48 +58,58 @@ export default function HeroSlider() {
         onTouchEnd={() => setDragging(false)}
       >
         {/* BEFORE */}
-        <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, #1a1208 0%, #2a1e10 40%, #1e1808 100%)" }}>
-          <div className="absolute" style={{ bottom: "15%", left: "10%", width: "55%", height: "25%", background: "linear-gradient(180deg, #3d2e1e, #2a1f10)", borderRadius: "6px 6px 0 0" }} />
-          <div className="absolute" style={{ bottom: "38%", left: "12%", width: "20%", height: "30%", background: "linear-gradient(180deg, #4a3520, #352515)", borderRadius: 4 }} />
-          <div className="absolute bottom-0 left-0 right-0" style={{ height: "14%", background: "linear-gradient(0deg, #0d0a05, transparent)" }} />
-        </div>
+        <img
+          src={BEFORE_IMG}
+          alt="Before"
+          className="absolute inset-0 w-full h-full object-cover"
+          draggable={false}
+        />
 
-        {/* AFTER */}
+        {/* AFTER - clipped */}
         <div
           className="absolute inset-0"
-          style={{
-            background: "linear-gradient(160deg, #f5f0e8 0%, #ede5d8 40%, #e8ddd0 100%)",
-            clipPath: `polygon(${pos}% 0%, 100% 0%, 100% 100%, ${pos}% 100%)`,
-          }}
+          style={{ clipPath: `polygon(${pos}% 0%, 100% 0%, 100% 100%, ${pos}% 100%)` }}
         >
-          <div className="absolute right-0 top-0 bottom-0" style={{ width: "38%", background: "linear-gradient(180deg, #e8dcc8, #d8ccb8)" }} />
-          <div className="absolute" style={{ bottom: "12%", left: "8%", width: "58%", height: "22%", background: "linear-gradient(180deg, #d4c4a8, #c4b490)", borderRadius: "4px 4px 0 0" }} />
-          <div className="absolute" style={{ bottom: "32%", left: "11%", width: "10%", height: "18%", background: "linear-gradient(180deg, #b8a888, #a89878)", borderRadius: 2 }} />
-          <div className="absolute" style={{ bottom: "10%", right: "32%", width: "2%", height: "48%", background: "#c8b898", borderRadius: 100 }} />
-          <div className="absolute bottom-0 left-0 right-0" style={{ height: "12%", background: "#c8b898" }} />
+          <img
+            src={AFTER_IMG}
+            alt="After - Japandi"
+            className="w-full h-full object-cover"
+            draggable={false}
+          />
+          {/* subtle warm overlay on after side */}
+          <div className="absolute inset-0" style={{ background: "rgba(201,169,110,0.06)" }} />
         </div>
 
         {/* Drag handle */}
         <div
           className="absolute top-0 bottom-0 flex items-center justify-center pointer-events-none"
-          style={{ left: `${pos}%`, transform: "translateX(-50%)", width: 2, background: "rgba(255,255,255,0.9)", boxShadow: "0 0 16px rgba(255,255,255,0.6)" }}
+          style={{
+            left: `${pos}%`,
+            transform: "translateX(-50%)",
+            width: 2,
+            background: "rgba(255,255,255,0.92)",
+            boxShadow: "0 0 16px rgba(255,255,255,0.6)",
+          }}
         >
-          <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-xl text-sm font-bold flex-shrink-0" style={{ color: "#555", boxShadow: "0 4px 16px rgba(0,0,0,0.3)" }}>
+          <div
+            className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-xl text-sm font-bold flex-shrink-0"
+            style={{ color: "#555", boxShadow: "0 4px 20px rgba(0,0,0,0.4)", fontSize: 16 }}
+          >
             ⇔
           </div>
         </div>
 
         {/* Labels */}
-        <span className="absolute bottom-4 left-4 text-[11px] font-semibold px-3 py-1.5 rounded-full pointer-events-none" style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(10px)", color: "rgba(255,255,255,0.7)" }}>
+        <span className="absolute bottom-4 left-4 text-[11px] font-semibold px-3 py-1.5 rounded-full pointer-events-none" style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(10px)", color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.1)" }}>
           Before
         </span>
-        <span className="absolute bottom-4 right-4 text-[11px] font-semibold px-3 py-1.5 rounded-full pointer-events-none" style={{ background: "rgba(201,169,110,0.15)", border: "1px solid rgba(201,169,110,0.35)", color: "#c9a96e", backdropFilter: "blur(10px)" }}>
+        <span className="absolute bottom-4 right-4 text-[11px] font-semibold px-3 py-1.5 rounded-full pointer-events-none" style={{ background: "rgba(201,169,110,0.18)", border: "1px solid rgba(201,169,110,0.4)", color: "#c9a96e", backdropFilter: "blur(10px)" }}>
           Japandi ✦
         </span>
 
         {/* Floating card 1 */}
-        <div className="absolute hidden sm:flex items-center gap-3 p-3 rounded-2xl" style={{ top: "14%", right: "4%", background: "rgba(18,18,18,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.09)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", animation: "floatCard 5s ease-in-out infinite" }}>
-          <div className="w-10 h-10 rounded-xl flex-shrink-0" style={{ background: "linear-gradient(135deg, #d4c4a8, #b8a888)" }} />
+        <div className="absolute hidden sm:flex items-center gap-3 p-3 rounded-2xl" style={{ top: "14%", right: "4%", background: "rgba(14,14,14,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.09)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", animation: "floatCard 5s ease-in-out infinite" }}>
+          <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=80&h=80&q=70" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="Sofa" />
           <div>
             <div className="text-xs font-semibold text-white leading-tight">Muji Linen Sofa</div>
             <div className="text-[11px] font-bold mt-1" style={{ color: "#c9a96e" }}>$1,299</div>
@@ -104,8 +118,8 @@ export default function HeroSlider() {
         </div>
 
         {/* Floating card 2 */}
-        <div className="absolute hidden sm:flex items-center gap-3 p-3 rounded-2xl" style={{ bottom: "22%", right: "4%", background: "rgba(18,18,18,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.09)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", animation: "floatCard 5s ease-in-out infinite", animationDelay: "-2.5s" }}>
-          <div className="w-10 h-10 rounded-xl flex-shrink-0" style={{ background: "linear-gradient(135deg, #c8b88a, #a89868)" }} />
+        <div className="absolute hidden sm:flex items-center gap-3 p-3 rounded-2xl" style={{ bottom: "22%", right: "4%", background: "rgba(14,14,14,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.09)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", animation: "floatCard 5s ease-in-out infinite", animationDelay: "-2.5s" }}>
+          <img src="https://images.unsplash.com/photo-1513506003901-1e6a35c1e2df?auto=format&fit=crop&w=80&h=80&q=70" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="Lamp" />
           <div>
             <div className="text-xs font-semibold text-white leading-tight">Arc Floor Lamp</div>
             <div className="text-[11px] font-bold mt-1" style={{ color: "#c9a96e" }}>$380</div>
