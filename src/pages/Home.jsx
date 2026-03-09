@@ -118,14 +118,18 @@ function StyleCard({ s, i }) {
       className="relative rounded-3xl overflow-hidden cursor-pointer group"
       style={{ aspectRatio: "3/4", border: "1px solid rgba(255,255,255,0.07)" }}
     >
-      <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-105" style={{ background: `linear-gradient(160deg, ${s.bg[0]} 0%, ${s.bg[1]} 100%)` }} />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-opacity duration-300 opacity-70 group-hover:opacity-90" />
-      <span className="absolute top-4 right-4 text-[10px] font-bold tracking-widest uppercase px-2.5 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.18)", color: "#fff" }}>
+      <img
+        src={s.img}
+        alt={s.name}
+        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+      <span className="absolute top-4 right-4 text-[10px] font-bold tracking-widest uppercase px-2.5 py-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff" }}>
         {s.badge}
       </span>
       <div className="absolute bottom-0 left-0 right-0 p-5 translate-y-1 group-hover:translate-y-0 transition-transform duration-300">
         <div className="text-base font-bold text-white tracking-tight">{s.name}</div>
-        <div className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>{s.desc}</div>
+        <div className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.65)" }}>{s.desc}</div>
       </div>
     </motion.div>
   );
