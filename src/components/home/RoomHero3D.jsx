@@ -172,11 +172,6 @@ function RoomContents({ styleIndex }) {
         position={[-5, 5, 2]}
         intensity={1.1}
         color="#FFF5E4"
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-        shadow-camera-near={0.5}
-        shadow-camera-far={30}
       />
       <pointLight
         position={[-2.5, 1.85, -3.8]}
@@ -196,20 +191,19 @@ function RoomContents({ styleIndex }) {
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0, 0]}
-        receiveShadow
       >
         <planeGeometry args={[14, 14]} />
         <primitive object={mats.floor} attach="material" />
       </mesh>
 
       {/* Back wall */}
-      <mesh position={[0, 3, -6]} receiveShadow>
+      <mesh position={[0, 3, -6]}>
         <planeGeometry args={[14, 7]} />
         <primitive object={mats.wall} attach="material" />
       </mesh>
 
       {/* Left wall */}
-      <mesh position={[-6, 3, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
+      <mesh position={[-6, 3, 0]} rotation={[0, Math.PI / 2, 0]}>
         <planeGeometry args={[14, 7]} />
         <primitive object={mats.wall} attach="material" />
       </mesh>
@@ -230,7 +224,7 @@ function RoomContents({ styleIndex }) {
       </mesh>
 
       {/* Rug */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -3.2]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -3.2]}>
         <planeGeometry args={[3.6, 2.6]} />
         <primitive object={mats.rug} attach="material" />
       </mesh>
@@ -238,22 +232,22 @@ function RoomContents({ styleIndex }) {
       {/* Sofa */}
       <group position={[-0.3, 0, -4.4]}>
         {/* Seat */}
-        <mesh position={[0, 0.22, 0.32]} castShadow receiveShadow>
+        <mesh position={[0, 0.22, 0.32]}>
           <boxGeometry args={[2.6, 0.38, 1.1]} />
           <primitive object={mats.sofa} attach="material" />
         </mesh>
         {/* Back rest */}
-        <mesh position={[0, 0.74, -0.18]} castShadow>
+        <mesh position={[0, 0.74, -0.18]}>
           <boxGeometry args={[2.6, 0.82, 0.22]} />
           <primitive object={mats.sofa} attach="material" />
         </mesh>
         {/* Left arm */}
-        <mesh position={[-1.3, 0.44, 0.32]} castShadow>
+        <mesh position={[-1.3, 0.44, 0.32]}>
           <boxGeometry args={[0.22, 0.56, 1.1]} />
           <primitive object={mats.sofa} attach="material" />
         </mesh>
         {/* Right arm */}
-        <mesh position={[1.3, 0.44, 0.32]} castShadow>
+        <mesh position={[1.3, 0.44, 0.32]}>
           <boxGeometry args={[0.22, 0.56, 1.1]} />
           <primitive object={mats.sofa} attach="material" />
         </mesh>
@@ -278,7 +272,7 @@ function RoomContents({ styleIndex }) {
       {/* Coffee table */}
       <group position={[0, 0, -2.1]}>
         {/* Top */}
-        <mesh position={[0, 0.38, 0]} castShadow receiveShadow>
+        <mesh position={[0, 0.38, 0]}>
           <boxGeometry args={[1.4, 0.06, 0.75]} />
           <primitive object={mats.darkWood} attach="material" />
         </mesh>
@@ -289,7 +283,7 @@ function RoomContents({ styleIndex }) {
         </mesh>
         {/* Legs */}
         {tableLegs.map(([x, y, z], i) => (
-          <mesh key={i} position={[x, y, z]} castShadow>
+          <mesh key={i} position={[x, y, z]}>
             <cylinderGeometry args={[0.038, 0.038, 0.38, 8]} />
             <primitive object={mats.darkWood} attach="material" />
           </mesh>
@@ -322,7 +316,7 @@ function RoomContents({ styleIndex }) {
           <primitive object={mats.darkWood} attach="material" />
         </mesh>
         {/* Pole */}
-        <mesh position={[0, 0.97, 0]} castShadow>
+        <mesh position={[0, 0.97, 0]}>
           <cylinderGeometry args={[0.028, 0.028, 1.88, 8]} />
           <primitive object={mats.lampPole} attach="material" />
         </mesh>
@@ -349,7 +343,7 @@ function RoomContents({ styleIndex }) {
       {/* Plant */}
       <group position={[2.5, 0, -4.6]}>
         {/* Pot */}
-        <mesh position={[0, 0.2, 0]} castShadow>
+        <mesh position={[0, 0.2, 0]}>
           <cylinderGeometry args={[0.21, 0.17, 0.38, 12]} />
           <primitive object={mats.pot} attach="material" />
         </mesh>
@@ -393,7 +387,7 @@ function RoomContents({ styleIndex }) {
       {/* Wall art on back wall */}
       <group position={[1.6, 2.2, -5.93]}>
         {/* Frame */}
-        <mesh castShadow>
+        <mesh>
           <boxGeometry args={[1.6, 1.05, 0.06]} />
           <primitive object={mats.darkWood} attach="material" />
         </mesh>
@@ -432,9 +426,7 @@ export default function RoomHero3D() {
     <div className="w-full h-full relative">
       {/* 3D Canvas */}
       <Canvas
-        shadows
         camera={{ position: [5, 3.2, 5.5], fov: 48 }}
-        gl={{ antialias: true, alpha: true, preserveDrawingBuffer: false }}
         style={{ background: "transparent" }}
       >
         <CameraRig />
