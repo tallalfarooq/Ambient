@@ -24,21 +24,21 @@ export default function CookieBanner({ onConsent }) {
   const [expanded, setExpanded] = useState(false);
   const [prefs, setPrefs] = useState({ functional: false, marketing: false });
 
-  const acceptAll = async () => {
+  const acceptAll = () => {
     const p = { functional: true, marketing: true };
-    await logConsent("accept_all", p);
     onConsent({ necessary: true, ...p });
+    logConsent("accept_all", p).catch(() => {});
   };
 
-  const rejectAll = async () => {
+  const rejectAll = () => {
     const p = { functional: false, marketing: false };
-    await logConsent("reject_all", p);
     onConsent({ necessary: true, ...p });
+    logConsent("reject_all", p).catch(() => {});
   };
 
-  const saveCustom = async () => {
-    await logConsent("custom", prefs);
+  const saveCustom = () => {
     onConsent({ necessary: true, ...prefs });
+    logConsent("custom", prefs).catch(() => {});
   };
 
   return (
