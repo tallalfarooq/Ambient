@@ -4,7 +4,7 @@ import { createPageUrl } from "@/utils";
 import { X, Upload, Palette, ShoppingBag, Sparkles, ArrowRight, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
-import RoomHero3D from "@/components/home/RoomHero3D";
+import Room3DShowcase from "@/components/home/Room3DShowcase";
 import HeroSlider from "@/components/home/HeroSlider";
 
 /* ─── Data ──────────────────────────────────────────────────────────────── */
@@ -557,7 +557,7 @@ export default function Home() {
           className="hidden lg:block absolute right-0 top-0 bottom-0"
           style={{ width: "52%" }}
         >
-          <RoomHero3D />
+          <Room3DShowcase />
         </div>
       </section>
 
