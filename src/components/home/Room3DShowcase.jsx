@@ -30,7 +30,7 @@ function FurnitureItem({ position, geometry, color, delay = 0, scale = 1 }) {
   });
 
   return (
-    <mesh ref={meshRef} position={position} castShadow receiveShadow>
+    <mesh ref={meshRef} position={position}>
       {geometry}
       <meshStandardMaterial 
         color={color} 
@@ -74,9 +74,6 @@ function AnimatedLights({ colorIndex }) {
         angle={0.6}
         penumbra={0.5}
         intensity={1.5}
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
       />
       <pointLight
         ref={pointRef}
@@ -114,25 +111,25 @@ function RoomScene() {
       <AnimatedLights colorIndex={colorIndex} />
 
       {/* Floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[12, 12]} />
         <meshStandardMaterial color="#2D2218" roughness={0.9} />
       </mesh>
 
       {/* Back wall */}
-      <mesh position={[0, 3, -6]} receiveShadow>
+      <mesh position={[0, 3, -6]}>
         <planeGeometry args={[12, 6]} />
         <meshStandardMaterial color="#E8DFD0" roughness={0.95} />
       </mesh>
 
       {/* Left wall */}
-      <mesh position={[-6, 3, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
+      <mesh position={[-6, 3, 0]} rotation={[0, Math.PI / 2, 0]}>
         <planeGeometry args={[12, 6]} />
         <meshStandardMaterial color="#E8DFD0" roughness={0.95} />
       </mesh>
 
       {/* Right wall */}
-      <mesh position={[6, 3, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
+      <mesh position={[6, 3, 0]} rotation={[0, -Math.PI / 2, 0]}>
         <planeGeometry args={[12, 6]} />
         <meshStandardMaterial color="#E8DFD0" roughness={0.95} />
       </mesh>
@@ -255,7 +252,7 @@ function CameraRig() {
 export default function Room3DShowcase() {
   return (
     <div className="w-full h-full">
-      <Canvas shadows>
+      <Canvas>
         <PerspectiveCamera makeDefault position={[8, 4, 8]} fov={50} />
         <CameraRig />
         <RoomScene />
