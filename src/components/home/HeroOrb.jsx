@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Sphere, MeshDistortMaterial } from "@react-three/drei";
+import { Sphere } from "@react-three/drei";
 
 function AnimatedOrb() {
   const meshRef = useRef();
@@ -19,11 +19,8 @@ function AnimatedOrb() {
       <pointLight position={[-10, -10, -10]} intensity={0.5} color="#6B4FBB" />
       
       <Sphere ref={meshRef} args={[1, 64, 64]}>
-        <MeshDistortMaterial
+        <meshStandardMaterial
           color="#1D9E75"
-          attach="material"
-          distort={0.4}
-          speed={1.5}
           roughness={0.2}
           metalness={0.8}
         />
