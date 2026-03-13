@@ -12,19 +12,20 @@ function AnimatedOrb() {
   });
 
   return (
-    <>
+    <group>
       <ambientLight intensity={0.3} />
       <pointLight position={[10, 10, 10]} intensity={1} color="#1D9E75" />
       <pointLight position={[-10, -10, -10]} intensity={0.5} color="#6B4FBB" />
       
-      <Sphere ref={meshRef} args={[1, 64, 64]}>
+      <mesh ref={meshRef}>
+        <sphereGeometry args={[1, 64, 64]} />
         <meshStandardMaterial
           color="#1D9E75"
           roughness={0.2}
           metalness={0.8}
         />
-      </Sphere>
-    </>
+      </mesh>
+    </group>
   );
 }
 
