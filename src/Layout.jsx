@@ -2,7 +2,7 @@ import { useState, useEffect, createContext } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
-import { Sparkles, Home, BookImage, LogIn, LogOut, User } from "lucide-react";
+import { Volume2, Home, BookImage, LogIn, LogOut, User } from "lucide-react";
 import CookieBanner from "@/components/consent/CookieBanner";
 
 export const ConsentContext = createContext(null);
@@ -48,10 +48,10 @@ export default function Layout({ children, currentPageName }) {
         <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/6 bg-[#0A0A0B]/80 backdrop-blur-xl">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
             <Link to={createPageUrl("Home")} className="flex items-center gap-2 group">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center">
-                <Sparkles className="w-3.5 h-3.5 text-white" />
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-500 to-violet-600 flex items-center justify-center">
+                <Volume2 className="w-3.5 h-3.5 text-white" />
               </div>
-              <span className="font-bold text-white tracking-tight text-sm">Ambient</span>
+              <span className="font-bold text-white tracking-tight text-sm">AmbiVerse</span>
             </Link>
 
             <div className="flex items-center gap-1">
