@@ -2,7 +2,7 @@ import { useState, useEffect, createContext } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
-import { Volume2, Home, BookImage, LogIn, LogOut, User } from "lucide-react";
+import { Volume2, Home, BookImage, LogIn, LogOut, User, Sparkles } from "lucide-react";
 import CookieBanner from "@/components/consent/CookieBanner";
 
 export const ConsentContext = createContext(null);
