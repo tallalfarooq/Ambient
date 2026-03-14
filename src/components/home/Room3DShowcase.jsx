@@ -238,10 +238,8 @@ function Room() {
 
 export default function Room3DShowcase() {
   return (
-    <div className="w-full h-full">
-      <Canvas gl={{ antialias: true, alpha: false }}>
-        <color attach="background" args={[0x0A0A0B]} />
-        <fogExp2 attach="fog" args={[0x0A0A0B, 0.02]} />
+    <div className="w-full h-full" style={{ background: '#0A0A0B' }}>
+      <Canvas>
         <AnimatedCamera />
         <Room />
       </Canvas>
