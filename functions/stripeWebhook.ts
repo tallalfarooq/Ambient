@@ -4,7 +4,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
 
 Deno.serve(async (req) => {
-  const base44 = createClientFromRequest(req);
   const signature = req.headers.get('stripe-signature');
   const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
 
@@ -25,6 +24,16 @@ Deno.serve(async (req) => {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const userEmail = session.metadata.user_email;
+    const appId = session.metadata.base44_app_id;
+
+    // Create Base44 client with app ID from session metadata
+    const headers = new Headers(req.headers);
+    headers.set('Base44-App-Id', appId);
+    const modifiedReq = new Request(req.url, {
+      method: req.method,
+      headers: headers,
+    });
+    const base44 = createClientFromRequest(modifiedReq);
 
     try {
       const existingCredits = await base44.asServiceRole.entities.UserCredits.filter({
