@@ -273,7 +273,17 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-2">Generate your design</h2>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-2xl font-bold">Generate your design</h2>
+        {credits && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-violet-500/10 border border-violet-500/20">
+            <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+            <span className="text-sm font-semibold text-violet-400">
+              {credits.credits_remaining} {credits.credits_remaining === 1 ? 'credit' : 'credits'}
+            </span>
+          </div>
+        )}
+      </div>
       <p className="text-white/40 text-sm mb-6">
         Stable Diffusion will paint your room in the{" "}
         <strong className="text-white/70">{data.style}</strong> style.
