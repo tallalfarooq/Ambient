@@ -144,11 +144,31 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const refinedPromptRef = useRef(prompt);
   useEffect(() => { refinedPromptRef.current = prompt; }, [prompt]);
 
+  const handleBuyCredits = async () => {
+    if (!user) return;
+    setCheckingOut(true);
+    try {
+      const response = await base44.functions.invoke('createCheckout', {});
+      if (response.data?.url) {
+        window.location.href = response.data.url;
+      }
+    } catch (err) {
+      setError('Failed to start checkout. Please try again.');
+      setCheckingOut(false);
+    }
+  };
+
   const generate = async () => {
     if (!data.room_image_url) {
       setError("Please go back and upload a room photo first.");
       return;
     }
+
+    if (!credits || credits.credits_remaining <= 0) {
+      setError("You're out of credits. Purchase more to continue generating designs.");
+      return;
+    }
+
     setError(null);
     setLoading(true);
     setFeedback(null);
@@ -170,6 +190,11 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
 
       const url = result?.url || result;
       if (!url) throw new Error("No image returned. Please try again.");
+
+      await base44.entities.UserCredits.update(credits.id, {
+        credits_remaining: credits.credits_remaining - 1,
+      });
+      setCredits({ ...credits, credits_remaining: credits.credits_remaining - 1 });
 
       setProgress(100);
       setGenerated(url);
