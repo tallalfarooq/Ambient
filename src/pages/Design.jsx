@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Loader2, ShoppingBag, Sparkles, ArrowLeft, Recycle, Lock, ShoppingCart } from "lucide-react";
+import { Loader2, ShoppingBag, Sparkles, ArrowLeft, Recycle, Lock, ShoppingCart, Heart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import FurnitureMatchCard from "@/components/design/FurnitureMatchCard";
 import CartDrawer from "@/components/design/CartDrawer";
@@ -69,10 +69,40 @@ export default function Design() {
   const [user,            setUser]            = useState(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [cartOpen,        setCartOpen]        = useState(false);
+  const [isSaved,         setIsSaved]         = useState(false);
+  const [saving,          setSaving]          = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => setUser(null));
   }, []);
+
+  useEffect(() => {
+    if (!user || !designId) return;
+    base44.entities.SavedDesign.filter({ design_id: designId, user_email: user.email })
+      .then((saved) => setIsSaved(saved.length > 0))
+      .catch(() => {});
+  }, [user, designId]);
+
+  const toggleSave = async () => {
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
+    setSaving(true);
+    try {
+      if (isSaved) {
+        const saved = await base44.entities.SavedDesign.filter({ design_id: designId, user_email: user.email });
+        if (saved.length > 0) await base44.entities.SavedDesign.delete(saved[0].id);
+        setIsSaved(false);
+      } else {
+        await base44.entities.SavedDesign.create({ design_id: designId, user_email: user.email });
+        setIsSaved(true);
+      }
+    } catch (err) {
+      console.error('Save toggle failed:', err);
+    }
+    setSaving(false);
+  };
 
   const loadDesign = useCallback(async () => {
     if (!designId) return;
@@ -216,6 +246,18 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
               <Recycle className="w-3 h-3" /> Pre-Loved mode
             </div>
           )}
+          <button
+            onClick={toggleSave}
+            disabled={saving}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              isSaved
+                ? "bg-pink-500/20 border border-pink-500/40 text-pink-300"
+                : "bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20"
+            }`}
+          >
+            <Heart className={`w-3.5 h-3.5 ${isSaved ? "fill-current" : ""}`} />
+            {isSaved ? "Saved" : "Save"}
+          </button>
           <button
             onClick={() => setCartOpen(true)}
             className="relative flex items-center gap-1.5 bg-violet-500/15 border border-violet-500/30 hover:bg-violet-500/25 text-violet-300 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
