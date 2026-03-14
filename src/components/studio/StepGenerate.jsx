@@ -100,6 +100,9 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [error,        setError]        = useState(null);
   const [progress,     setProgress]     = useState(0);
   const [copied,       setCopied]       = useState(false);
+  const [credits,      setCredits]      = useState(null);
+  const [user,         setUser]         = useState(null);
+  const [checkingOut,  setCheckingOut]  = useState(false);
 
   useEffect(() => { setPrompt(buildPrompt(data)); }, [data.style, data.color_palette, data.vibes]);
 
