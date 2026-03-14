@@ -2,7 +2,7 @@ import { useState, useEffect, createContext } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
-import { Layers, Home, BookImage, LogIn, LogOut, User, Sparkles } from "lucide-react";
+import { Layers, Home, BookImage, LogIn, LogOut, User, Sparkles, Heart } from "lucide-react";
 import CookieBanner from "@/components/consent/CookieBanner";
 
 export const ConsentContext = createContext(null);
@@ -11,6 +11,7 @@ const NAV = [
   { label: "Home", page: "Home", icon: Home },
   { label: "Studio", page: "Studio", icon: Sparkles },
   { label: "My Designs", page: "Projects", icon: BookImage },
+  { label: "Favorites", page: "Favorites", icon: Heart },
 ];
 
 const CONSENT_KEY = "ambient_consent";
