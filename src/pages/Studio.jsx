@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Palette, Wallet, Sparkles, Check } from "lucide-react";
+import { toast } from "sonner";
 import StepUpload   from "@/components/studio/StepUpload";
 import StepStyle    from "@/components/studio/StepStyle";
 import StepBudget   from "@/components/studio/StepBudget";
@@ -39,6 +40,17 @@ export default function Studio() {
 
   const update    = (patch) => setData((d) => ({ ...d, ...patch }));
   const stepProps = { data, update, onNext: () => setStep((s) => s + 1), onBack: () => setStep((s) => s - 1) };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      toast.success('Payment successful! 10 credits added to your account.');
+      window.history.replaceState({}, '', '/Studio');
+    } else if (params.get('payment') === 'cancelled') {
+      toast.error('Payment cancelled.');
+      window.history.replaceState({}, '', '/Studio');
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0A0A0B] text-white overflow-x-hidden">

@@ -127,6 +127,11 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       }
     };
     fetchCredits();
+
+    // Refresh credits when returning from payment
+    const handleFocus = () => fetchCredits();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   useEffect(() => {
