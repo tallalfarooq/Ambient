@@ -107,6 +107,29 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   useEffect(() => { setPrompt(buildPrompt(data)); }, [data.style, data.color_palette, data.vibes]);
 
   useEffect(() => {
+    const fetchCredits = async () => {
+      try {
+        const currentUser = await base44.auth.me();
+        setUser(currentUser);
+        const userCredits = await base44.entities.UserCredits.filter({ user_email: currentUser.email });
+        if (userCredits.length > 0) {
+          setCredits(userCredits[0]);
+        } else {
+          const newCredits = await base44.entities.UserCredits.create({
+            user_email: currentUser.email,
+            credits_remaining: 1,
+            total_purchased: 0,
+          });
+          setCredits(newCredits);
+        }
+      } catch (err) {
+        console.error('Failed to fetch credits:', err);
+      }
+    };
+    fetchCredits();
+  }, []);
+
+  useEffect(() => {
     if (!loading) { setProgress(0); return; }
     setProgress(8);
     const t = setInterval(() => {
