@@ -144,6 +144,20 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const refinedPromptRef = useRef(prompt);
   useEffect(() => { refinedPromptRef.current = prompt; }, [prompt]);
 
+  const handleBuyCredits = async () => {
+    if (!user) return;
+    setCheckingOut(true);
+    try {
+      const response = await base44.functions.invoke('createCheckout', {});
+      if (response.data?.url) {
+        window.location.href = response.data.url;
+      }
+    } catch (err) {
+      setError('Failed to start checkout. Please try again.');
+      setCheckingOut(false);
+    }
+  };
+
   const generate = async () => {
     if (!data.room_image_url) {
       setError("Please go back and upload a room photo first.");
@@ -151,7 +165,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     }
 
     if (!credits || credits.credits_remaining <= 0) {
-      setError("You've used all your generations. Purchase more to continue.");
+      setError("You're out of credits. Purchase more to continue generating designs.");
       return;
     }
 
@@ -180,8 +194,8 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       await base44.entities.UserCredits.update(credits.id, {
         credits_remaining: credits.credits_remaining - 1,
       });
-
       setCredits({ ...credits, credits_remaining: credits.credits_remaining - 1 });
+
       setProgress(100);
       setGenerated(url);
       update({ generated_render_url: url, generation_prompt: refinedPrompt, intensity });
@@ -189,22 +203,6 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       setError(err?.message || "Generation failed. Please try again.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleBuyCredits = async () => {
-    setCheckingOut(true);
-    try {
-      const response = await base44.functions.invoke('createCheckout', {});
-      if (response.data?.url) {
-        window.location.href = response.data.url;
-      } else {
-        setError("Couldn't start checkout. Please try again.");
-        setCheckingOut(false);
-      }
-    } catch (err) {
-      setError("Checkout failed. Please try again.");
-      setCheckingOut(false);
     }
   };
 
@@ -275,34 +273,21 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold mb-2">Generate your design</h2>
-          <p className="text-white/40 text-sm">
-            Stable Diffusion will paint your room in the{" "}
-            <strong className="text-white/70">{data.style}</strong> style.
-          </p>
-        </div>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-2xl font-bold">Generate your design</h2>
         {credits && (
-          <div className="flex flex-col items-end gap-1">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-              <Sparkles className="w-4 h-4 text-violet-400" />
-              <span className="font-semibold text-white/90">{credits.credits_remaining}</span>
-              <span className="text-xs text-white/40">credits</span>
-            </div>
-            {credits.credits_remaining === 0 && (
-              <button
-                onClick={handleBuyCredits}
-                disabled={checkingOut}
-                className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 transition-colors"
-              >
-                <CreditCard className="w-3 h-3" />
-                {checkingOut ? "Loading..." : "Buy more"}
-              </button>
-            )}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-violet-500/10 border border-violet-500/20">
+            <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+            <span className="text-sm font-semibold text-violet-400">
+              {credits.credits_remaining} {credits.credits_remaining === 1 ? 'credit' : 'credits'}
+            </span>
           </div>
         )}
       </div>
+      <p className="text-white/40 text-sm mb-6">
+        Stable Diffusion will paint your room in the{" "}
+        <strong className="text-white/70">{data.style}</strong> style.
+      </p>
 
       {/* Prompt editor */}
       <div className="mb-5">
@@ -370,18 +355,8 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
 
       {/* Error */}
       {error && (
-        <div className="mb-5 px-4 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-start justify-between gap-3">
-          <span>{error}</span>
-          {credits && credits.credits_remaining === 0 && (
-            <button
-              onClick={handleBuyCredits}
-              disabled={checkingOut}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-500 hover:bg-violet-400 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
-            >
-              <CreditCard className="w-3.5 h-3.5" />
-              {checkingOut ? "Loading..." : "Buy 10 for €5"}
-            </button>
-          )}
+        <div className="mb-5 px-4 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+          {error}
         </div>
       )}
 
@@ -438,22 +413,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           Back
         </button>
 
-        <button
-          onClick={generate}
-          disabled={loading || (credits && credits.credits_remaining === 0)}
-          className="flex items-center gap-2 bg-white/8 border border-white/15 text-white/80
-                     px-5 py-4 rounded-2xl hover:bg-white/12 transition-colors disabled:opacity-40 font-medium"
-        >
-          {loading ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>
-          ) : generated ? (
-            <><RefreshCw className="w-4 h-4" /> Regenerate</>
-          ) : (
-            <><Sparkles className="w-4 h-4" /> Generate</>
-          )}
-        </button>
-
-        {credits && credits.credits_remaining === 0 && !generated && (
+        {credits && credits.credits_remaining <= 0 ? (
           <button
             onClick={handleBuyCredits}
             disabled={checkingOut}
@@ -461,9 +421,24 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                        px-5 py-4 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-60 font-semibold"
           >
             {checkingOut ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</>
+              <><Loader2 className="w-4 h-4 animate-spin" /> Opening checkout…</>
             ) : (
               <><CreditCard className="w-4 h-4" /> Buy 10 Credits (€5)</>
+            )}
+          </button>
+        ) : (
+          <button
+            onClick={generate}
+            disabled={loading || !credits}
+            className="flex items-center gap-2 bg-white/8 border border-white/15 text-white/80
+                       px-5 py-4 rounded-2xl hover:bg-white/12 transition-colors disabled:opacity-40 font-medium"
+          >
+            {loading ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>
+            ) : generated ? (
+              <><RefreshCw className="w-4 h-4" /> Regenerate</>
+            ) : (
+              <><Sparkles className="w-4 h-4" /> Generate</>
             )}
           </button>
         )}
