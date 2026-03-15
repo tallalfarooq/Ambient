@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Plus, Sparkles, Loader2, Recycle, Trash2, Download, Pencil, ShoppingBag, Clock } from "lucide-react";
-import { motion } from "framer-motion";
+import { Plus, Sparkles, Loader2, Recycle, Trash2, Download, Pencil, ShoppingBag, Clock, Heart, Share2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 
 const STATUS_CONFIG = {
@@ -13,9 +13,10 @@ const STATUS_CONFIG = {
   shopping:   { label: "Shopping",   color: "text-amber-400 bg-amber-500/10 border-amber-500/20"       },
 };
 
-function DesignCard({ design, onDelete, deleting }) {
+function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSave, onShare }) {
   const status = STATUS_CONFIG[design.status] || STATUS_CONFIG.draft;
   const [downloading, setDownloading] = useState(false);
+  const isSaved = savedDesigns?.some((s) => s.design_id === design.id);
 
   const handleDownload = async () => {
     if (!design.generated_render_url) return;
@@ -81,17 +82,37 @@ function DesignCard({ design, onDelete, deleting }) {
           </span>
         </div>
 
-        {design.generated_render_url && (
-          <button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="absolute top-3 right-3 w-8 h-8 rounded-xl bg-black/50 backdrop-blur-sm border border-white/10
-                       flex items-center justify-center text-white/60 hover:text-white hover:bg-black/70
-                       transition-all opacity-0 group-hover:opacity-100"
-          >
-            {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-          </button>
-        )}
+        <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {user && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleSave(design.id); }}
+              className={`w-8 h-8 rounded-xl backdrop-blur-sm border flex items-center justify-center transition-all ${
+                isSaved
+                  ? "bg-pink-500/30 border-pink-500/50 text-pink-300"
+                  : "bg-black/50 border-white/10 text-white/60 hover:text-white hover:bg-black/70"
+              }`}
+            >
+              <Heart className={`w-3.5 h-3.5 ${isSaved ? "fill-current" : ""}`} />
+            </button>
+          )}
+          {isSaved && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onShare(design.id); }}
+              className="w-8 h-8 rounded-xl bg-violet-500/30 backdrop-blur-sm border border-violet-500/50 flex items-center justify-center text-violet-300 hover:bg-violet-500/40 transition-all"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {design.generated_render_url && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDownload(); }}
+              disabled={downloading}
+              className="w-8 h-8 rounded-xl bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-black/70 transition-all"
+            >
+              {downloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="p-4">
@@ -138,9 +159,14 @@ function DesignCard({ design, onDelete, deleting }) {
 }
 
 export default function Projects() {
-  const [designs,  setDesigns]  = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [deleting, setDeleting] = useState(null);
+  const [designs,       setDesigns]       = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [deleting,      setDeleting]      = useState(null);
+  const [user,          setUser]          = useState(null);
+  const [savedDesigns,  setSavedDesigns]  = useState([]);
+  const [shareLink,     setShareLink]     = useState("");
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copied,        setCopied]        = useState(false);
 
   const load = useCallback(async () => {
     const data = await base44.entities.RoomDesign.list("-created_date", 50);
@@ -149,6 +175,14 @@ export default function Projects() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    base44.auth.me().then(async (currentUser) => {
+      setUser(currentUser);
+      const saved = await base44.entities.SavedDesign.filter({ user_email: currentUser.email });
+      setSavedDesigns(saved);
+    }).catch(() => setUser(null));
+  }, []);
 
   useEffect(() => {
     const hasGenerating = designs.some((d) => d.status === "generating");
@@ -168,6 +202,43 @@ export default function Projects() {
     } finally {
       setDeleting(null);
     }
+  };
+
+  const handleToggleSave = async (designId) => {
+    if (!user) return;
+    const existing = savedDesigns.find((s) => s.design_id === designId);
+    if (existing) {
+      await base44.entities.SavedDesign.delete(existing.id);
+      setSavedDesigns((prev) => prev.filter((s) => s.id !== existing.id));
+    } else {
+      const created = await base44.entities.SavedDesign.create({ design_id: designId, user_email: user.email });
+      setSavedDesigns((prev) => [...prev, created]);
+    }
+  };
+
+  const handleShare = async (designId) => {
+    const saved = savedDesigns.find((s) => s.design_id === designId);
+    if (!saved) return;
+    
+    let token = saved.share_token;
+    if (!token) {
+      token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      await base44.entities.SavedDesign.update(saved.id, { share_token: token, is_public: true });
+      setSavedDesigns((prev) => prev.map((s) => s.id === saved.id ? { ...s, share_token: token, is_public: true } : s));
+    } else if (!saved.is_public) {
+      await base44.entities.SavedDesign.update(saved.id, { is_public: true });
+      setSavedDesigns((prev) => prev.map((s) => s.id === saved.id ? { ...s, is_public: true } : s));
+    }
+    
+    const link = `${window.location.origin}/SharedDesign?token=${token}`;
+    setShareLink(link);
+    setShowShareModal(true);
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(shareLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -206,11 +277,75 @@ export default function Projects() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {designs.map((design) => (
-              <DesignCard key={design.id} design={design} onDelete={handleDelete} deleting={deleting === design.id} />
+              <DesignCard
+                key={design.id}
+                design={design}
+                onDelete={handleDelete}
+                deleting={deleting === design.id}
+                user={user}
+                savedDesigns={savedDesigns}
+                onToggleSave={handleToggleSave}
+                onShare={handleShare}
+              />
             ))}
           </div>
         )}
       </div>
+
+      {/* Share Modal */}
+      <AnimatePresence>
+        {showShareModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowShareModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg rounded-3xl p-8 shadow-2xl"
+              style={{ background: "#111114", border: "1px solid rgba(255,255,255,0.1)" }}
+            >
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6 bg-gradient-to-br from-violet-500 to-pink-500">
+                <Share2 className="w-7 h-7 text-white" />
+              </div>
+              
+              <h2 className="text-2xl font-bold mb-2 text-center">Share Your Design</h2>
+              <p className="text-white/40 text-sm text-center mb-6">
+                Anyone with this link can view your room design — no login required.
+              </p>
+
+              <div className="bg-white/5 rounded-2xl p-4 mb-6 border border-white/10">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={shareLink}
+                    readOnly
+                    className="flex-1 bg-transparent text-white/70 text-sm outline-none"
+                  />
+                  <button
+                    onClick={copyLink}
+                    className="flex items-center gap-1.5 bg-violet-500 hover:bg-violet-400 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                  >
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 px-6 py-3 rounded-2xl font-medium transition-all"
+              >
+                Close
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
