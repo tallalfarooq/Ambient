@@ -179,6 +179,26 @@ export default function StepUpload({ data, update, onNext }) {
         </div>
       </div>
 
+      {/* Room type */}
+      <div className="mt-5">
+        <label className="text-[11px] font-semibold text-white/35 block mb-2 uppercase tracking-wider">Room Type</label>
+        <div className="grid grid-cols-3 gap-2">
+          {ROOM_TYPES.map((type) => (
+            <button
+              key={type}
+              onClick={() => update({ room_type: type })}
+              className={`px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                data.room_type === type
+                  ? "bg-violet-500/20 border border-violet-500/40 text-violet-300"
+                  : "bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 hover:text-white/70"
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Room dims */}
       <div className="mt-5 grid grid-cols-3 gap-3">
         {["width", "length", "height"].map((dim) => (
