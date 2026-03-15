@@ -36,6 +36,14 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(modifiedReq);
 
     try {
+      const planType = session.metadata.plan_type;
+      const creditsToAdd = parseInt(session.metadata.credits || '0');
+
+      if (!planType || !creditsToAdd) {
+        console.error('Missing plan metadata');
+        return Response.json({ error: 'Missing plan metadata' }, { status: 400 });
+      }
+
       const existingCredits = await base44.asServiceRole.entities.UserCredits.filter({
         user_email: userEmail
       });
@@ -43,20 +51,22 @@ Deno.serve(async (req) => {
       if (existingCredits.length > 0) {
         const current = existingCredits[0];
         await base44.asServiceRole.entities.UserCredits.update(current.id, {
-          credits_remaining: current.credits_remaining + 10,
-          total_purchased: current.total_purchased + 10,
+          credits_remaining: current.credits_remaining + creditsToAdd,
+          plan_type: planType,
+          total_purchased: current.total_purchased + creditsToAdd,
           last_purchase_date: new Date().toISOString(),
         });
       } else {
         await base44.asServiceRole.entities.UserCredits.create({
           user_email: userEmail,
-          credits_remaining: 11,
-          total_purchased: 10,
+          credits_remaining: creditsToAdd,
+          plan_type: planType,
+          total_purchased: creditsToAdd,
           last_purchase_date: new Date().toISOString(),
         });
       }
 
-      console.log(`Added 10 credits for ${userEmail}`);
+      console.log(`Added ${creditsToAdd} credits (${planType} plan) for ${userEmail}`);
     } catch (error) {
       console.error('Error updating credits:', error);
       return Response.json({ error: 'Failed to update credits' }, { status: 500 });

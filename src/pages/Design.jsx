@@ -162,6 +162,17 @@ export default function Design() {
 
   const detectItems = async () => {
     if (!design) return;
+
+    // Check if user has Pro plan
+    if (user) {
+      const userCredits = await base44.entities.UserCredits.filter({ user_email: user.email });
+      if (userCredits.length > 0 && userCredits[0].plan_type !== 'pro') {
+        setShowLoginPrompt(false);
+        alert('AI product matching is a Pro feature. Upgrade to Pro to unlock this feature.');
+        return;
+      }
+    }
+
     setDetecting(true);
 
     const tier = design.budget_tier || "mid";
@@ -378,8 +389,8 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                       <Lock className="w-5 h-5 text-violet-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-white">Sign in to unlock product matches</p>
-                      <p className="text-xs text-white/40 mt-1">Create a free account to detect furniture and start shopping.</p>
+                      <p className="text-sm font-medium text-white">Pro feature: AI product matching</p>
+                      <p className="text-xs text-white/40 mt-1">Upgrade to Pro plan to automatically detect and match furniture from your renders.</p>
                     </div>
                     <button
                       onClick={() => base44.auth.redirectToLogin(window.location.href)}
