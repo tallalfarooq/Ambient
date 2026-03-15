@@ -8,7 +8,7 @@ const PLANS = [
     id: "free",
     name: "Free",
     price: "€0",
-    credits: 1,
+    credits: 2,
     icon: Sparkles,
     color: "from-gray-500 to-gray-600",
     features: [
