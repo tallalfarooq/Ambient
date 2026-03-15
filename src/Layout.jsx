@@ -12,6 +12,7 @@ const NAV = [
   { label: "Studio", page: "Studio", icon: Sparkles },
   { label: "My Designs", page: "Projects", icon: BookImage },
   { label: "Favorites", page: "Favorites", icon: Heart },
+  { label: "Pricing", page: "Pricing", icon: Layers },
 ];
 
 const CONSENT_KEY = "ambient_consent";

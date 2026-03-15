@@ -117,7 +117,8 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         } else {
           const newCredits = await base44.entities.UserCredits.create({
             user_email: currentUser.email,
-            credits_remaining: 0,
+            credits_remaining: 1,
+            plan_type: "free",
             total_purchased: 0,
           });
           setCredits(newCredits);
@@ -151,16 +152,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
 
   const handleBuyCredits = async () => {
     if (!user) return;
-    setCheckingOut(true);
-    try {
-      const response = await base44.functions.invoke('createCheckout', {});
-      if (response.data?.url) {
-        window.location.href = response.data.url;
-      }
-    } catch (err) {
-      setError('Failed to start checkout. Please try again.');
-      setCheckingOut(false);
-    }
+    navigate(createPageUrl("Pricing"));
   };
 
   const generate = async () => {
@@ -169,8 +161,8 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       return;
     }
 
-    if (!credits || credits.credits_remaining <= 0) {
-      setError("You're out of credits. Purchase more to continue generating designs.");
+    if (!credits || credits.credits_remaining < 2) {
+      setError("You need at least 2 credits to generate a design. Purchase more to continue.");
       return;
     }
 
@@ -197,9 +189,9 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       if (!url) throw new Error("No image returned. Please try again.");
 
       await base44.entities.UserCredits.update(credits.id, {
-        credits_remaining: credits.credits_remaining - 1,
+        credits_remaining: credits.credits_remaining - 2,
       });
-      setCredits({ ...credits, credits_remaining: credits.credits_remaining - 1 });
+      setCredits({ ...credits, credits_remaining: credits.credits_remaining - 2 });
 
       setProgress(100);
       setGenerated(url);
@@ -291,7 +283,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       </div>
       <p className="text-white/40 text-sm mb-6">
         Stable Diffusion will paint your room in the{" "}
-        <strong className="text-white/70">{data.style}</strong> style.
+        <strong className="text-white/70">{data.style}</strong> style. Each generation uses 2 credits.
       </p>
 
       {/* Prompt editor */}
@@ -418,18 +410,13 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           Back
         </button>
 
-        {credits && credits.credits_remaining <= 0 ? (
+        {credits && credits.credits_remaining < 2 ? (
           <button
             onClick={handleBuyCredits}
-            disabled={checkingOut}
             className="flex items-center gap-2 bg-gradient-to-r from-violet-500 to-pink-500 text-white
-                       px-5 py-4 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-60 font-semibold"
+                       px-5 py-4 rounded-2xl hover:opacity-90 transition-opacity font-semibold"
           >
-            {checkingOut ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Opening checkout…</>
-            ) : (
-              <><CreditCard className="w-4 h-4" /> Buy 10 Credits (€5)</>
-            )}
+            <CreditCard className="w-4 h-4" /> Get More Credits
           </button>
         ) : (
           <button
