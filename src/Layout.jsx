@@ -105,10 +105,25 @@ export default function Layout({ children, currentPageName }) {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-white/6 py-4 px-6 flex items-center justify-center gap-6">
-          <Link to={createPageUrl("Impressum")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Impressum</Link>
-          <Link to={createPageUrl("Datenschutz")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Datenschutz</Link>
-        </div>
+        <footer className="border-t border-white/6 py-8 px-6">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
+            <Link to={createPageUrl("Home")} className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-teal-500 to-violet-600 flex items-center justify-center">
+                <Layers className="w-3 h-3 text-white" />
+              </div>
+              <span className="text-white/40 text-xs font-bold tracking-tight">Ambient</span>
+            </Link>
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+              <Link to={createPageUrl("Home")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Home</Link>
+              <Link to={createPageUrl("Studio")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Studio</Link>
+              <Link to={createPageUrl("Projects")} className="text-white/25 hover:text-white/50 text-xs transition-colors">My Designs</Link>
+              <Link to={createPageUrl("Pricing")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Pricing</Link>
+              <Link to={createPageUrl("Impressum")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Impressum</Link>
+              <Link to={createPageUrl("Datenschutz")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Datenschutz</Link>
+            </div>
+            <p className="text-white/15 text-xs">© 2026 Ambient. All rights reserved.</p>
+          </div>
+        </footer>
 
         {/* Cookie banner */}
         {!consent && <CookieBanner onConsent={handleConsent} />}

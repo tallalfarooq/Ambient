@@ -245,6 +245,7 @@ function StyleCard({ s, i }) {
       <img
         src={s.img}
         alt={s.name}
+        loading="lazy"
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
@@ -586,7 +587,7 @@ export default function Home() {
                 letterSpacing: "-2px",
               }}
             >
-              From photo to
+              From photo to{" "}
               <br />
               dream room
             </h2>

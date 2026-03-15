@@ -117,7 +117,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         } else {
           const newCredits = await base44.entities.UserCredits.create({
             user_email: currentUser.email,
-            credits_remaining: 1,
+            credits_remaining: 2,
             plan_type: "free",
             total_purchased: 0,
           });
