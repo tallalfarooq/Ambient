@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
-const BEFORE_IMG = "https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1600&q=80";
-const AFTER_IMG  = "https://images.unsplash.com/photo-1618221118493-9cfa1a1c00da?auto=format&fit=crop&w=1600&q=80";
+const BEFORE_IMG = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1600&q=80";
+const AFTER_IMG  = "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1600&q=80";
 
 export default function HeroSlider() {
   const [pos, setPos] = useState(100);
@@ -119,7 +119,7 @@ export default function HeroSlider() {
 
         {/* Floating card 2 */}
         <div className="absolute hidden sm:flex items-center gap-3 p-3 rounded-2xl" style={{ bottom: "22%", right: "4%", background: "rgba(14,14,14,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.09)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", animation: "floatCard 5s ease-in-out infinite", animationDelay: "-2.5s" }}>
-          <img src="https://images.unsplash.com/photo-1513506003901-1e6a35c1e2df?auto=format&fit=crop&w=80&h=80&q=70" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="Lamp" />
+          <img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=80&h=80&q=70" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="Lamp" />
           <div>
             <div className="text-xs font-semibold text-white leading-tight">Arc Floor Lamp</div>
             <div className="text-[11px] font-bold mt-1" style={{ color: "#c9a96e" }}>$380</div>

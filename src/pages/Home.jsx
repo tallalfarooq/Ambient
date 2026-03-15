@@ -408,6 +408,7 @@ export default function Home() {
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section
+        id="hero"
         className="relative flex items-center min-h-screen overflow-hidden"
         style={{ paddingTop: 0 }}
       >
@@ -564,7 +565,7 @@ export default function Home() {
       <TrustBar />
 
       {/* ── How It Works ──────────────────────────────────────────────────── */}
-      <section className="py-28 px-6">
+      <section id="how-it-works" className="py-28 px-6">
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
@@ -651,6 +652,7 @@ export default function Home() {
 
       {/* ── Before / After ────────────────────────────────────────────────── */}
       <section
+        id="transformation"
         className="py-28 px-6"
         style={{
           background: "#0D0D0F",
@@ -706,7 +708,7 @@ export default function Home() {
       </section>
 
       {/* ── Style Showcase ────────────────────────────────────────────────── */}
-      <section className="py-28 px-6">
+      <section id="styles" className="py-28 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-14">
             <motion.div
@@ -753,6 +755,7 @@ export default function Home() {
 
       {/* ── Testimonials ──────────────────────────────────────────────────── */}
       <section
+        id="testimonials"
         className="py-28 px-6"
         style={{
           background: "#0D0D0F",
@@ -792,6 +795,7 @@ export default function Home() {
 
       {/* ── Final CTA ─────────────────────────────────────────────────────── */}
       <section
+        id="cta"
         className="py-40 px-6 text-center relative overflow-hidden"
         style={{
           borderTop: "1px solid rgba(255,255,255,0.04)",
