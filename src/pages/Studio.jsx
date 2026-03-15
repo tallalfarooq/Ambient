@@ -25,6 +25,7 @@ export default function Studio() {
   const [step, setStep] = useState(0);
   const [data, setData] = useState({
     name:                "My Room Design",
+    room_type:           null,
     room_image_url:      null,
     room_file_url:       null,
     style:               null,

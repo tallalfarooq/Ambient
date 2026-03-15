@@ -18,6 +18,8 @@ const TIPS = [
   },
 ];
 
+const ROOM_TYPES = ["Living Room", "Bedroom", "Kitchen", "Dining Room", "Home Office", "Bathroom", "Hallway", "Kids Room", "Outdoor"];
+
 export default function StepUpload({ data, update, onNext }) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(data.room_image_url);

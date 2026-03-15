@@ -5,6 +5,7 @@ import { createPageUrl } from "@/utils";
 import { Plus, Sparkles, Loader2, Recycle, Trash2, Download, Pencil, ShoppingBag, Clock, Heart, Share2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
+import ProjectFilters from "@/components/projects/ProjectFilters";
 
 const STATUS_CONFIG = {
   draft:      { label: "Draft",      color: "text-white/40 bg-white/5 border-white/10"                 },
@@ -167,6 +168,7 @@ export default function Projects() {
   const [shareLink,     setShareLink]     = useState("");
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied,        setCopied]        = useState(false);
+  const [filters,       setFilters]       = useState({ styles: [], roomTypes: [], budgetRange: null });
 
   const load = useCallback(async () => {
     const data = await base44.entities.RoomDesign.list("-created_date", 50);
@@ -241,10 +243,32 @@ export default function Projects() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const filteredDesigns = designs.filter((design) => {
+    // Style filter
+    if (filters.styles?.length > 0 && !filters.styles.includes(design.style)) {
+      return false;
+    }
+    
+    // Room type filter
+    if (filters.roomTypes?.length > 0 && !filters.roomTypes.includes(design.room_type)) {
+      return false;
+    }
+    
+    // Budget range filter
+    if (filters.budgetRange) {
+      const designMax = design.budget_max || 0;
+      if (designMax < filters.budgetRange.min || designMax > filters.budgetRange.max) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-[#0A0A0B] text-white px-4 py-12">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold">My Projects</h1>
             <p className="text-white/35 text-sm mt-1">{designs.length} room design{designs.length !== 1 ? "s" : ""}</p>
@@ -256,6 +280,15 @@ export default function Projects() {
             <Plus className="w-4 h-4" /> New design
           </Link>
         </div>
+
+        {designs.length > 0 && (
+          <ProjectFilters
+            filters={filters}
+            onFiltersChange={setFilters}
+            totalCount={designs.length}
+            filteredCount={filteredDesigns.length}
+          />
+        )}
 
         {loading ? (
           <div className="flex justify-center py-24">
@@ -274,9 +307,22 @@ export default function Projects() {
               <Plus className="w-4 h-4" /> Start designing
             </Link>
           </div>
+        ) : filteredDesigns.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="w-16 h-16 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-5">
+              <Sparkles className="w-7 h-7 text-white/20" />
+            </div>
+            <p className="text-white/40 mb-4">No designs match your filters.</p>
+            <button
+              onClick={() => setFilters({ styles: [], roomTypes: [], budgetRange: null })}
+              className="text-sm text-violet-400 hover:text-violet-300 transition-colors"
+            >
+              Clear all filters
+            </button>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {designs.map((design) => (
+            {filteredDesigns.map((design) => (
               <DesignCard
                 key={design.id}
                 design={design}
