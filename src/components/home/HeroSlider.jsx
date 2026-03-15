@@ -109,7 +109,7 @@ export default function HeroSlider() {
 
         {/* Floating card 1 */}
         <div className="absolute hidden sm:flex items-center gap-3 p-3 rounded-2xl" style={{ top: "14%", right: "4%", background: "rgba(14,14,14,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.09)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", animation: "floatCard 5s ease-in-out infinite" }}>
-          <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=80&h=80&q=70" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="Sofa" />
+          <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=80&h=80&q=70" loading="lazy" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="Sofa" />
           <div>
             <div className="text-xs font-semibold text-white leading-tight">Muji Linen Sofa</div>
             <div className="text-[11px] font-bold mt-1" style={{ color: "#c9a96e" }}>$1,299</div>
@@ -119,7 +119,7 @@ export default function HeroSlider() {
 
         {/* Floating card 2 */}
         <div className="absolute hidden sm:flex items-center gap-3 p-3 rounded-2xl" style={{ bottom: "22%", right: "4%", background: "rgba(14,14,14,0.88)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.09)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", animation: "floatCard 5s ease-in-out infinite", animationDelay: "-2.5s" }}>
-          <img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=80&h=80&q=70" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="Lamp" />
+          <img src="https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=80&h=80&q=70" loading="lazy" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="Lamp" />
           <div>
             <div className="text-xs font-semibold text-white leading-tight">Arc Floor Lamp</div>
             <div className="text-[11px] font-bold mt-1" style={{ color: "#c9a96e" }}>$380</div>
