@@ -479,8 +479,7 @@ export default function Home() {
               >
                 space
               </span>
-              <br />
-              in minutes
+              {" "}in minutes
             </h1>
 
             <p
@@ -681,7 +680,7 @@ export default function Home() {
                   letterSpacing: "-2px",
                 }}
               >
-                See the difference
+                See the difference{" "}
                 <br />
                 AI makes
               </h2>
@@ -730,7 +729,7 @@ export default function Home() {
                   letterSpacing: "-2px",
                 }}
               >
-                8 curated
+                8 curated{" "}
                 <br />
                 aesthetics
               </h2>

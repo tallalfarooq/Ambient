@@ -27,7 +27,7 @@ const PLANS = [
     color: "from-violet-500 to-purple-600",
     popular: true,
     features: [
-      "20 AI generations",
+      "10 AI generations",
       "All 8 design styles",
       "HD image download",
       "Priority support",
@@ -43,7 +43,7 @@ const PLANS = [
     icon: Crown,
     color: "from-amber-500 to-orange-600",
     features: [
-      "100 AI generations",
+      "50 AI generations",
       "All 8 design styles",
       "HD image download",
       "Priority support",
