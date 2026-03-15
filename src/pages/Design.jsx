@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Loader2, ShoppingBag, Sparkles, ArrowLeft, Recycle, Lock, ShoppingCart, Heart } from "lucide-react";
+import { Loader2, ShoppingBag, Sparkles, ArrowLeft, Recycle, Lock, ShoppingCart, Heart, Share2, Check, Copy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import FurnitureMatchCard from "@/components/design/FurnitureMatchCard";
 import CartDrawer from "@/components/design/CartDrawer";
@@ -71,6 +71,10 @@ export default function Design() {
   const [cartOpen,        setCartOpen]        = useState(false);
   const [isSaved,         setIsSaved]         = useState(false);
   const [saving,          setSaving]          = useState(false);
+  const [savedDesign,     setSavedDesign]     = useState(null);
+  const [showShareModal,  setShowShareModal]  = useState(false);
+  const [shareLink,       setShareLink]       = useState("");
+  const [copied,          setCopied]          = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => setUser(null));
@@ -79,7 +83,10 @@ export default function Design() {
   useEffect(() => {
     if (!user || !designId) return;
     base44.entities.SavedDesign.filter({ design_id: designId, user_email: user.email })
-      .then((saved) => setIsSaved(saved.length > 0))
+      .then((saved) => {
+        setIsSaved(saved.length > 0);
+        if (saved.length > 0) setSavedDesign(saved[0]);
+      })
       .catch(() => {});
   }, [user, designId]);
 
@@ -94,14 +101,40 @@ export default function Design() {
         const saved = await base44.entities.SavedDesign.filter({ design_id: designId, user_email: user.email });
         if (saved.length > 0) await base44.entities.SavedDesign.delete(saved[0].id);
         setIsSaved(false);
+        setSavedDesign(null);
       } else {
-        await base44.entities.SavedDesign.create({ design_id: designId, user_email: user.email });
+        const created = await base44.entities.SavedDesign.create({ design_id: designId, user_email: user.email });
         setIsSaved(true);
+        setSavedDesign(created);
       }
     } catch (err) {
       console.error('Save toggle failed:', err);
     }
     setSaving(false);
+  };
+
+  const handleShare = async () => {
+    if (!savedDesign) return;
+    
+    let token = savedDesign.share_token;
+    if (!token) {
+      token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      await base44.entities.SavedDesign.update(savedDesign.id, { share_token: token, is_public: true });
+      setSavedDesign({ ...savedDesign, share_token: token, is_public: true });
+    } else if (!savedDesign.is_public) {
+      await base44.entities.SavedDesign.update(savedDesign.id, { is_public: true });
+      setSavedDesign({ ...savedDesign, is_public: true });
+    }
+    
+    const link = `${window.location.origin}/SharedDesign?token=${token}`;
+    setShareLink(link);
+    setShowShareModal(true);
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(shareLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const loadDesign = useCallback(async () => {
@@ -258,6 +291,15 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
             <Heart className={`w-3.5 h-3.5 ${isSaved ? "fill-current" : ""}`} />
             {isSaved ? "Saved" : "Save"}
           </button>
+          {isSaved && (
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1.5 bg-violet-500/15 border border-violet-500/30 hover:bg-violet-500/25 text-violet-300 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              Share
+            </button>
+          )}
           <button
             onClick={() => setCartOpen(true)}
             className="relative flex items-center gap-1.5 bg-violet-500/15 border border-violet-500/30 hover:bg-violet-500/25 text-violet-300 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
@@ -409,6 +451,76 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
           if (selectedItem?.id === itemId) setSelectedItem((s) => ({ ...s, selected_match_index: null }));
         }}
       />
+
+      {/* Share Modal */}
+      <AnimatePresence>
+        {showShareModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowShareModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg rounded-3xl p-8 shadow-2xl"
+              style={{ background: "#111114", border: "1px solid rgba(255,255,255,0.1)" }}
+            >
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6 bg-gradient-to-br from-violet-500 to-pink-500">
+                <Share2 className="w-7 h-7 text-white" />
+              </div>
+              
+              <h2 className="text-2xl font-bold mb-2 text-center">Share Your Design</h2>
+              <p className="text-white/40 text-sm text-center mb-6">
+                Anyone with this link can view your room design and furniture list — no login required.
+              </p>
+
+              <div className="bg-white/5 rounded-2xl p-4 mb-6 border border-white/10">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={shareLink}
+                    readOnly
+                    className="flex-1 bg-transparent text-white/70 text-sm outline-none"
+                  />
+                  <button
+                    onClick={copyLink}
+                    className="flex items-center gap-1.5 bg-violet-500 hover:bg-violet-400 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 px-6 py-3 rounded-2xl font-medium transition-all"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({ title: design.name, url: shareLink });
+                    } else {
+                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out my ${design.style} room design!`)}&url=${encodeURIComponent(shareLink)}`, '_blank');
+                    }
+                  }}
+                  className="flex-1 bg-gradient-to-r from-violet-500 to-pink-500 hover:opacity-90 text-white px-6 py-3 rounded-2xl font-semibold transition-opacity"
+                >
+                  Share on Social
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
