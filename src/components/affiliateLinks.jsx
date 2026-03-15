@@ -37,3 +37,13 @@ export function getSourceCTA(source) {
     default:       return { label: "Shop Now",        className: "bg-violet-500 hover:bg-violet-400 text-white font-bold" };
   }
 }
+
+/**
+ * Alias for getSourceCTA for backward compatibility.
+ */
+export const getAffiliateButtonStyle = getSourceCTA;
+
+/**
+ * Alias for buildAffiliateUrl for backward compatibility.
+ */
+export const getAffiliateLink = buildAffiliateUrl;
