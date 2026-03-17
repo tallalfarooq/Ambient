@@ -23,6 +23,9 @@ const STEP_HEADLINES = [
 ];
 
 export default function Studio() {
+  const [mode, setMode] = useState("design"); // "design" | "find"
+  const [user, setUser] = useState(null);
+  const [credits, setCredits] = useState(null);
   const [step, setStep] = useState(0);
   const [data, setData] = useState({
     name:                "My Room Design",
