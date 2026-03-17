@@ -233,6 +233,7 @@ export default function Studio() {
             </motion.div>
           </AnimatePresence>
         </div>
+        )}
       </div>
     </div>
   );
