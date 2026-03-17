@@ -163,16 +163,6 @@ export default function Design() {
   const detectItems = async () => {
     if (!design) return;
 
-    // Check if user has Pro plan
-    if (user) {
-      const userCredits = await base44.entities.UserCredits.filter({ user_email: user.email });
-      if (userCredits.length > 0 && userCredits[0].plan_type !== 'pro') {
-        setShowLoginPrompt(false);
-        alert('AI product matching is a Pro feature. Upgrade to Pro to unlock this feature.');
-        return;
-      }
-    }
-
     setDetecting(true);
 
     const tier = design.budget_tier || "mid";
