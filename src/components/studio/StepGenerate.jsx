@@ -268,6 +268,15 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     : intensity < 75 ? "Bold transformation"
     : "Full reimagination";
 
+  // Still loading auth
+  if (user === undefined) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="w-7 h-7 text-violet-400 animate-spin" />
+      </div>
+    );
+  }
+
   // Not logged in — show login wall
   if (user === null) {
     return (
