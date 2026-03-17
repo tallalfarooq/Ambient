@@ -4,7 +4,7 @@ import { createPageUrl } from "@/utils";
 import { X, Upload, Palette, ShoppingBag, Sparkles, ArrowRight, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { base44 } from "@/api/base44Client";
-import Room3DShowcase from "@/components/home/Room3DShowcase";
+import RoomVideoShowcase from "@/components/home/RoomVideoShowcase";
 import HeroSlider from "@/components/home/HeroSlider";
 
 /* ─── Data ──────────────────────────────────────────────────────────────── */

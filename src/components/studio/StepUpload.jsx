@@ -141,15 +141,6 @@ export default function StepUpload({ data, update, onNext }) {
         )}
       </div>
 
-      {/* Scale calibration overlay */}
-      {preview && (
-        <ScaleCalibrator
-          imageUrl={preview}
-          calibration={data.scale_calibration || null}
-          onCalibrate={(cal) => update({ scale_calibration: cal })}
-        />
-      )}
-
       {/* Action chips */}
       <div className="flex gap-2.5 mt-4 flex-wrap">
         <button
