@@ -268,6 +268,38 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     : intensity < 75 ? "Bold transformation"
     : "Full reimagination";
 
+  // Not logged in — show login wall
+  if (user === null) {
+    return (
+      <div className="flex flex-col items-center text-center gap-5 py-6">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+          style={{ background: "linear-gradient(135deg, #1D9E75, #6B4FBB)" }}>
+          <Layers className="w-8 h-8 text-white" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold mb-2">Sign in to generate</h2>
+          <p className="text-white/40 text-sm max-w-xs mx-auto">
+            Create a free account to generate AI room designs. You get 2 free credits to start.
+          </p>
+        </div>
+        <button
+          onClick={() => base44.auth.redirectToLogin(window.location.href)}
+          className="flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl transition-all hover:opacity-90"
+          style={{ background: "linear-gradient(135deg, #1D9E75, #16B891)", color: "#0A0A12" }}
+        >
+          <LogIn className="w-4 h-4" />
+          Sign in — it's free
+        </button>
+        <button
+          onClick={onBack}
+          className="text-sm text-white/30 hover:text-white/60 transition-colors"
+        >
+          ← Go back
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
