@@ -442,7 +442,11 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           Back
         </button>
 
-        {credits && credits.credits_remaining < 2 ? (
+        {!credits ? (
+          <button disabled className="flex items-center gap-2 bg-white/8 border border-white/15 text-white/40 px-5 py-4 rounded-2xl font-medium opacity-50 cursor-not-allowed">
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+          </button>
+        ) : credits.credits_remaining < 2 ? (
           <button
             onClick={handleBuyCredits}
             className="flex items-center gap-2 bg-gradient-to-r from-violet-500 to-pink-500 text-white
@@ -453,7 +457,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         ) : (
           <button
             onClick={generate}
-            disabled={loading || !credits}
+            disabled={loading}
             className="flex items-center gap-2 bg-white/8 border border-white/15 text-white/80
                        px-5 py-4 rounded-2xl hover:bg-white/12 transition-colors disabled:opacity-40 font-medium"
           >
