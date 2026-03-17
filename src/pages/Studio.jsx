@@ -143,7 +143,7 @@ export default function Studio() {
         )}
 
         {/* ── Step headline ─────────────────────────────────────── */}
-        {mode === "design" && (
+        {mode === "design" && (<>
         <AnimatePresence mode="wait">
           <motion.div
             key={`hd-${step}`}
