@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Palette, Wallet, Sparkles, Check } from "lucide-react";
+import { Camera, Palette, Wallet, Sparkles, Check, ScanSearch } from "lucide-react";
 import { toast } from "sonner";
 import StepUpload   from "@/components/studio/StepUpload";
 import StepStyle    from "@/components/studio/StepStyle";
