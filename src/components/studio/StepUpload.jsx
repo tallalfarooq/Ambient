@@ -151,30 +151,6 @@ export default function StepUpload({ data, update, onNext }) {
         </div>
       </div>
 
-      {/* ── Room dimensions ── */}
-      <div>
-        <p className="text-xs font-semibold text-white/30 uppercase tracking-widest mb-3">Room Dimensions (optional)</p>
-        <div className="grid grid-cols-3 gap-3">
-          {["width", "length", "height"].map((dim) => (
-            <div key={dim}>
-              <label className="text-[11px] text-white/25 block mb-1.5 capitalize">{dim} (m)</label>
-              <input
-                type="number"
-                step="0.1"
-                value={data.room_dimensions[dim]}
-                onChange={(e) =>
-                  update({ room_dimensions: { ...data.room_dimensions, [dim]: parseFloat(e.target.value) } })
-                }
-                className="w-full text-sm text-white/80 px-3 py-2.5 rounded-xl focus:outline-none transition-all"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(124,58,237,0.45)"; }}
-                onBlur={(e)  => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* ── CTA ── */}
       <button
         onClick={onNext}
