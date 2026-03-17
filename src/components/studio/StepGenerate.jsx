@@ -5,15 +5,11 @@ import { base44 } from "@/api/base44Client";
 import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers } from "lucide-react";
 
 const buildPrompt = (data) => {
-  const dims = data.room_dimensions;
   const vibeStr = data.vibes?.length ? `, ${data.vibes.join(", ")} atmosphere` : "";
-  const dimStr = dims ? `, ${dims.width}m x ${dims.length}m x ${dims.height}m room` : "";
-  const cal = data.scale_calibration;
-  const scaleStr = cal ? `, reference scale: ${cal.label} is ${cal.meters}m` : "";
   return (
-    `Interior design photograph, ${data.style} style, ${data.color_palette} color palette${dimStr}${scaleStr}, ` +
+    `Interior design photograph, ${data.style} style, ${data.color_palette} color palette, ` +
     `photorealistic room render, natural lighting, high-end furniture, ultra-detailed, 8K, architectural photography style, ` +
-    `ControlNet depth guidance, layered furniture placement, magazine quality${vibeStr}`
+    `layered furniture placement, magazine quality${vibeStr}`
   );
 };
 
