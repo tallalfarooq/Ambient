@@ -47,6 +47,14 @@ export default function Studio() {
   const stepProps = { data, update, onNext: () => setStep((s) => s + 1), onBack: () => setStep((s) => s - 1) };
 
   useEffect(() => {
+    base44.auth.me().then(async (u) => {
+      setUser(u);
+      const uc = await base44.entities.UserCredits.filter({ user_email: u.email });
+      if (uc.length > 0) setCredits(uc[0]);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'success') {
       toast.success('Payment successful! 10 credits added to your account.');
