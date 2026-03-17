@@ -91,7 +91,59 @@ export default function Studio() {
 
       <div className="relative z-10 max-w-3xl mx-auto px-4 pb-24 pt-10">
 
+        {/* ── Mode Switcher ─────────────────────────────────────── */}
+        <div className="flex items-center justify-center mb-10">
+          <div
+            className="flex items-center gap-1 p-1 rounded-2xl"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <button
+              onClick={() => setMode("design")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                mode === "design"
+                  ? "bg-violet-500 text-white shadow-lg shadow-violet-500/25"
+                  : "text-white/40 hover:text-white/70"
+              }`}
+            >
+              <Sparkles className="w-4 h-4" /> Design Room
+            </button>
+            <button
+              onClick={() => setMode("find")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                mode === "find"
+                  ? "bg-amber-500 text-white shadow-lg shadow-amber-500/25"
+                  : "text-white/40 hover:text-white/70"
+              }`}
+            >
+              <ScanSearch className="w-4 h-4" /> Find Similar
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                style={{ background: "rgba(245,158,11,0.25)", color: "#f59e0b" }}>PRO</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ── Find Similar Mode ─────────────────────────────────── */}
+        {mode === "find" && (
+          <div>
+            <div className="text-center mb-8">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">Find Similar Products</h1>
+              <p className="text-white/40 text-sm">Snap any furniture or decor item and AI finds where to buy it</p>
+            </div>
+            <div
+              className="rounded-3xl p-6 sm:p-8 shadow-2xl"
+              style={{
+                background: "rgba(255,255,255,0.025)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                boxShadow: "0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03)",
+              }}
+            >
+              <StepFindSimilar user={user} credits={credits} />
+            </div>
+          </div>
+        )}
+
         {/* ── Step headline ─────────────────────────────────────── */}
+        {mode === "design" && (
         <AnimatePresence mode="wait">
           <motion.div
             key={`hd-${step}`}
