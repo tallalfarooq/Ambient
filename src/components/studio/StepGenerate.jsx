@@ -5,11 +5,15 @@ import { base44 } from "@/api/base44Client";
 import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers } from "lucide-react";
 
 const buildPrompt = (data) => {
-  const vibeStr = data.vibes?.length ? `, ${data.vibes.join(", ")} atmosphere` : "";
+  const vibeStr = data.vibes?.length ? `, ${data.vibes.join(", ")}` : "";
+  const style = data.style || "modern";
+  const palette = data.color_palette ? `, ${data.color_palette} color tones` : "";
   return (
-    `Interior design photograph, ${data.style} style, ${data.color_palette} color palette, ` +
-    `photorealistic room render, natural lighting, high-end furniture, ultra-detailed, 8K, architectural photography style, ` +
-    `layered furniture placement, magazine quality${vibeStr}`
+    `Real interior design photo of a ${style} style living space${palette}${vibeStr}. ` +
+    `Shot with a professional DSLR camera, natural window light, realistic shadows. ` +
+    `Furniture looks exactly like products sold on Amazon and IKEA — clean lines, real textures, real materials. ` +
+    `No CGI, no illustration, no fantasy elements. Looks like a real apartment photo from Houzz or Architectural Digest. ` +
+    `High resolution, sharp focus, realistic depth of field, true-to-life colors.`
   );
 };
 
