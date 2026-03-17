@@ -125,6 +125,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         }
       } catch (err) {
         console.error('Failed to fetch credits:', err);
+        setUser(null);
       }
     };
     fetchCredits();
