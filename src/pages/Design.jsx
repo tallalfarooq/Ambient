@@ -379,14 +379,14 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                       <Lock className="w-5 h-5 text-violet-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-white">Pro feature: AI product matching</p>
-                      <p className="text-xs text-white/40 mt-1">Upgrade to Pro plan to automatically detect and match furniture from your renders.</p>
+                      <p className="text-sm font-medium text-white">Sign in to detect furniture</p>
+                      <p className="text-xs text-white/40 mt-1">Create a free account to use AI product matching. Uses credits from your account.</p>
                     </div>
                     <button
                       onClick={() => base44.auth.redirectToLogin(window.location.href)}
                       className="bg-violet-500 hover:bg-violet-400 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors"
                     >
-                      Sign in / Register
+                      Sign in — it's free
                     </button>
                   </motion.div>
                 )}
