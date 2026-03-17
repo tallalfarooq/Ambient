@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Upload, Search, Loader2, X, ExternalLink, Lock, Crown, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,7 +11,7 @@ export default function StepFindSimilar({ user, credits }) {
   const [searching, setSearching] = useState(false);
   const [results, setResults]   = useState([]);
   const [error, setError]       = useState(null);
-  const fileRef = useState(null);
+  const fileRef = useRef(null);
 
   const isPro = credits?.plan_type === "pro";
 
