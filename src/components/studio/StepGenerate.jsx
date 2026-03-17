@@ -401,120 +401,130 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
 
       {/* Feedback */}
       {generated && !loading && (
-        <div className="mb-6 p-4 rounded-2xl bg-white/3 border border-white/8">
-          <p className="text-xs text-white/40 mb-3">How does this look?</p>
-          <div className="flex items-center gap-3">
+        <div className="mb-6 rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)" }}>
+          <div className="px-5 py-4 border-b border-white/5">
+            <p className="text-xs font-semibold text-white/40 tracking-wide uppercase">Rate this result</p>
+          </div>
+          <div className="px-5 py-4 flex items-center gap-3">
             <button
               onClick={() => setFeedback(feedback === "like" ? null : "like")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                 feedback === "like"
-                  ? "border-emerald-500 bg-emerald-500/10 text-emerald-400"
-                  : "border-white/10 text-white/40 hover:border-white/20"
+                  ? "bg-emerald-500/15 border border-emerald-500/40 text-emerald-400"
+                  : "bg-white/4 border border-white/8 text-white/45 hover:text-white/70 hover:border-white/15"
               }`}
             >
-              <ThumbsUp className="w-3.5 h-3.5" /> Love it
+              <ThumbsUp className="w-3.5 h-3.5" /> Looks great
             </button>
             <button
               onClick={() => setFeedback(feedback === "dislike" ? null : "dislike")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                 feedback === "dislike"
-                  ? "border-red-500 bg-red-500/10 text-red-400"
-                  : "border-white/10 text-white/40 hover:border-white/20"
+                  ? "bg-red-500/12 border border-red-500/35 text-red-400"
+                  : "bg-white/4 border border-white/8 text-white/45 hover:text-white/70 hover:border-white/15"
               }`}
             >
-              <ThumbsDown className="w-3.5 h-3.5" /> Not quite
+              <ThumbsDown className="w-3.5 h-3.5" /> Needs work
             </button>
           </div>
           {feedback === "dislike" && (
-            <div className="mt-3">
+            <div className="px-5 pb-4">
               <input
                 type="text"
-                placeholder="What didn't work? (e.g. too dark, too many plants)"
+                placeholder="What would you change? e.g. too dark, more plants, lighter colors"
                 value={feedbackNote}
                 onChange={(e) => setFeedbackNote(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs
-                           text-white/70 placeholder-white/25 focus:outline-none focus:border-violet-500/50"
+                className="w-full text-sm px-4 py-3 rounded-xl text-white/70 placeholder-white/20 focus:outline-none transition-all"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(124,58,237,0.4)"; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
               />
-              <p className="text-white/25 text-xs mt-1.5">Regenerate below to apply your feedback ↓</p>
+              <p className="text-white/25 text-xs mt-2">Tap Regenerate below to apply your feedback</p>
             </div>
           )}
         </div>
       )}
 
       {/* Action buttons */}
-      <div className="flex gap-3 flex-wrap">
-        <button
-          onClick={onBack}
-          disabled={loading}
-          className="bg-white/5 border border-white/10 text-white/70 px-5 py-4 rounded-2xl
-                     hover:bg-white/8 transition-colors font-medium disabled:opacity-30"
-        >
-          Back
-        </button>
-
-        {!credits ? (
-          <button disabled className="flex items-center gap-2 bg-white/8 border border-white/15 text-white/40 px-5 py-4 rounded-2xl font-medium opacity-50 cursor-not-allowed">
-            <Loader2 className="w-4 h-4 animate-spin" /> Loading…
-          </button>
-        ) : credits.credits_remaining < 2 ? (
-          <button
-            onClick={handleBuyCredits}
-            className="flex items-center gap-2 bg-gradient-to-r from-violet-500 to-pink-500 text-white
-                       px-5 py-4 rounded-2xl hover:opacity-90 transition-opacity font-semibold"
-          >
-            <CreditCard className="w-4 h-4" /> Get More Credits
-          </button>
-        ) : (
-          <button
-            onClick={generate}
-            disabled={loading}
-            className="flex items-center gap-2 bg-white/8 border border-white/15 text-white/80
-                       px-5 py-4 rounded-2xl hover:bg-white/12 transition-colors disabled:opacity-40 font-medium"
-          >
-            {loading ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>
-            ) : generated ? (
-              <><RefreshCw className="w-4 h-4" /> Regenerate</>
-            ) : (
-              <><Sparkles className="w-4 h-4" /> Generate</>
-            )}
-          </button>
-        )}
-
+      <div className="space-y-3">
+        {/* Primary CTA */}
         {generated && !loading && (
-          <>
-            <button
-              onClick={handleDownload}
-              title="Download"
-              className="flex items-center gap-2 bg-white/5 border border-white/10 text-white/60
-                         px-4 py-4 rounded-2xl hover:bg-white/10 hover:text-white transition-all font-medium"
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Download</span>
-            </button>
-
-            <button
-              onClick={handleShare}
-              title="Share"
-              className="flex items-center gap-2 bg-white/5 border border-white/10 text-white/60
-                         px-4 py-4 rounded-2xl hover:bg-white/10 hover:text-white transition-all font-medium"
-            >
-              <Share2 className="w-4 h-4" />
-              <span className="hidden sm:inline">{copied ? "Copied!" : "Share"}</span>
-            </button>
-
-            <button
-              onClick={handleSaveAndShop}
-              disabled={saving}
-              className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r
-                         from-violet-500 to-pink-500 text-white font-semibold py-4 rounded-2xl
-                         hover:opacity-90 transition-opacity disabled:opacity-60"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookmarkCheck className="w-4 h-4" />}
-              {saving ? "Saving…" : "Save & Shop this look"}
-            </button>
-          </>
+          <button
+            onClick={handleSaveAndShop}
+            disabled={saving}
+            className="w-full flex items-center justify-center gap-2.5 text-white font-semibold py-4 rounded-2xl transition-all disabled:opacity-50"
+            style={{
+              background: "linear-gradient(135deg, #7c3aed, #db2777)",
+              boxShadow: "0 8px 32px rgba(124,58,237,0.35)",
+            }}
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookmarkCheck className="w-4 h-4" />}
+            {saving ? "Saving your design…" : "Save & Shop this look"}
+          </button>
         )}
+
+        {/* Secondary row */}
+        <div className="flex gap-2.5">
+          <button
+            onClick={onBack}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl text-sm font-medium transition-all disabled:opacity-30"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)" }}
+          >
+            Back
+          </button>
+
+          {!credits ? (
+            <button disabled className="flex items-center gap-2 flex-1 justify-center px-5 py-3.5 rounded-xl text-sm font-medium opacity-50 cursor-not-allowed"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)" }}>
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+            </button>
+          ) : credits.credits_remaining < 2 ? (
+            <button
+              onClick={handleBuyCredits}
+              className="flex items-center gap-2 flex-1 justify-center px-5 py-3.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, #7c3aed, #db2777)", color: "white" }}
+            >
+              <CreditCard className="w-4 h-4" /> Get More Credits
+            </button>
+          ) : (
+            <button
+              onClick={generate}
+              disabled={loading}
+              className="flex items-center gap-2 flex-1 justify-center px-5 py-3.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
+              style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.35)", color: "#a78bfa" }}
+            >
+              {loading ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>
+              ) : generated ? (
+                <><RefreshCw className="w-4 h-4" /> Regenerate</>
+              ) : (
+                <><Sparkles className="w-4 h-4" /> Generate Design</>
+              )}
+            </button>
+          )}
+
+          {generated && !loading && (
+            <>
+              <button
+                onClick={handleDownload}
+                title="Download"
+                className="flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-xl text-sm font-medium transition-all"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }}
+              >
+                <Download className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleShare}
+                title={copied ? "Copied!" : "Share"}
+                className="flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-xl text-sm font-medium transition-all"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: copied ? "#a78bfa" : "rgba(255,255,255,0.5)" }}
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
