@@ -558,7 +558,7 @@ export default function Home() {
           className="hidden lg:block absolute right-0 top-0 bottom-0"
           style={{ width: "52%" }}
         >
-          <Room3DShowcase />
+          <RoomVideoShowcase />
         </div>
       </section>
 
