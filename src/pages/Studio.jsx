@@ -6,6 +6,7 @@ import StepUpload   from "@/components/studio/StepUpload";
 import StepStyle    from "@/components/studio/StepStyle";
 import StepBudget   from "@/components/studio/StepBudget";
 import StepGenerate from "@/components/studio/StepGenerate";
+import StepFindSimilar from "@/components/studio/StepFindSimilar";
 
 const STEPS = [
   { label: "Upload Room",  sublabel: "Your space",    Icon: Camera   },
