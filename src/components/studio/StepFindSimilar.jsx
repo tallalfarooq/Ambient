@@ -128,8 +128,8 @@ Focus on the most prominent item in the image.`,
         <label
           className="flex flex-col items-center justify-center gap-4 rounded-3xl cursor-pointer transition-all duration-300 min-h-[220px]"
           style={{
-            border: "2px dashed rgba(245,158,11,0.35)",
-            background: "rgba(245,158,11,0.03)",
+            border: "2px dashed rgba(201,150,58,0.35)",
+            background: "rgba(201,150,58,0.03)",
           }}
         >
           <input
