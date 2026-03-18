@@ -80,7 +80,7 @@ export default function Studio() {
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div style={{
           position: "absolute", width: 700, height: 700, top: -150, right: -150,
-          background: "radial-gradient(circle, rgba(107,79,187,0.13), transparent 70%)",
+          background: "radial-gradient(circle, rgba(27,143,160,0.13), transparent 70%)",
           filter: "blur(100px)", animation: "floatOrb 16s ease-in-out infinite",
         }} />
         <div style={{
@@ -102,7 +102,8 @@ export default function Studio() {
               onClick={() => setMode("design")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 mode === "design"
-                  ? "bg-violet-500 text-white shadow-lg"
+                  ? "text-white shadow-lg"
+                  style_active_design
                   : "text-white/40 hover:text-white/70"
               }`}
             >
