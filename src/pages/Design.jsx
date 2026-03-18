@@ -519,7 +519,8 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out my ${design.style} room design!`)}&url=${encodeURIComponent(shareLink)}`, '_blank');
                     }
                   }}
-                  className="flex-1 bg-gradient-to-r from-violet-500 to-pink-500 hover:opacity-90 text-white px-6 py-3 rounded-2xl font-semibold transition-opacity"
+                  className="flex-1 text-white px-6 py-3 rounded-2xl font-semibold transition-opacity hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
                 >
                   Share on Social
                 </button>
