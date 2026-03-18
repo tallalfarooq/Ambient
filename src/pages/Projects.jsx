@@ -55,8 +55,8 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
 
         {design.status === "generating" && (
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
-            <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
-            <p className="text-xs text-violet-300 font-medium">Generating…</p>
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#1B8FA0" }} />
+            <p className="text-xs font-medium" style={{ color: "#6EC6C6" }}>Generating…</p>
           </div>
         )}
 
