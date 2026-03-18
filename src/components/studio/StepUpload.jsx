@@ -139,9 +139,9 @@ export default function StepUpload({ data, update, onNext }) {
               onClick={() => update({ room_type: type })}
               className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-left"
               style={{
-                background: data.room_type === type ? "rgba(124,58,237,0.18)" : "rgba(255,255,255,0.03)",
-                border: `1px solid ${data.room_type === type ? "rgba(124,58,237,0.45)" : "rgba(255,255,255,0.07)"}`,
-                color: data.room_type === type ? "#c4b5fd" : "rgba(255,255,255,0.45)",
+                background: data.room_type === type ? "rgba(27,143,160,0.18)" : "rgba(255,255,255,0.03)",
+                border: `1px solid ${data.room_type === type ? "rgba(27,143,160,0.45)" : "rgba(255,255,255,0.07)"}`,
+                color: data.room_type === type ? "#6EC6C6" : "rgba(255,255,255,0.45)",
               }}
             >
               <span>{ROOM_ICONS[type]}</span>
