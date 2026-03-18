@@ -9,7 +9,7 @@ import ProjectFilters from "@/components/projects/ProjectFilters";
 
 const STATUS_CONFIG = {
   draft:      { label: "Draft",      color: "text-white/40 bg-white/5 border-white/10"                 },
-  generating: { label: "Generating", color: "text-violet-400 bg-violet-500/10 border-violet-500/20"    },
+  generating: { label: "Generating", color: "border" },
   ready:      { label: "Ready",      color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
   shopping:   { label: "Shopping",   color: "text-amber-400 bg-amber-500/10 border-amber-500/20"       },
 };
