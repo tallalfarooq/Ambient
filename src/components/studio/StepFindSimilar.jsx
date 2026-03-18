@@ -108,7 +108,8 @@ Focus on the most prominent item in the image.`,
         </div>
         <Link
           to={createPageUrl("Pricing")}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition-opacity"
+          className="w-full flex items-center justify-center gap-2 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition-opacity"
+          style={{ background: "linear-gradient(135deg, #C9963A, #a8782e)" }}
         >
           <Crown className="w-4 h-4" /> Upgrade to Pro — €20
         </Link>
