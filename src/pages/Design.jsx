@@ -342,7 +342,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                     style={{ left: `${item.position_x}%`, top: `${item.position_y}%` }}
                     className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
                       selectedItem?.id === item.id
-                        ? "border-white/80 scale-125"
+                        ? "border-white/80 scale-125" // selected pin uses teal via style below
                         : "bg-black/60 border-white/50 hover:scale-110"
                     }`}
                   >
