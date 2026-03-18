@@ -304,7 +304,8 @@ export default function Projects() {
             <p className="text-white/40 mb-6">No designs yet. Create your first one.</p>
             <Link
               to={createPageUrl("Studio")}
-              className="inline-flex items-center gap-2 bg-violet-500 hover:bg-violet-400 text-white font-semibold px-6 py-3 rounded-2xl transition-colors text-sm"
+              className="inline-flex items-center gap-2 text-white font-semibold px-6 py-3 rounded-2xl transition-opacity hover:opacity-90 text-sm"
+              style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
             >
               <Plus className="w-4 h-4" /> Start designing
             </Link>
