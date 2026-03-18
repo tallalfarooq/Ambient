@@ -376,7 +376,8 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 8 }}
-                    className="mt-3 p-5 rounded-2xl border border-violet-500/30 bg-violet-500/8 flex flex-col items-center gap-3 text-center"
+                    className="mt-3 p-5 rounded-2xl flex flex-col items-center gap-3 text-center"
+                    style={{ border: "1px solid rgba(27,143,160,0.3)", background: "rgba(27,143,160,0.08)" }}
                   >
                     <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
                       <Lock className="w-5 h-5 text-violet-400" />
