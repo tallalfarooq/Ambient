@@ -360,7 +360,7 @@ export default function Projects() {
               className="relative w-full max-w-lg rounded-3xl p-8 shadow-2xl"
               style={{ background: "#111114", border: "1px solid rgba(255,255,255,0.1)" }}
             >
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6 bg-gradient-to-br from-violet-500 to-pink-500">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}>
                 <Share2 className="w-7 h-7 text-white" />
               </div>
               
