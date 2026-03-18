@@ -50,9 +50,12 @@
 import CatalogImport from './pages/CatalogImport';
 import Datenschutz from './pages/Datenschutz';
 import Design from './pages/Design';
+import Favorites from './pages/Favorites';
 import Home from './pages/Home';
 import Impressum from './pages/Impressum';
+import Pricing from './pages/Pricing';
 import Projects from './pages/Projects';
+import SharedDesign from './pages/SharedDesign';
 import Studio from './pages/Studio';
 import __Layout from './Layout.jsx';
 
@@ -61,9 +64,12 @@ export const PAGES = {
     "CatalogImport": CatalogImport,
     "Datenschutz": Datenschutz,
     "Design": Design,
+    "Favorites": Favorites,
     "Home": Home,
     "Impressum": Impressum,
+    "Pricing": Pricing,
     "Projects": Projects,
+    "SharedDesign": SharedDesign,
     "Studio": Studio,
 }
 
