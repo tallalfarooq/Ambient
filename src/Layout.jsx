@@ -90,7 +90,8 @@ export default function Layout({ children, currentPageName }) {
               ) : (
                 <button
                   onClick={() => base44.auth.redirectToLogin(window.location.href)}
-                  className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-violet-500 hover:bg-violet-400 text-white transition-all"
+                  className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-white transition-all hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
                 >
                   <LogIn className="w-3.5 h-3.5" />
                   <span>Sign in</span>

@@ -91,7 +91,8 @@ export default function Favorites() {
           <p className="text-white/40 text-sm mb-6">Save and revisit your favorite room designs.</p>
           <button
             onClick={() => base44.auth.redirectToLogin(window.location.href)}
-            className="bg-violet-500 hover:bg-violet-400 text-white font-semibold px-6 py-3 rounded-2xl transition-colors"
+            className="text-white font-semibold px-6 py-3 rounded-2xl transition-opacity hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
           >
             Sign in
           </button>
@@ -130,7 +131,8 @@ export default function Favorites() {
             </p>
             <button
               onClick={() => navigate(createPageUrl("Studio"))}
-              className="flex items-center gap-2 bg-gradient-to-r from-violet-500 to-pink-500 text-white font-semibold px-6 py-3 rounded-2xl hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2 text-white font-semibold px-6 py-3 rounded-2xl hover:opacity-90 transition-opacity"
+              style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
             >
               <Sparkles className="w-4 h-4" />
               Create Your First Design
@@ -149,7 +151,7 @@ export default function Favorites() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="group relative rounded-3xl overflow-hidden border border-white/10 bg-white/3 hover:border-violet-500/30 transition-all duration-300"
+                  className="group relative rounded-3xl overflow-hidden border border-white/10 bg-white/3 hover:border-white/25 transition-all duration-300"
                 >
                   <Link to={createPageUrl("Design") + `?id=${design.id}`} className="block">
                     <div className="relative aspect-video overflow-hidden bg-white/5">
