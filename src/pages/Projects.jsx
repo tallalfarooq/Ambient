@@ -379,7 +379,8 @@ export default function Projects() {
                   />
                   <button
                     onClick={copyLink}
-                    className="flex items-center gap-1.5 bg-violet-500 hover:bg-violet-400 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                    className="flex items-center gap-1.5 text-white px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-90"
+                    style={{ background: "#1B8FA0" }}
                   >
                     {copied ? "Copied!" : "Copy"}
                   </button>
