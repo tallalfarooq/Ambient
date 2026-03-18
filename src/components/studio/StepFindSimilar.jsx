@@ -101,7 +101,7 @@ Focus on the most prominent item in the image.`,
         <div className="w-full rounded-2xl border border-white/8 bg-white/3 p-4 text-left space-y-2">
           {["Photo → instant product match", "Amazon & IKEA search links", "Style description & alternatives", "Unlimited searches"].map((f) => (
             <div key={f} className="flex items-center gap-2 text-sm text-white/50">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+              <Sparkles className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#C9963A" }} />
               {f}
             </div>
           ))}
