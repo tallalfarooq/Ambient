@@ -138,8 +138,8 @@ Focus on the most prominent item in the image.`,
             className="hidden"
             onChange={(e) => handleFile(e.target.files[0])}
           />
-          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-            <Upload className="w-6 h-6 text-amber-400" />
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: "rgba(201,150,58,0.1)", border: "1px solid rgba(201,150,58,0.2)" }}>
+            <Upload className="w-6 h-6" style={{ color: "#C9963A" }} />
           </div>
           <div className="text-center">
             <p className="text-white/70 font-semibold">Upload a photo of any item</p>
