@@ -318,7 +318,8 @@ export default function Projects() {
             <p className="text-white/40 mb-4">No designs match your filters.</p>
             <button
               onClick={() => setFilters({ styles: [], roomTypes: [], budgetRange: null })}
-              className="text-sm text-violet-400 hover:text-violet-300 transition-colors"
+              className="text-sm transition-colors"
+              style={{ color: "#1B8FA0" }}
             >
               Clear all filters
             </button>
