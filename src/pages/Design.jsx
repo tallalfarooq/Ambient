@@ -407,7 +407,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                   onClick={() => setSelectedItem(item)}
                   className={`text-left p-3 rounded-2xl border text-xs transition-all ${
                     selectedItem?.id === item.id
-                      ? "border-violet-500 bg-violet-500/10"
+                      ? "border-white/30 bg-white/5"
                       : "border-white/8 bg-white/3 hover:border-white/15"
                   }`}
                 >
