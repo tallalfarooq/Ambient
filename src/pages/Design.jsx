@@ -360,7 +360,8 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
               <button
                 onClick={() => { if (!user) { setShowLoginPrompt(true); } else { detectItems(); } }}
                 disabled={detecting}
-                className="mt-4 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-violet-500 to-pink-500 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="mt-4 w-full flex items-center justify-center gap-2 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
               >
                 {detecting ? (
                   <><Loader2 className="w-4 h-4 animate-spin" /> Detecting furniture…</>
