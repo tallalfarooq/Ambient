@@ -50,10 +50,17 @@ export default function Layout({ children, currentPageName }) {
         <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/6 bg-[#0A0A0B]/80 backdrop-blur-xl">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
             <Link to={createPageUrl("Home")} className="flex items-center gap-2 group">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-500 to-violet-600 flex items-center justify-center">
-                <Layers className="w-3.5 h-3.5 text-white" />
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center overflow-hidden"
+                style={{ background: "linear-gradient(135deg, #1D9E75 0%, #6B4FBB 100%)" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 18 Q8 6 12 10 Q16 14 21 4" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="12" cy="10" r="2" fill="white" fillOpacity="0.5"/>
+                </svg>
               </div>
-              <span className="font-bold text-white tracking-tight text-sm">Ambient</span>
+              <div className="flex flex-col leading-none">
+                <span className="font-black text-white tracking-tight text-sm leading-none">ambient</span>
+                <span className="text-[9px] font-bold tracking-widest uppercase leading-none" style={{ color: "#1D9E75" }}>space.ai</span>
+              </div>
             </Link>
 
             <div className="flex items-center gap-1">
@@ -108,10 +115,16 @@ export default function Layout({ children, currentPageName }) {
         <footer className="border-t border-white/6 py-8 px-6">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
             <Link to={createPageUrl("Home")} className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-teal-500 to-violet-600 flex items-center justify-center">
-                <Layers className="w-3 h-3 text-white" />
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg, #1D9E75, #6B4FBB)" }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 18 Q8 6 12 10 Q16 14 21 4" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </div>
-              <span className="text-white/40 text-xs font-bold tracking-tight">Ambient</span>
+              <div className="flex flex-col leading-none">
+                <span className="font-black text-white/40 tracking-tight text-xs leading-none">ambient</span>
+                <span className="text-[8px] font-bold tracking-widest uppercase leading-none" style={{ color: "#1D9E75" }}>space.ai</span>
+              </div>
             </Link>
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
               <Link to={createPageUrl("Home")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Home</Link>
