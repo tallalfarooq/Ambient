@@ -342,8 +342,8 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                     style={{ left: `${item.position_x}%`, top: `${item.position_y}%` }}
                     className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
                       selectedItem?.id === item.id
-                        ? "bg-violet-500 border-violet-300 scale-125"
-                        : "bg-black/60 border-white/50 hover:scale-110 hover:border-violet-400"
+                        ? "border-white/80 scale-125"
+                        : "bg-black/60 border-white/50 hover:scale-110"
                     }`}
                   >
                     <ShoppingBag className="w-3 h-3 text-white" />
