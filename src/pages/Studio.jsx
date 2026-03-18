@@ -113,9 +113,10 @@ export default function Studio() {
               onClick={() => setMode("find")}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 mode === "find"
-                  ? "bg-amber-500 text-white shadow-lg"
+                  ? "text-white shadow-lg"
                   : "text-white/40 hover:text-white/70"
               }`}
+              style={mode === "find" ? { background: "#C9963A" } : {}}
             >
               <ScanSearch className="w-4 h-4" /> Find Similar
               <span
