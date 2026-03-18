@@ -162,7 +162,8 @@ Focus on the most prominent item in the image.`,
       {preview && !searching && results.length === 0 && (
         <button
           onClick={handleSearch}
-          className="mt-4 w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition-opacity"
+          className="mt-4 w-full flex items-center justify-center gap-2 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition-opacity"
+          style={{ background: "linear-gradient(135deg, #C9963A, #a8782e)" }}
         >
           <Search className="w-4 h-4" /> Find Similar Products
         </button>
