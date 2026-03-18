@@ -542,13 +542,7 @@ export default function Home() {
               <div className="text-sm" style={{ color: "#4A5568" }}>
                 10,000+ rooms transformed
               </div>
-              <div
-                className="w-px h-4 hidden sm:block"
-                style={{ background: "rgba(255,255,255,0.1)" }}
-              />
-              <div className="text-sm" style={{ color: "#4A5568" }}>
-                Free forever
-              </div>
+
             </div>
           </motion.div>
         </div>
@@ -815,12 +809,7 @@ export default function Home() {
           viewport={{ once: true }}
           className="relative z-10 max-w-3xl mx-auto"
         >
-          <div
-            className="text-xs font-bold tracking-widest uppercase mb-5"
-            style={{ color: "#1D9E75" }}
-          >
-            Free Forever
-          </div>
+
           <h2
             className="font-bold mb-6"
             style={{
