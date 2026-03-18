@@ -85,9 +85,9 @@ export default function StepUpload({ data, update, onNext }) {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-6 text-center">
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300"
-              style={{ background: dragOver ? "rgba(124,58,237,0.2)" : "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
+              style={{ background: dragOver ? "rgba(27,143,160,0.2)" : "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}
             >
-              <Upload className="w-6 h-6" style={{ color: dragOver ? "#a78bfa" : "rgba(255,255,255,0.35)" }} />
+              <Upload className="w-6 h-6" style={{ color: dragOver ? "#1B8FA0" : "rgba(255,255,255,0.35)" }} />
             </div>
             <div>
               <p className="text-white/80 font-semibold text-base mb-1">
