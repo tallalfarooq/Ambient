@@ -339,10 +339,10 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                   <button
                     key={item.id}
                     onClick={() => setSelectedItem(item)}
-                    style={{ left: `${item.position_x}%`, top: `${item.position_y}%` }}
+                    style={{ left: `${item.position_x}%`, top: `${item.position_y}%`, ...(selectedItem?.id === item.id ? { background: "#1B8FA0", borderColor: "rgba(255,255,255,0.8)" } : {}) }}
                     className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
                       selectedItem?.id === item.id
-                        ? "border-white/80 scale-125" // selected pin uses teal via style below
+                        ? "scale-125"
                         : "bg-black/60 border-white/50 hover:scale-110"
                     }`}
                   >
