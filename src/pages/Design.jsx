@@ -246,7 +246,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#1B8FA0" }} />
       </div>
     );
   }
@@ -322,7 +322,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
           <div className="rounded-3xl overflow-hidden border border-white/10 bg-white/3">
             {design.status === "generating" ? (
               <div className="h-80 flex flex-col items-center justify-center gap-4 text-white/40">
-                <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+                <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#1B8FA0" }} />
                 <p className="text-sm">Your design is being generated…</p>
                 <p className="text-xs text-white/25">This usually takes 30–60 seconds</p>
               </div>
