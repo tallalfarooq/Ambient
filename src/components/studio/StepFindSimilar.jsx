@@ -172,7 +172,7 @@ Focus on the most prominent item in the image.`,
       {/* Searching state */}
       {searching && (
         <div className="mt-4 flex flex-col items-center gap-3 py-6">
-          <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#C9963A" }} />
           <p className="text-white/40 text-sm">Identifying item and finding matches…</p>
         </div>
       )}
