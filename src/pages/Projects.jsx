@@ -131,7 +131,7 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
 
         <div className="flex flex-wrap gap-1.5 mb-3">
           {design.style && (
-            <span className="text-xs bg-violet-500/10 border border-violet-500/20 text-violet-300 px-2 py-0.5 rounded-full">
+            <span className="text-xs px-2 py-0.5 rounded-full border" style={{ background: "rgba(27,143,160,0.1)", borderColor: "rgba(27,143,160,0.25)", color: "#6EC6C6" }}>
               {design.style}
             </span>
           )}
