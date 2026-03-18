@@ -52,7 +52,7 @@ function BeforeAfterSlider({ before, after }) {
         </div>
       </div>
       <span className="absolute top-3 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-white/70 pointer-events-none">Before</span>
-      <span className="absolute top-3 right-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-600/80 backdrop-blur-sm text-white pointer-events-none">After ✦</span>
+      <span className="absolute top-3 right-3 text-[10px] font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm text-white pointer-events-none" style={{ background: "rgba(27,143,160,0.8)" }}>After ✦</span>
     </div>
   );
 }
