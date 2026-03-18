@@ -50,27 +50,10 @@ export default function Layout({ children, currentPageName }) {
         <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/6 bg-[#0A0A0B]/80 backdrop-blur-xl">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
             <Link to={createPageUrl("Home")} className="flex items-center gap-2.5 group">
-              {/* House + AS icon */}
-              <svg width="36" height="32" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="tealGold" x1="0" y1="0" x2="36" y2="32" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#1B8FA0"/>
-                    <stop offset="100%" stopColor="#C9963A"/>
-                  </linearGradient>
-                </defs>
-                {/* House outline */}
-                <path d="M18 2 L34 14 L34 30 L2 30 L2 14 Z" stroke="url(#tealGold)" strokeWidth="2" fill="none" strokeLinejoin="round"/>
-                <path d="M18 2 L34 14" stroke="url(#tealGold)" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M2 14 L18 2" stroke="url(#tealGold)" strokeWidth="2" strokeLinecap="round"/>
-                {/* A — teal */}
-                <text x="7" y="27" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="16" fill="#1B8FA0">A</text>
-                {/* S — gold */}
-                <text x="21" y="27" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="16" fill="#C9963A">S</text>
-              </svg>
-              {/* Wordmark */}
+              <img src="https://media.base44.com/images/public/69a33ae1bd1ae899284f21e8/c8bd4ea0c_251dc708f_logo.png" alt="AmbientSpace logo" className="w-8 h-8 rounded-lg object-cover" />
               <div className="flex items-baseline gap-0">
                 <span className="font-black text-white text-sm tracking-tight">Ambient</span>
-                <span className="font-semibold text-sm tracking-tight ml-1" style={{ color: "#C9963A" }}>Space</span>
+                <span className="font-semibold text-sm tracking-tight ml-1" style={{ color: "#6EC6C6" }}>Space</span>
               </div>
             </Link>
 
@@ -126,22 +109,10 @@ export default function Layout({ children, currentPageName }) {
         <footer className="border-t border-white/6 py-8 px-6">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
             <Link to={createPageUrl("Home")} className="flex items-center gap-2">
-              <svg width="26" height="23" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="tealGoldFt" x1="0" y1="0" x2="36" y2="32" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#1B8FA0" stopOpacity="0.6"/>
-                    <stop offset="100%" stopColor="#C9963A" stopOpacity="0.6"/>
-                  </linearGradient>
-                </defs>
-                <path d="M18 2 L34 14 L34 30 L2 30 L2 14 Z" stroke="url(#tealGoldFt)" strokeWidth="2" fill="none" strokeLinejoin="round"/>
-                <path d="M18 2 L34 14" stroke="url(#tealGoldFt)" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M2 14 L18 2" stroke="url(#tealGoldFt)" strokeWidth="2" strokeLinecap="round"/>
-                <text x="7" y="27" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="16" fill="#1B8FA0" opacity="0.5">A</text>
-                <text x="21" y="27" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="16" fill="#C9963A" opacity="0.5">S</text>
-              </svg>
+              <img src="https://media.base44.com/images/public/69a33ae1bd1ae899284f21e8/c8bd4ea0c_251dc708f_logo.png" alt="AmbientSpace logo" className="w-6 h-6 rounded-md object-cover opacity-60" />
               <div className="flex items-baseline gap-0">
                 <span className="font-black text-white/30 text-xs tracking-tight">Ambient</span>
-                <span className="font-semibold text-xs tracking-tight ml-1" style={{ color: "rgba(201,150,58,0.4)" }}>Space</span>
+                <span className="font-semibold text-xs tracking-tight ml-1" style={{ color: "rgba(110,198,198,0.4)" }}>Space</span>
               </div>
             </Link>
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
