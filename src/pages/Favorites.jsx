@@ -82,6 +82,24 @@ export default function Favorites() {
     );
   }
 
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center text-white text-center px-4">
+        <div>
+          <Heart className="w-12 h-12 text-white/20 mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Sign in to view your favorites</h2>
+          <p className="text-white/40 text-sm mb-6">Save and revisit your favorite room designs.</p>
+          <button
+            onClick={() => base44.auth.redirectToLogin(window.location.href)}
+            className="bg-violet-500 hover:bg-violet-400 text-white font-semibold px-6 py-3 rounded-2xl transition-colors"
+          >
+            Sign in
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0A0A0B] text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
