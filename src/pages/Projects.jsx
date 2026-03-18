@@ -99,7 +99,8 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
           {isSaved && (
             <button
               onClick={(e) => { e.stopPropagation(); onShare(design.id); }}
-              className="w-8 h-8 rounded-xl bg-violet-500/30 backdrop-blur-sm border border-violet-500/50 flex items-center justify-center text-violet-300 hover:bg-violet-500/40 transition-all"
+              className="w-8 h-8 rounded-xl backdrop-blur-sm border flex items-center justify-center transition-all"
+              style={{ background: "rgba(27,143,160,0.3)", borderColor: "rgba(27,143,160,0.5)", color: "#6EC6C6" }}
             >
               <Share2 className="w-3.5 h-3.5" />
             </button>
