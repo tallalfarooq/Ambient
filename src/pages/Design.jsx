@@ -310,7 +310,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
             <ShoppingCart className="w-3.5 h-3.5" />
             Cart
             {items.filter((i) => i.selected_match_index != null).length > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-violet-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 text-white text-[10px] font-bold rounded-full flex items-center justify-center" style={{ background: "#1B8FA0" }}>
                 {items.filter((i) => i.selected_match_index != null).length}
               </span>
             )}
