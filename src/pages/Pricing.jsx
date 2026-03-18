@@ -181,6 +181,7 @@ export default function Pricing() {
                       ? "text-white hover:opacity-90"
                       : "bg-white/10 text-white hover:bg-white/15"
                   }`}
+                  style={plan.popular && !isCurrentPlan ? { background: "linear-gradient(135deg, #1B8FA0, #C9963A)" } : {}}
                 >
                   {purchasing === plan.id ? (
                     <span className="flex items-center justify-center gap-2">

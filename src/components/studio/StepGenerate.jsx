@@ -80,7 +80,7 @@ function BeforeAfterSlider({ before, after }) {
       <span className="absolute top-3 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-white/70 pointer-events-none">
         Before
       </span>
-      <span className="absolute top-3 right-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-600/80 backdrop-blur-sm text-white pointer-events-none">
+      <span className="absolute top-3 right-3 text-[10px] font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm text-white pointer-events-none" style={{ background: "rgba(27,143,160,0.8)" }}>
         After ✦
       </span>
     </div>
@@ -273,7 +273,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   if (user === undefined) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-7 h-7 text-violet-400 animate-spin" />
+        <Loader2 className="w-7 h-7 animate-spin" style={{ color: "#1B8FA0" }} />
       </div>
     );
   }
@@ -283,7 +283,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     return (
       <div className="flex flex-col items-center text-center gap-5 py-6">
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-          style={{ background: "linear-gradient(135deg, #1D9E75, #6B4FBB)" }}>
+          style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}>
           <Layers className="w-8 h-8 text-white" />
         </div>
         <div>
@@ -295,7 +295,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         <button
           onClick={() => base44.auth.redirectToLogin(window.location.href)}
           className="flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl transition-all hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, #1D9E75, #16B891)", color: "#0A0A12" }}
+          style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)", color: "#0A0A12" }}
         >
           <LogIn className="w-4 h-4" />
           Sign in — it's free
@@ -315,9 +315,9 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-2xl font-bold">Generate your design</h2>
         {credits && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-violet-500/10 border border-violet-500/20">
-            <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-            <span className="text-sm font-semibold text-violet-400">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl" style={{ background: "rgba(27,143,160,0.1)", border: "1px solid rgba(27,143,160,0.25)" }}>
+            <Sparkles className="w-3.5 h-3.5" style={{ color: "#1B8FA0" }} />
+            <span className="text-sm font-semibold" style={{ color: "#1B8FA0" }}>
               {credits.credits_remaining} {credits.credits_remaining === 1 ? 'credit' : 'credits'}
             </span>
           </div>
@@ -340,8 +340,9 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           rows={3}
           disabled={loading}
           className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white/80
-                     focus:outline-none focus:border-violet-500/50 resize-none leading-relaxed
+                     focus:outline-none resize-none leading-relaxed
                      disabled:opacity-50"
+          style={{ '--tw-ring-color': '#1B8FA0' }}
         />
       </div>
 
@@ -349,7 +350,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs text-white/40">Transformation intensity</label>
-          <span className="text-xs font-semibold text-violet-400">{intensityLabel}</span>
+          <span className="text-xs font-semibold" style={{ color: "#1B8FA0" }}>{intensityLabel}</span>
         </div>
         <input
           type="range"
@@ -358,7 +359,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           value={intensity}
           onChange={(e) => setIntensity(parseInt(e.target.value))}
           disabled={loading}
-          className="w-full accent-violet-500 disabled:opacity-40"
+          className="w-full disabled:opacity-40" style={{ accentColor: "#1B8FA0" }}
         />
         <div className="flex justify-between text-[10px] text-white/25 mt-1">
           <span>Keep original character</span>
@@ -370,11 +371,11 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       <div className="relative rounded-3xl overflow-hidden border border-white/10 mb-6 min-h-[220px] flex items-center justify-center bg-white/3">
         {loading ? (
           <div className="flex flex-col items-center gap-4 py-10">
-            <Loader2 className="w-10 h-10 text-violet-400 animate-spin" />
+            <Loader2 className="w-10 h-10 animate-spin" style={{ color: "#1B8FA0" }} />
             <p className="text-white/40 text-sm">Painting your room…</p>
             <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-violet-500 to-pink-500 rounded-full transition-all duration-1000"
+                className="h-full rounded-full transition-all duration-1000" style={{ background: "linear-gradient(90deg, #1B8FA0, #C9963A)" }}
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -384,8 +385,8 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           <BeforeAfterSlider before={data.room_image_url} after={generated} />
         ) : (
           <div className="flex flex-col items-center gap-3 p-10">
-            <div className="w-16 h-16 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-              <Sparkles className="w-7 h-7 text-violet-400" />
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "rgba(27,143,160,0.1)", border: "1px solid rgba(27,143,160,0.25)" }}>
+              <Sparkles className="w-7 h-7" style={{ color: "#1B8FA0" }} />
             </div>
             <p className="text-white/30 text-sm">Your AI render will appear here</p>
           </div>
@@ -436,7 +437,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                 onChange={(e) => setFeedbackNote(e.target.value)}
                 className="w-full text-sm px-4 py-3 rounded-xl text-white/70 placeholder-white/20 focus:outline-none transition-all"
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(124,58,237,0.4)"; }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(27,143,160,0.4)"; }}
                 onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
               />
               <p className="text-white/25 text-xs mt-2">Tap Regenerate below to apply your feedback</p>
@@ -454,8 +455,8 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
             disabled={saving}
             className="w-full flex items-center justify-center gap-2.5 text-white font-semibold py-4 rounded-2xl transition-all disabled:opacity-50"
             style={{
-              background: "linear-gradient(135deg, #7c3aed, #db2777)",
-              boxShadow: "0 8px 32px rgba(124,58,237,0.35)",
+              background: "linear-gradient(135deg, #1B8FA0, #C9963A)",
+              boxShadow: "0 8px 32px rgba(27,143,160,0.35)",
             }}
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookmarkCheck className="w-4 h-4" />}
@@ -483,7 +484,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
             <button
               onClick={handleBuyCredits}
               className="flex items-center gap-2 flex-1 justify-center px-5 py-3.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, #7c3aed, #db2777)", color: "white" }}
+              style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)", color: "white" }}
             >
               <CreditCard className="w-4 h-4" /> Get More Credits
             </button>
@@ -492,7 +493,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
               onClick={generate}
               disabled={loading}
               className="flex items-center gap-2 flex-1 justify-center px-5 py-3.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
-              style={{ background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.35)", color: "#a78bfa" }}
+              style={{ background: "rgba(27,143,160,0.15)", border: "1px solid rgba(27,143,160,0.35)", color: "#1B8FA0" }}
             >
               {loading ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>
@@ -518,7 +519,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                 onClick={handleShare}
                 title={copied ? "Copied!" : "Share"}
                 className="flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-xl text-sm font-medium transition-all"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: copied ? "#a78bfa" : "rgba(255,255,255,0.5)" }}
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: copied ? "#1B8FA0" : "rgba(255,255,255,0.5)" }}
               >
                 <Share2 className="w-4 h-4" />
               </button>
