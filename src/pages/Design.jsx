@@ -388,7 +388,8 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                     </div>
                     <button
                       onClick={() => base44.auth.redirectToLogin(window.location.href)}
-                      className="bg-violet-500 hover:bg-violet-400 text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors"
+                      className="text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-opacity hover:opacity-90"
+                      style={{ background: "#1B8FA0" }}
                     >
                       Sign in — it's free
                     </button>
