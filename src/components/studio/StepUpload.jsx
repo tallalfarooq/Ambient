@@ -46,9 +46,9 @@ export default function StepUpload({ data, update, onNext }) {
         className="relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300"
         style={{
           minHeight: 240,
-          border: `1.5px dashed ${dragOver ? "rgba(124,58,237,0.8)" : preview ? "rgba(124,58,237,0.5)" : "rgba(255,255,255,0.1)"}`,
+          border: `1.5px dashed ${dragOver ? "rgba(27,143,160,0.8)" : preview ? "rgba(27,143,160,0.5)" : "rgba(255,255,255,0.1)"}`,
           background: dragOver
-            ? "radial-gradient(ellipse at center, rgba(124,58,237,0.1) 0%, rgba(0,0,0,0) 80%)"
+            ? "radial-gradient(ellipse at center, rgba(27,143,160,0.1) 0%, rgba(0,0,0,0) 80%)"
             : preview ? "transparent" : "rgba(255,255,255,0.015)",
         }}
       >
