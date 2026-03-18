@@ -208,7 +208,10 @@ Focus on the most prominent item in the image.`,
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.07 }}
-                  className="flex items-center gap-4 p-4 rounded-2xl border border-white/8 bg-white/3 hover:border-amber-500/30 hover:bg-amber-500/5 transition-all group"
+                  className="flex items-center gap-4 p-4 rounded-2xl border border-white/8 bg-white/3 transition-all group"
+                  style={{ '--hover-border': 'rgba(201,150,58,0.3)' }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(201,150,58,0.3)'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white/80 truncate">{m.title}</p>
