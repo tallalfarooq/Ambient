@@ -104,7 +104,7 @@ const TESTIMONIALS = [
   {
     stars: 5,
     featured: true,
-    text: `"I redesigned my entire living room in 20 minutes. The Japandi style the AI generated was exactly what I'd been dreaming of for years — and every furniture piece had a shopping link."`,
+    text: `"I redesigned my entire living room in 20 minutes. The Japandi style ambientspace.ai generated was exactly what I'd been dreaming of for years — and every furniture piece had a shopping link."`,
     name: "Sarah M.",
     role: "Homeowner, Berlin",
     avatar: "S",
@@ -112,7 +112,7 @@ const TESTIMONIALS = [
   },
   {
     stars: 5,
-    text: `"Used Ambient for our entire office renovation. Saved 3 weeks of planning. The furniture recommendations from AI were remarkably accurate and affordable."`,
+    text: `"Used AmbientSpace for our entire office renovation. Saved 3 weeks of planning. The furniture recommendations from AI were remarkably accurate and affordable."`,
     name: "Kai L.",
     role: "Startup Founder, Amsterdam",
     avatar: "K",
@@ -120,7 +120,7 @@ const TESTIMONIALS = [
   },
   {
     stars: 5,
-    text: `"Finally an AI that truly understands interior design. The style consistency is incredible, and the before/after comparison feature blew every client away."`,
+    text: `"Finally an AI that truly understands interior design. ambientspace.ai's style consistency is incredible, and the before/after comparison blew every client away."`,
     name: "Priya K.",
     role: "Interior Designer, London",
     avatar: "P",
