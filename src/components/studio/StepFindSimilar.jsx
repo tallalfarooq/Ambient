@@ -192,8 +192,8 @@ Focus on the most prominent item in the image.`,
             animate={{ opacity: 1, y: 0 }}
             className="mt-5 space-y-4"
           >
-            <div className="p-4 rounded-2xl bg-amber-500/8 border border-amber-500/20">
-              <p className="text-xs text-amber-400/70 font-semibold uppercase tracking-wider mb-1">Identified Item</p>
+            <div className="p-4 rounded-2xl" style={{ background: "rgba(201,150,58,0.08)", border: "1px solid rgba(201,150,58,0.2)" }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: "rgba(201,150,58,0.7)" }}>Identified Item</p>
               <p className="text-white font-semibold text-sm">{results.item}</p>
               {results.style && <p className="text-white/40 text-xs mt-1">{results.style}</p>}
             </div>
