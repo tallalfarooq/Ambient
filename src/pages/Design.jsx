@@ -295,7 +295,8 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
           {isSaved && (
             <button
               onClick={handleShare}
-              className="flex items-center gap-1.5 bg-violet-500/15 border border-violet-500/30 hover:bg-violet-500/25 text-violet-300 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:opacity-80"
+              style={{ background: "rgba(27,143,160,0.15)", border: "1px solid rgba(27,143,160,0.35)", color: "#1B8FA0" }}
             >
               <Share2 className="w-3.5 h-3.5" />
               Share
