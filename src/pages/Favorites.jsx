@@ -170,7 +170,7 @@ export default function Favorites() {
                     </div>
 
                     <div className="p-5">
-                      <h3 className="font-semibold text-base mb-1 truncate group-hover:text-violet-300 transition-colors">
+                      <h3 className="font-semibold text-base mb-1 truncate group-hover:text-white transition-colors">
                         {design.name}
                       </h3>
                       <p className="text-white/40 text-sm mb-3">
@@ -189,7 +189,8 @@ export default function Favorites() {
                         e.preventDefault();
                         handleShare(saved.id);
                       }}
-                      className="w-8 h-8 rounded-full bg-violet-500/30 backdrop-blur-sm border border-violet-500/50 flex items-center justify-center text-violet-300 hover:bg-violet-500/40 transition-all"
+                      className="w-8 h-8 rounded-full backdrop-blur-sm flex items-center justify-center text-white hover:opacity-80 transition-all"
+                      style={{ background: "rgba(27,143,160,0.35)", border: "1px solid rgba(27,143,160,0.55)" }}
                     >
                       <Share2 className="w-3.5 h-3.5" />
                     </button>
@@ -234,7 +235,7 @@ export default function Favorites() {
               className="relative w-full max-w-lg rounded-3xl p-8 shadow-2xl"
               style={{ background: "#111114", border: "1px solid rgba(255,255,255,0.1)" }}
             >
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6 bg-gradient-to-br from-violet-500 to-pink-500">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}>
                 <Share2 className="w-7 h-7 text-white" />
               </div>
               
@@ -253,7 +254,8 @@ export default function Favorites() {
                   />
                   <button
                     onClick={copyLink}
-                    className="flex items-center gap-1.5 bg-violet-500 hover:bg-violet-400 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                    className="flex items-center gap-1.5 text-white px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-90"
+                    style={{ background: "#1B8FA0" }}
                   >
                     {copied ? "Copied!" : "Copy"}
                   </button>
