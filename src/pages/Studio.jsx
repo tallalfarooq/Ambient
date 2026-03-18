@@ -85,7 +85,7 @@ export default function Studio() {
         }} />
         <div style={{
           position: "absolute", width: 500, height: 500, bottom: -100, left: -100,
-          background: "radial-gradient(circle, rgba(29,158,117,0.09), transparent 70%)",
+          background: "radial-gradient(circle, rgba(201,150,58,0.09), transparent 70%)",
           filter: "blur(100px)", animation: "floatOrb 16s ease-in-out infinite", animationDelay: "-7s",
         }} />
       </div>
@@ -105,6 +105,7 @@ export default function Studio() {
                   ? "text-white shadow-lg"
                   : "text-white/40 hover:text-white/70"
               }`}
+              style={mode === "design" ? { background: "#1B8FA0" } : {}}
             >
               <Sparkles className="w-4 h-4" /> Design Room
             </button>
@@ -162,7 +163,7 @@ export default function Studio() {
               >
                 <span
                   className="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1.5 rounded-full mb-4"
-                  style={{ background: "rgba(107,79,187,0.12)", border: "1px solid rgba(107,79,187,0.25)", color: "#a78bfa" }}
+                  style={{ background: "rgba(27,143,160,0.12)", border: "1px solid rgba(27,143,160,0.25)", color: "#1B8FA0" }}
                 >
                   {(() => { const Icon = STEPS[step].Icon; return <Icon className="w-3 h-3" />; })()}
                   Step {step + 1} of {STEPS.length}
@@ -180,22 +181,24 @@ export default function Studio() {
                     <div className="relative">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 ${
                         i < step
-                          ? "bg-violet-500"
+                          ? ""
                           : i === step
-                          ? "bg-violet-500/15 ring-2 ring-violet-400 ring-offset-2 ring-offset-[#0A0A0B]"
+                          ? "ring-2 ring-offset-2 ring-offset-[#0A0A0B]"
                           : "bg-white/5 ring-1 ring-white/10"
-                      }`}>
+                      }`}
+                      style={i < step ? { background: "#1B8FA0" } : i === step ? { background: "rgba(27,143,160,0.15)", ringColor: "#1B8FA0" } : {}}
+                      >
                         {i < step
                           ? <Check className="w-4 h-4 text-white" />
-                          : <s.Icon className={`w-4 h-4 ${i === step ? "text-violet-400" : "text-white/20"}`} />
+                          : <s.Icon className={`w-4 h-4 ${i === step ? "" : "text-white/20"}`} style={i === step ? { color: "#1B8FA0" } : {}} />
                         }
                       </div>
                       {i === step && (
-                        <div className="absolute inset-0 rounded-full bg-violet-500/25 blur-lg -z-10 animate-pulse" />
+                        <div className="absolute inset-0 rounded-full blur-lg -z-10 animate-pulse" style={{ background: "rgba(27,143,160,0.25)" }} />
                       )}
                     </div>
                     <span className={`text-[10px] font-semibold tracking-wide hidden sm:block transition-colors ${
-                      i === step ? "text-white/70" : i < step ? "text-violet-400/60" : "text-white/15"
+                      i === step ? "text-white/70" : i < step ? "text-white/40" : "text-white/15"
                     }`}>
                       {s.sublabel}
                     </span>
@@ -205,7 +208,7 @@ export default function Studio() {
                     <div className="flex-1 mx-3 mb-5 h-px relative overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
                       <motion.div
                         className="absolute inset-y-0 left-0 rounded-full"
-                        style={{ background: "linear-gradient(90deg, #7c3aed, #a78bfa)" }}
+                        style={{ background: "linear-gradient(90deg, #1B8FA0, #C9963A)" }}
                         initial={false}
                         animate={{ width: i < step ? "100%" : "0%" }}
                         transition={{ duration: 0.6, ease: "easeInOut" }}
