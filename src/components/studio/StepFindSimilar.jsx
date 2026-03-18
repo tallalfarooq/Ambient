@@ -228,7 +228,7 @@ Focus on the most prominent item in the image.`,
                     <span className="text-[10px] bg-white/8 px-2 py-1 rounded-full text-white/50">
                       {m.source || "Amazon"}
                     </span>
-                    <ExternalLink className="w-3.5 h-3.5 text-white/20 group-hover:text-amber-400 transition-colors" />
+                    <ExternalLink className="w-3.5 h-3.5 text-white/20 transition-colors" />
                   </div>
                 </motion.a>
               ))}
