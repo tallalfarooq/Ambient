@@ -221,7 +221,7 @@ Focus on the most prominent item in the image.`,
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
                     {m.price && (
-                      <span className="text-sm font-bold text-amber-400">
+                      <span className="text-sm font-bold" style={{ color: "#C9963A" }}>
                         €{m.price.toLocaleString()}
                       </span>
                     )}
