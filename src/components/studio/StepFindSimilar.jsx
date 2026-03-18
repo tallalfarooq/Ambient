@@ -89,8 +89,8 @@ Focus on the most prominent item in the image.`,
   if (!isPro) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center gap-5">
-        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-          <Crown className="w-8 h-8 text-amber-400" />
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "rgba(201,150,58,0.1)", border: "1px solid rgba(201,150,58,0.25)" }}>
+          <Crown className="w-8 h-8" style={{ color: "#C9963A" }} />
         </div>
         <div>
           <h3 className="text-lg font-bold mb-2">Pro Feature</h3>
