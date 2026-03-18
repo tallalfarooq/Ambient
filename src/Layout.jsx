@@ -126,15 +126,22 @@ export default function Layout({ children, currentPageName }) {
         <footer className="border-t border-white/6 py-8 px-6">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
             <Link to={createPageUrl("Home")} className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg, #1D9E75, #6B4FBB)" }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                  <path d="M3 18 Q8 6 12 10 Q16 14 21 4" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="flex flex-col leading-none">
-                <span className="font-black text-white/40 tracking-tight text-xs leading-none">ambient</span>
-                <span className="text-[8px] font-bold tracking-widest uppercase leading-none" style={{ color: "#1D9E75" }}>space.ai</span>
+              <svg width="26" height="23" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="tealGoldFt" x1="0" y1="0" x2="36" y2="32" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#1B8FA0" stopOpacity="0.6"/>
+                    <stop offset="100%" stopColor="#C9963A" stopOpacity="0.6"/>
+                  </linearGradient>
+                </defs>
+                <path d="M18 2 L34 14 L34 30 L2 30 L2 14 Z" stroke="url(#tealGoldFt)" strokeWidth="2" fill="none" strokeLinejoin="round"/>
+                <path d="M18 2 L34 14" stroke="url(#tealGoldFt)" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M2 14 L18 2" stroke="url(#tealGoldFt)" strokeWidth="2" strokeLinecap="round"/>
+                <text x="7" y="27" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="16" fill="#1B8FA0" opacity="0.5">A</text>
+                <text x="21" y="27" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="16" fill="#C9963A" opacity="0.5">S</text>
+              </svg>
+              <div className="flex items-baseline gap-0">
+                <span className="font-black text-white/30 text-xs tracking-tight">Ambient</span>
+                <span className="font-semibold text-xs tracking-tight ml-1" style={{ color: "rgba(201,150,58,0.4)" }}>Space</span>
               </div>
             </Link>
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
