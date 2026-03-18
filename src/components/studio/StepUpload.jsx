@@ -59,8 +59,8 @@ export default function StepUpload({ data, update, onNext }) {
 
         {uploading ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-violet-500/15 flex items-center justify-center">
-              <Loader2 className="w-5 h-5 text-violet-400 animate-spin" />
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "rgba(27,143,160,0.15)" }}>
+              <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#1B8FA0" }} />
             </div>
             <p className="text-white/40 text-sm">Uploading your photo…</p>
           </div>
