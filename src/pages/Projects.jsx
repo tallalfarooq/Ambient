@@ -294,7 +294,7 @@ export default function Projects() {
 
         {loading ? (
           <div className="flex justify-center py-24">
-            <Loader2 className="w-7 h-7 text-violet-400 animate-spin" />
+            <Loader2 className="w-7 h-7 animate-spin" style={{ color: "#1B8FA0" }} />
           </div>
         ) : designs.length === 0 ? (
           <div className="text-center py-28">
