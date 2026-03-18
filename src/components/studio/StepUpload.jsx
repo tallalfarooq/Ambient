@@ -96,9 +96,9 @@ export default function StepUpload({ data, update, onNext }) {
               <p className="text-white/30 text-xs">JPG, PNG, HEIC · Up to 20MB</p>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-              style={{ background: "rgba(124,58,237,0.1)", border: "1px solid rgba(124,58,237,0.2)" }}>
-              <Sparkles className="w-3 h-3 text-violet-400" />
-              <span className="text-violet-300/80 text-xs font-medium">AI analyzes your space automatically</span>
+              style={{ background: "rgba(27,143,160,0.1)", border: "1px solid rgba(27,143,160,0.2)" }}>
+              <Sparkles className="w-3 h-3" style={{ color: "#1B8FA0" }} />
+              <span className="text-xs font-medium" style={{ color: "rgba(110,198,198,0.8)" }}>AI analyzes your space automatically</span>
             </div>
           </div>
         )}
