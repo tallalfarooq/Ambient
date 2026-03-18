@@ -108,7 +108,7 @@ const TESTIMONIALS = [
     name: "Sarah M.",
     role: "Homeowner, Berlin",
     avatar: "S",
-    color: "from-teal-400 to-cyan-400",
+    color: "from-sky-400 to-teal-500",
   },
   {
     stars: 5,
@@ -124,7 +124,7 @@ const TESTIMONIALS = [
     name: "Priya K.",
     role: "Interior Designer, London",
     avatar: "P",
-    color: "from-emerald-400 to-teal-500",
+    color: "from-amber-400 to-orange-500",
   },
 ];
 
@@ -287,7 +287,7 @@ function TestimonialCard({ t, i }) {
         <div className="p-8 sm:p-12">
           <div
             className="text-base mb-5"
-            style={{ color: "#1D9E75", letterSpacing: 3 }}
+            style={{ color: "#C9963A", letterSpacing: 3 }}
           >
             {stars}
           </div>
@@ -321,11 +321,10 @@ function TestimonialCard({ t, i }) {
           <div
             className="absolute inset-0"
             style={{
-              background:
-                "radial-gradient(circle at 60% 40%, rgba(29,158,117,0.15), transparent 70%)",
+              background: "radial-gradient(circle at 60% 40%, rgba(27,143,160,0.12), transparent 70%)",
             }}
           />
-          <Layers className="w-16 h-16 opacity-10 text-teal-400" />
+          <Layers className="w-16 h-16 opacity-10" style={{ color: "#1B8FA0" }} />
           <span
             className="absolute bottom-4 left-4 text-[11px] font-semibold px-3 py-1.5 rounded-full"
             style={{
@@ -349,7 +348,7 @@ function TestimonialCard({ t, i }) {
       className="rounded-3xl p-8 border border-white/8 hover:border-amber-500/20 transition-all duration-300"
       style={{ background: "#1a1a1a" }}
     >
-      <div className="text-sm mb-4" style={{ color: "#1D9E75", letterSpacing: 3 }}>
+      <div className="text-sm mb-4" style={{ color: "#C9963A", letterSpacing: 3 }}>
         {stars}
       </div>
       <p
@@ -431,8 +430,7 @@ export default function Home() {
             style={{
               bottom: -50,
               left: "20%",
-              background:
-                "radial-gradient(circle, rgba(107,79,187,0.1), transparent 70%)",
+              background: "radial-gradient(circle, rgba(201,150,58,0.06), transparent 70%)",
               filter: "blur(100px)",
               animation: "floatOrb 14s ease-in-out infinite",
               animationDelay: "-5s",
@@ -451,9 +449,9 @@ export default function Home() {
             <div
               className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-8 text-xs font-semibold tracking-widest uppercase"
               style={{
-                background: "rgba(29,158,117,0.12)",
-                border: "1px solid rgba(29,158,117,0.25)",
-                color: "#1D9E75",
+                background: "rgba(27,143,160,0.1)",
+                border: "1px solid rgba(27,143,160,0.25)",
+                color: "#1B8FA0",
               }}
             >
               <Sparkles className="w-3 h-3" />
@@ -471,8 +469,7 @@ export default function Home() {
               Redesign your{" "}
               <span
                 style={{
-                  background:
-                    "linear-gradient(135deg, #1D9E75 0%, #6B4FBB 100%)",
+                  background: "linear-gradient(135deg, #1B8FA0 0%, #C9963A 100%)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                 }}
@@ -500,12 +497,12 @@ export default function Home() {
                 onClick={handleStart}
                 className="group flex items-center gap-2.5 font-semibold transition-all duration-300 hover:opacity-90"
                 style={{
-                  background: "linear-gradient(135deg, #1D9E75, #16B891)",
+                  background: "linear-gradient(135deg, #1B8FA0, #C9963A)",
                   color: "#0A0A12",
                   fontSize: 16,
                   padding: "16px 36px",
                   borderRadius: 100,
-                  boxShadow: "0 8px 32px rgba(29,158,117,0.4)",
+                  boxShadow: "0 8px 32px rgba(27,143,160,0.35)",
                 }}
               >
                 <Sparkles className="w-4 h-4" />
@@ -533,7 +530,7 @@ export default function Home() {
                 className="flex items-center gap-2 text-sm"
                 style={{ color: "#4A5568" }}
               >
-                <span style={{ color: "#1D9E75" }}>★★★★★</span> 4.9 rating
+                <span style={{ color: "#C9963A" }}>★★★★★</span> 4.9 rating
               </div>
               <div
                 className="w-px h-4 hidden sm:block"
@@ -569,8 +566,8 @@ export default function Home() {
           >
             <div
               className="text-xs font-bold tracking-widest uppercase mb-4"
-              style={{ color: "#1D9E75" }}
-            >
+              style={{ color: "#1B8FA0" }}
+              >
               How It Works
             </div>
             <h2
@@ -612,8 +609,7 @@ export default function Home() {
                   className="text-6xl font-black mb-8 leading-none"
                   style={{
                     letterSpacing: "-4px",
-                    background:
-                      "linear-gradient(180deg, rgba(29,158,117,0.35), rgba(29,158,117,0.04))",
+                    background: "linear-gradient(180deg, rgba(27,143,160,0.3), rgba(27,143,160,0.03))",
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                   }}
@@ -623,11 +619,11 @@ export default function Home() {
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
                   style={{
-                    background: "rgba(29,158,117,0.1)",
-                    border: "1px solid rgba(29,158,117,0.25)",
+                    background: "rgba(27,143,160,0.08)",
+                    border: "1px solid rgba(27,143,160,0.2)",
                   }}
                 >
-                  <s.Icon className="w-5 h-5 text-emerald-400" />
+                  <s.Icon className="w-5 h-5" style={{ color: "#1B8FA0" }} />
                 </div>
                 <div className="text-lg font-bold mb-3 tracking-tight">
                   {s.title}
@@ -663,8 +659,8 @@ export default function Home() {
             >
               <div
                 className="text-xs font-bold tracking-widest uppercase mb-4"
-                style={{ color: "#1D9E75" }}
-              >
+                style={{ color: "#1B8FA0" }}
+                >
                 Transformation
               </div>
               <h2
@@ -712,8 +708,8 @@ export default function Home() {
             >
               <div
                 className="text-xs font-bold tracking-widest uppercase mb-4"
-                style={{ color: "#1D9E75" }}
-              >
+                style={{ color: "#1B8FA0" }}
+                >
                 Design Styles
               </div>
               <h2
@@ -765,8 +761,8 @@ export default function Home() {
           >
             <div
               className="text-xs font-bold tracking-widest uppercase mb-4"
-              style={{ color: "#1D9E75" }}
-            >
+              style={{ color: "#1B8FA0" }}
+              >
               Loved by designers
             </div>
             <h2
@@ -799,8 +795,7 @@ export default function Home() {
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background:
-              "radial-gradient(ellipse 60% 60% at 50% 50%, rgba(29,158,117,0.08), transparent 70%)",
+            background: "radial-gradient(ellipse 60% 60% at 50% 50%, rgba(27,143,160,0.07), transparent 70%)",
           }}
         />
         <motion.div
@@ -837,12 +832,12 @@ export default function Home() {
             onClick={handleStart}
             className="inline-flex items-center gap-3 font-semibold transition-all duration-300 hover:opacity-90"
             style={{
-              background: "linear-gradient(135deg, #1D9E75, #16B891)",
+              background: "linear-gradient(135deg, #1B8FA0, #C9963A)",
               color: "#0A0A12",
               fontSize: 18,
               padding: "20px 44px",
               borderRadius: 100,
-              boxShadow: "0 8px 32px rgba(29,158,117,0.4)",
+              boxShadow: "0 8px 32px rgba(27,143,160,0.3)",
             }}
           >
             <Sparkles className="w-5 h-5" />
@@ -881,7 +876,7 @@ export default function Home() {
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6"
                 style={{
-                  background: "linear-gradient(135deg, #1D9E75, #6B4FBB)",
+                  background: "linear-gradient(135deg, #1B8FA0, #C9963A)",
                 }}
               >
                 <Layers className="w-7 h-7 text-white" />
@@ -903,7 +898,7 @@ export default function Home() {
                   }
                   className="w-full font-semibold py-3.5 rounded-2xl text-sm hover:opacity-90 transition-opacity"
                   style={{
-                    background: "linear-gradient(135deg, #1D9E75, #16B891)",
+                    background: "linear-gradient(135deg, #1B8FA0, #C9963A)",
                     color: "#0A0A12",
                   }}
                 >
