@@ -103,7 +103,6 @@ export default function Studio() {
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 mode === "design"
                   ? "text-white shadow-lg"
-                  style_active_design
                   : "text-white/40 hover:text-white/70"
               }`}
             >
