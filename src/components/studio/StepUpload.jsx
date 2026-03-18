@@ -157,8 +157,8 @@ export default function StepUpload({ data, update, onNext }) {
         disabled={!canContinue}
         className="w-full text-white font-semibold py-4 rounded-2xl transition-all disabled:opacity-25 disabled:cursor-not-allowed"
         style={{
-          background: canContinue ? "linear-gradient(135deg, #7c3aed, #6d28d9)" : "rgba(124,58,237,0.25)",
-          boxShadow: canContinue ? "0 8px 28px rgba(124,58,237,0.3)" : "none",
+          background: canContinue ? "linear-gradient(135deg, #1B8FA0, #C9963A)" : "rgba(27,143,160,0.25)",
+          boxShadow: canContinue ? "0 8px 28px rgba(27,143,160,0.3)" : "none",
         }}
       >
         {canContinue ? "Continue to Style →" : "Upload a photo to continue"}
