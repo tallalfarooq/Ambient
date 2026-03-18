@@ -170,28 +170,28 @@ export default function Projects() {
   const [copied,        setCopied]        = useState(false);
   const [filters,       setFilters]       = useState({ styles: [], roomTypes: [], budgetRange: null });
 
-  const load = useCallback(async () => {
-    const data = await base44.entities.RoomDesign.list("-created_date", 50);
+  const load = useCallback(async (currentUser) => {
+    if (!currentUser) return;
+    const data = await base44.entities.RoomDesign.filter({ created_by: currentUser.email }, "-created_date", 50);
     setDesigns(data);
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
-
   useEffect(() => {
     base44.auth.me().then(async (currentUser) => {
       setUser(currentUser);
+      load(currentUser);
       const saved = await base44.entities.SavedDesign.filter({ user_email: currentUser.email });
       setSavedDesigns(saved);
-    }).catch(() => setUser(null));
-  }, []);
+    }).catch(() => { setUser(null); setLoading(false); });
+  }, [load]);
 
   useEffect(() => {
     const hasGenerating = designs.some((d) => d.status === "generating");
     if (!hasGenerating) return;
-    const timer = setInterval(load, 4000);
+    const timer = setInterval(() => load(user), 4000);
     return () => clearInterval(timer);
-  }, [designs, load]);
+  }, [designs, load, user]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this design? This cannot be undone.")) return;
