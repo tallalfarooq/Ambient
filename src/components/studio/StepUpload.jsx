@@ -116,7 +116,7 @@ export default function StepUpload({ data, update, onNext }) {
         <button
           onClick={(e) => { e.stopPropagation(); cameraRef.current.click(); }}
           className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
-          style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.3)", color: "#a78bfa" }}
+          style={{ background: "rgba(27,143,160,0.12)", border: "1px solid rgba(27,143,160,0.3)", color: "#6EC6C6" }}
         >
           <Camera className="w-4 h-4" /> Take a photo
         </button>
