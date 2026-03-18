@@ -24,7 +24,7 @@ const PLANS = [
     price: "€5",
     credits: 20,
     icon: Zap,
-    color: "from-violet-500 to-purple-600",
+    color: "from-teal-500 to-cyan-600",
     popular: true,
     features: [
       "10 AI generations",
@@ -100,9 +100,9 @@ export default function Pricing() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20 mb-6">
-            <Sparkles className="w-4 h-4 text-violet-400" />
-            <span className="text-sm font-semibold text-violet-300">Simple, transparent pricing</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6" style={{ background: "rgba(27,143,160,0.1)", border: "1px solid rgba(27,143,160,0.25)" }}>
+            <Sparkles className="w-4 h-4" style={{ color: "#1B8FA0" }} />
+            <span className="text-sm font-semibold" style={{ color: "#1B8FA0" }}>Simple, transparent pricing</span>
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold mb-4 tracking-tight">
             Choose Your Plan
@@ -119,7 +119,7 @@ export default function Pricing() {
               <span className="text-sm text-white/50">Current plan:</span>
               <span className="text-sm font-semibold text-white capitalize">{credits.plan_type}</span>
               <span className="text-xs text-white/40">•</span>
-              <span className="text-sm text-violet-400 font-semibold">{credits.credits_remaining} credits remaining</span>
+              <span className="text-sm font-semibold" style={{ color: "#1B8FA0" }}>{credits.credits_remaining} credits remaining</span>
             </div>
           </div>
         )}
@@ -138,12 +138,13 @@ export default function Pricing() {
                 transition={{ delay: i * 0.1 }}
                 className={`relative rounded-3xl p-8 border transition-all ${
                   plan.popular
-                    ? "border-violet-500/40 bg-gradient-to-br from-violet-500/10 to-purple-500/5"
+                    ? "border-white/20 bg-white/3"
                     : "border-white/10 bg-white/3 hover:border-white/20"
                 }`}
+                style={plan.popular ? { borderColor: "rgba(27,143,160,0.4)", background: "rgba(27,143,160,0.05)" } : {}}
               >
                 {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-violet-500 to-purple-600 text-white text-xs font-bold">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-white text-xs font-bold" style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}>
                     MOST POPULAR
                   </div>
                 )}
@@ -166,7 +167,7 @@ export default function Pricing() {
 
                 <div className="mb-6">
                   <div className="text-sm text-white/60 mb-1">Credits included:</div>
-                  <div className="text-2xl font-bold text-violet-400">{plan.credits}</div>
+                  <div className="text-2xl font-bold" style={{ color: "#1B8FA0" }}>{plan.credits}</div>
                   <div className="text-xs text-white/40 mt-1">= {Math.floor(plan.credits / 2)} AI generations</div>
                 </div>
 
@@ -177,7 +178,7 @@ export default function Pricing() {
                     isCurrentPlan
                       ? "bg-white/5 text-white/40 cursor-not-allowed"
                       : plan.popular
-                      ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white hover:opacity-90"
+                      ? "text-white hover:opacity-90"
                       : "bg-white/10 text-white hover:bg-white/15"
                   }`}
                 >
