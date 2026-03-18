@@ -32,8 +32,7 @@ export default function Favorites() {
           setDesigns(designData.filter(Boolean));
         }
       } catch (err) {
-        console.error('Failed to load favorites:', err);
-        base44.auth.redirectToLogin(window.location.href);
+        setUser(null);
       }
       setLoading(false);
     };
