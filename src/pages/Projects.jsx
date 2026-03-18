@@ -78,7 +78,7 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
         )}
 
         <div className="absolute top-3 left-3">
-          <span className={`text-xs px-2.5 py-1 rounded-full border font-medium backdrop-blur-sm ${status.color}`}>
+          <span className={`text-xs px-2.5 py-1 rounded-full border font-medium backdrop-blur-sm ${status.color}`} style={status.style || {}}>
             {status.label}
           </span>
         </div>
