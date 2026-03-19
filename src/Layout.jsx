@@ -123,6 +123,8 @@ export default function Layout({ children, currentPageName }) {
               <Link to={createPageUrl("Pricing")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Pricing</Link>
               <Link to={createPageUrl("Impressum")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Impressum</Link>
               <Link to={createPageUrl("Datenschutz")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Datenschutz</Link>
+              <Link to="/privacy-policy" className="text-white/25 hover:text-white/50 text-xs transition-colors">Privacy Policy</Link>
+              <Link to="/terms-of-service" className="text-white/25 hover:text-white/50 text-xs transition-colors">Terms of Service</Link>
             </div>
             <div className="flex items-center gap-4">
               <a href="https://www.instagram.com/ambientspace_ai/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-white/25 hover:text-white/60 transition-colors">
