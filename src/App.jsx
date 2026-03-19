@@ -37,9 +37,13 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
+      // Use SDK login redirect - don't render null to avoid flicker
+      base44.auth.redirectToLogin(window.location.href);
+      return (
+        <div className="fixed inset-0 flex items-center justify-center bg-[#0A0A0B]">
+          <div className="w-8 h-8 border-4 border-white/20 border-t-white/60 rounded-full animate-spin"></div>
+        </div>
+      );
     }
   }
 
