@@ -9,6 +9,8 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Favorites from '@/pages/Favorites';
 import SharedDesign from '@/pages/SharedDesign';
 import Pricing from '@/pages/Pricing';
+import PrivacyPolicy from '@/pages/PrivacyPolicy';
+import TermsOfService from '@/pages/TermsOfService';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
