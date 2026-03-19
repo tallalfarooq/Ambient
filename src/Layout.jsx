@@ -57,19 +57,19 @@ export default function Layout({ children, currentPageName }) {
               </div>
             </Link>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               {NAV.map(({ label, page, icon: Icon }) => (
                 <Link
                   key={page}
                   to={createPageUrl(page)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                  className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                     currentPageName === page
                       ? "bg-white/10 text-white"
                       : "text-white/40 hover:text-white/70 hover:bg-white/5"
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  <span className="hidden sm:block">{label}</span>
+                  <span className="hidden md:block">{label}</span>
                 </Link>
               ))}
 
