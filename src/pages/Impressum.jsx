@@ -24,7 +24,7 @@ export default function Impressum() {
 
           <div>
             <h2 className="text-white font-semibold mb-1">Affiliate Links</h2>
-            <p>This website contains affiliate links to Amazon, IKEA, and eBay. We may earn a small commission on purchases made through these links, at no extra cost to you.</p>
+            <p>This website contains affiliate links to Amazon, IKEA, and eBay.</p>
           </div>
 
         </section>
