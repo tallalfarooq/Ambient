@@ -68,7 +68,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-white font-semibold mb-2">11. Contact</h2>
-            <p>Questions? Contact us at: <a href="mailto:hello@ambientspace.ai" className="underline" style={{ color: "#1B8FA0" }}>hello@ambientspace.ai</a></p>
+            <p>Questions? Contact us at: <a href="mailto:support@ambientspace.ai" className="underline" style={{ color: "#1B8FA0" }}>support@ambientspace.ai</a></p>
           </section>
 
         </div>

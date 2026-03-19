@@ -58,7 +58,7 @@ export default function PrivacyPolicy() {
 
           <section>
             <h2 className="text-white font-semibold mb-2">8. Contact</h2>
-            <p>For any privacy questions, contact us at: <a href="mailto:hello@ambientspace.ai" className="underline" style={{ color: "#1B8FA0" }}>hello@ambientspace.ai</a></p>
+            <p>For any privacy questions, contact us at: <a href="mailto:support@ambientspace.ai" className="underline" style={{ color: "#1B8FA0" }}>support@ambientspace.ai</a></p>
           </section>
 
         </div>
