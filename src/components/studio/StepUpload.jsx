@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
-import { Upload, Image as ImageIcon, Box, Loader2, Camera, Sparkles, X, CheckCircle2 } from "lucide-react";
+import { Upload, Image as ImageIcon, Box, Loader2, Camera, Sparkles, X, CheckCircle2, Armchair, Wand2 } from "lucide-react";
 
 const ROOM_TYPES = ["Living Room", "Bedroom", "Kitchen", "Dining Room", "Home Office", "Bathroom", "Hallway", "Kids Room", "Outdoor"];
 
@@ -34,8 +34,53 @@ export default function StepUpload({ data, update, onNext }) {
 
   const canContinue = data.room_image_url || data.room_file_url;
 
+  const roomMode = data.room_mode || "redesign";
+
   return (
     <div className="space-y-6">
+
+      {/* ── Room mode toggle ── */}
+      <div>
+        <p className="text-xs font-semibold text-white/30 uppercase tracking-widest mb-3">What do you want to do?</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => update({ room_mode: "redesign" })}
+            className="flex flex-col items-center gap-2 py-4 px-3 rounded-2xl border text-left transition-all"
+            style={{
+              background: roomMode === "redesign" ? "rgba(27,143,160,0.15)" : "rgba(255,255,255,0.03)",
+              border: `1.5px solid ${roomMode === "redesign" ? "rgba(27,143,160,0.6)" : "rgba(255,255,255,0.08)"}`,
+            }}
+          >
+            <Armchair className="w-5 h-5" style={{ color: roomMode === "redesign" ? "#1B8FA0" : "rgba(255,255,255,0.3)" }} />
+            <div>
+              <div className="text-sm font-semibold" style={{ color: roomMode === "redesign" ? "#6EC6C6" : "rgba(255,255,255,0.6)" }}>
+                Redesign My Room
+              </div>
+              <div className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                Keep room structure, change style
+              </div>
+            </div>
+          </button>
+          <button
+            onClick={() => update({ room_mode: "furnish" })}
+            className="flex flex-col items-center gap-2 py-4 px-3 rounded-2xl border text-left transition-all"
+            style={{
+              background: roomMode === "furnish" ? "rgba(201,150,58,0.15)" : "rgba(255,255,255,0.03)",
+              border: `1.5px solid ${roomMode === "furnish" ? "rgba(201,150,58,0.6)" : "rgba(255,255,255,0.08)"}`,
+            }}
+          >
+            <Wand2 className="w-5 h-5" style={{ color: roomMode === "furnish" ? "#C9963A" : "rgba(255,255,255,0.3)" }} />
+            <div>
+              <div className="text-sm font-semibold" style={{ color: roomMode === "furnish" ? "#C9963A" : "rgba(255,255,255,0.6)" }}>
+                Furnish Empty Room
+              </div>
+              <div className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                Upload bare room, AI places furniture
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
 
       {/* ── Drop zone ── */}
       <div
@@ -91,14 +136,16 @@ export default function StepUpload({ data, update, onNext }) {
             </div>
             <div>
               <p className="text-white/80 font-semibold text-base mb-1">
-                {dragOver ? "Release to upload" : "Drop your room photo here"}
+                {dragOver ? "Release to upload" : roomMode === "furnish" ? "Drop your empty room photo here" : "Drop your room photo here"}
               </p>
               <p className="text-white/30 text-xs">JPG, PNG, HEIC · Up to 20MB</p>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
               style={{ background: "rgba(27,143,160,0.1)", border: "1px solid rgba(27,143,160,0.2)" }}>
               <Sparkles className="w-3 h-3" style={{ color: "#1B8FA0" }} />
-              <span className="text-xs font-medium" style={{ color: "rgba(110,198,198,0.8)" }}>AI analyzes your space automatically</span>
+              <span className="text-xs font-medium" style={{ color: "rgba(110,198,198,0.8)" }}>
+                {roomMode === "furnish" ? "AI places real-looking furniture while keeping your room's structure" : "AI analyzes your space automatically"}
+              </span>
             </div>
           </div>
         )}

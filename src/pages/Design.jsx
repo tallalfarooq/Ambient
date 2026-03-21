@@ -177,17 +177,17 @@ export default function Design() {
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are an Amazon.de product search expert analyzing an AI-generated interior design render in the ${design.style} style.
 Budget: €${design.budget_min ?? 0}–€${design.budget_max ?? 5000} (tier: ${tier}).
-TASK: Identify 8-12 distinct furniture or decor items visible in this room render. For each item provide:
-- label: descriptive name in English (e.g. "Low Linen Sofa", "Rattan Pendant Light")
-- style_tags: 2-3 English style tags (e.g. ["minimalist", "natural wood", "japandi"])
-- position_x, position_y: percentage position on the image (0-100) where the item appears
-- search_query: a precise GERMAN Amazon.de search query (4-6 words) that will return real buyable products. Be specific about material, style and colour.
+TASK: Identify 8-12 distinct furniture or decor items clearly visible in this room render. For each item provide:
+- label: descriptive English name including COLOR + MATERIAL + TYPE (e.g. "Beige Linen Low-Profile Sofa", "Walnut Wood Tapered-Leg Coffee Table", "Rattan Wicker Pendant Light")
+- style_tags: 2-3 English style tags matching the item's visual style (e.g. ["japandi", "natural oak", "minimalist"])
+- position_x, position_y: percentage position on the image (0-100) where the item center appears
+- search_query: a precise GERMAN Amazon.de search query (5-7 words) that targets this EXACT item. ALWAYS include: COLOR in German + MATERIAL in German + STYLE keyword + PRODUCT TYPE in German. Examples: "beige Leinen Sofa niedrig Japandi Wohnzimmer", "Walnuss Holz Couchtisch Mid-Century konische Beine", "Rattan Pendelleuchte Boho natur", "Eichenholz Regal minimalistisch schwarz Stahl".
 CRITICAL: The budget tier is "${tier}" — your query MUST include these German keywords: "${budgetHint}".
-Examples for this tier: ${
-  tier === "budget"  ? '"Teppich Wohnzimmer günstig", "Stehlampe günstig preiswert"' :
-  tier === "mid"     ? '"Stehlampe Wohnzimmer modern Qualität", "Sofa Stoff grau Bestseller"' :
-  tier === "premium" ? '"Designer Stehlampe Premium schwarz", "Sofa hochwertig Leder modern"' :
-                       '"Luxus Sofa Leder Designer exklusiv", "Stehlampe High-End exklusiv"'}.
+Budget-tier query examples: ${
+  tier === "budget"  ? '"Teppich Baumwolle günstig Wohnzimmer", "Stehlampe Stoff preiswert modern"' :
+  tier === "mid"     ? '"Sofa Stoff grau Wohnzimmer Qualität", "Couchtisch Eiche rund modern Bestseller"' :
+  tier === "premium" ? '"Designer Sofa Leder schwarz Premium hochwertig", "Stehlampe Messing modern Design"' :
+                       '"Luxus Sofa Leder Rindsleder Designer exklusiv", "Stehlampe vergoldet High-End Messing"'}.
 ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand options where possible." : ""}`,
       file_urls: [design.generated_render_url].filter(Boolean),
       response_json_schema: {

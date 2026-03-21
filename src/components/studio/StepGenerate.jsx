@@ -4,16 +4,58 @@ import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers } from "lucide-react";
 
+const STYLE_MAP = {
+  "Japandi":           "neutral linen/cotton textiles, low-profile solid oak furniture, wabi-sabi ceramics, muted beige and sage color palette, minimalist open shelving, paper lantern and rattan pendant lighting",
+  "Industrial":        "exposed brick or raw concrete walls, dark metal frame furniture, reclaimed wood tabletops, Edison bulb pendant lights, iron pipe shelving, leather and canvas upholstery",
+  "Boho":              "rattan and wicker furniture, macramé wall hangings, layered patterned wool rugs, warm terracotta and rust tones, trailing indoor plants in clay pots, fringe and tassel accents",
+  "Modern Minimal":    "white plaster walls, polished concrete or light oak floors, black powder-coated steel frame accents, floating open shelves, linen upholstery in cream or greige, sculptural geometric lighting",
+  "Cottagecore":       "floral chintz print soft furnishings, distressed white-painted wood furniture, cream and dusty rose palette, vintage ceramic accessories, dried flower arrangements in glass vases",
+  "Mid-Century Modern":"tapered splayed wooden legs in walnut, mustard yellow and teal fabric accents, organic curved forms, Eames-style lounge chairs, retro cone or globe pendant lights",
+  "Art Deco":          "deep jewel-tone velvet upholstery in emerald or navy, polished gold and brass metallic accents, bold geometric tile patterns, marble surfaces, oversized statement mirror with gilded frame",
+  "Scandi":            "white walls, pale birch and pine wood furniture, functional Shaker-style pieces, cozy chunky knit wool throws, hygge candle clusters, simple linen Roman blinds",
+};
+
+const FINE_TUNE_OPTIONS = {
+  wall_color:     ["White", "Warm Beige", "Sage Green", "Navy Blue", "Terracotta", "Charcoal"],
+  sofa_color:     ["Light Grey", "Cream", "Forest Green", "Mustard Yellow", "Navy", "Blush Pink"],
+  floor_type:     ["Light Oak", "Dark Walnut", "White Marble", "Herringbone Parquet", "Polished Concrete"],
+  ceiling_design: ["Plain White", "Exposed Wooden Beams", "Coffered", "Tray Ceiling", "Painted in accent color"],
+};
+
 const buildPrompt = (data) => {
-  const vibeStr = data.vibes?.length ? `, ${data.vibes.join(", ")}` : "";
   const style = data.style || "modern";
-  const palette = data.color_palette ? `, ${data.color_palette} color tones` : "";
+  const styleDetail = STYLE_MAP[style] || style;
+  const vibeStr = data.vibes?.length ? ` Mood: ${data.vibes.join(", ")}.` : "";
+  const palette = data.color_palette ? ` Color palette: ${data.color_palette}.` : "";
+
+  const customParts = [];
+  if (data.wall_color)      customParts.push(`Wall color: ${data.wall_color}`);
+  if (data.sofa_color)      customParts.push(`Sofa/seating upholstery: ${data.sofa_color}`);
+  if (data.floor_type)      customParts.push(`Flooring: ${data.floor_type}`);
+  if (data.ceiling_design)  customParts.push(`Ceiling: ${data.ceiling_design}`);
+  const customStr = customParts.length ? ` ${customParts.join(". ")}.` : "";
+
+  if (data.room_mode === "furnish") {
+    return (
+      `Photorealistic interior design photograph of a fully furnished ${data.room_type || "room"}.` +
+      ` CRITICAL: Preserve the EXACT same camera angle, perspective, window positions, room proportions, wall surfaces, and natural lighting from the reference empty room photo. Do NOT alter the architecture.` +
+      ` Fill the room with realistic furniture and decor in ${style} interior design style: ${styleDetail}.` +
+      ` Every furniture piece must look like a real purchasable product — crisp edges, realistic fabric/wood/metal textures, accurate proportions, proper contact shadows on the floor.` +
+      `${palette}${customStr}${vibeStr}` +
+      ` Shot on Canon EOS R5, 24mm wide-angle lens, soft natural daylight through windows, HDR.` +
+      ` 8K resolution, photorealistic, hyperdetailed. NO floating objects. NO blurry textures. NO unrealistic proportions. NO CGI glow. NO AI artifacts.`
+    );
+  }
+
+  // Default: redesign mode
   return (
-    `Real interior design photo of a ${style} style living space${palette}${vibeStr}. ` +
-    `Shot with a professional DSLR camera, natural window light, realistic shadows. ` +
-    `Furniture looks exactly like products sold on Amazon and IKEA — clean lines, real textures, real materials. ` +
-    `No CGI, no illustration, no fantasy elements. Looks like a real apartment photo from Houzz or Architectural Digest. ` +
-    `High resolution, sharp focus, realistic depth of field, true-to-life colors.`
+    `Photorealistic interior design photograph.` +
+    ` Keep the EXACT same room structure as the reference: same walls, windows, doors, floor layout, ceiling height, room dimensions, camera angle, and perspective. Do NOT change any architecture.` +
+    ` Only replace: furniture style, upholstery, colors, materials, and decorative accessories.` +
+    ` Apply ${style} interior design style: ${styleDetail}.` +
+    `${palette}${customStr}${vibeStr}` +
+    ` Shot on Canon EOS R5, 24mm lens, natural daylight, professional interior photography.` +
+    ` Hyperrealistic, 8K resolution, magazine quality. NO AI artifacts. NO distortion. NO structural changes to the room.`
   );
 };
 
@@ -104,7 +146,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [user,         setUser]         = useState(undefined); // undefined = loading, null = not logged in
   const [checkingOut,  setCheckingOut]  = useState(false);
 
-  useEffect(() => { setPrompt(buildPrompt(data)); }, [data.style, data.color_palette, data.vibes]);
+  useEffect(() => { setPrompt(buildPrompt(data)); }, [data.style, data.color_palette, data.vibes, data.room_mode, data.room_type, data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design]);
 
   useEffect(() => {
     const fetchCredits = async () => {
@@ -177,13 +219,16 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         ? `${prompt}, avoid: ${feedbackNote}`
         : prompt;
 
-    const strength = intensity / 100;
+    // Furnish mode needs higher minimum strength to actually place furniture
+    const strength = data.room_mode === "furnish"
+      ? Math.max(intensity / 100, 0.75)
+      : intensity / 100;
 
     try {
       const result = await base44.integrations.Core.GenerateImage({
         prompt: refinedPrompt,
         existing_image_urls: [data.room_image_url],
-        options: { strength, guidance_scale: 7.5 },
+        options: { strength, guidance_scale: 8.5 },
       });
 
       const url = result?.url || result;
@@ -313,7 +358,9 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-2xl font-bold">Generate your design</h2>
+        <h2 className="text-2xl font-bold">
+        {data.room_mode === "furnish" ? "Furnish your empty room" : "Generate your design"}
+      </h2>
         {credits && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl" style={{ background: "rgba(27,143,160,0.1)", border: "1px solid rgba(27,143,160,0.25)" }}>
             <Sparkles className="w-3.5 h-3.5" style={{ color: "#1B8FA0" }} />
@@ -324,8 +371,10 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         )}
       </div>
       <p className="text-white/40 text-sm mb-6">
-        Stable Diffusion will paint your room in the{" "}
-        <strong className="text-white/70">{data.style}</strong> style. Each generation uses 2 credits.
+        {data.room_mode === "furnish"
+          ? <>AI will place realistic <strong className="text-white/70">{data.style}</strong>-style furniture into your empty room — keeping your walls, windows and perspective.</>
+          : <>Stable Diffusion will redesign your room in the <strong className="text-white/70">{data.style}</strong> style, keeping your room structure intact.</>
+        }{" "}Each generation uses 2 credits.
       </p>
 
       {/* Prompt editor */}
@@ -443,6 +492,100 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
               <p className="text-white/25 text-xs mt-2">Tap Regenerate below to apply your feedback</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Fine-tune controls — shown after first generation */}
+      {generated && !loading && (
+        <div className="mb-6 rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)" }}>
+          <div className="px-5 py-4 border-b border-white/5">
+            <p className="text-xs font-semibold text-white/40 tracking-wide uppercase">Fine-tune details</p>
+            <p className="text-white/25 text-[10px] mt-0.5">Pick options below, then hit Regenerate</p>
+          </div>
+          <div className="px-5 py-4 space-y-4">
+            {/* Wall color */}
+            <div>
+              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Wall Color</p>
+              <div className="flex flex-wrap gap-1.5">
+                {FINE_TUNE_OPTIONS.wall_color.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => update({ wall_color: data.wall_color === opt ? null : opt })}
+                    className="text-[11px] px-3 py-1 rounded-full border transition-all"
+                    style={{
+                      borderColor: data.wall_color === opt ? "#1B8FA0" : "rgba(255,255,255,0.1)",
+                      background: data.wall_color === opt ? "rgba(27,143,160,0.2)" : "transparent",
+                      color: data.wall_color === opt ? "#6EC6C6" : "rgba(255,255,255,0.45)",
+                    }}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Sofa / seating */}
+            <div>
+              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Sofa / Seating</p>
+              <div className="flex flex-wrap gap-1.5">
+                {FINE_TUNE_OPTIONS.sofa_color.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => update({ sofa_color: data.sofa_color === opt ? null : opt })}
+                    className="text-[11px] px-3 py-1 rounded-full border transition-all"
+                    style={{
+                      borderColor: data.sofa_color === opt ? "#7c3aed" : "rgba(255,255,255,0.1)",
+                      background: data.sofa_color === opt ? "rgba(124,58,237,0.2)" : "transparent",
+                      color: data.sofa_color === opt ? "#a78bfa" : "rgba(255,255,255,0.45)",
+                    }}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Floor */}
+            <div>
+              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Flooring</p>
+              <div className="flex flex-wrap gap-1.5">
+                {FINE_TUNE_OPTIONS.floor_type.map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => update({ floor_type: data.floor_type === opt ? null : opt })}
+                    className="text-[11px] px-3 py-1 rounded-full border transition-all"
+                    style={{
+                      borderColor: data.floor_type === opt ? "#C9963A" : "rgba(255,255,255,0.1)",
+                      background: data.floor_type === opt ? "rgba(201,150,58,0.2)" : "transparent",
+                      color: data.floor_type === opt ? "#C9963A" : "rgba(255,255,255,0.45)",
+                    }}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Ceiling — only in furnish mode */}
+            {data.room_mode === "furnish" && (
+              <div>
+                <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Ceiling</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {FINE_TUNE_OPTIONS.ceiling_design.map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => update({ ceiling_design: data.ceiling_design === opt ? null : opt })}
+                      className="text-[11px] px-3 py-1 rounded-full border transition-all"
+                      style={{
+                        borderColor: data.ceiling_design === opt ? "#D4A0A0" : "rgba(255,255,255,0.1)",
+                        background: data.ceiling_design === opt ? "rgba(212,160,160,0.2)" : "transparent",
+                        color: data.ceiling_design === opt ? "#D4A0A0" : "rgba(255,255,255,0.45)",
+                      }}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

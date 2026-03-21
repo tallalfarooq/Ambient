@@ -31,6 +31,7 @@ export default function Studio() {
   const [data,    setData]    = useState({
     name:                "My Room Design",
     room_type:           null,
+    room_mode:           "redesign",   // "redesign" | "furnish"
     room_image_url:      null,
     room_file_url:       null,
     style:               null,
@@ -42,6 +43,10 @@ export default function Studio() {
     sustainability_mode: false,
     intensity:           65,
     room_dimensions:     { width: 4, length: 5, height: 2.8 },
+    wall_color:          null,
+    sofa_color:          null,
+    floor_type:          null,
+    ceiling_design:      null,
   });
 
   const update    = (patch) => setData((d) => ({ ...d, ...patch }));
