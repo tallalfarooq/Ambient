@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Check, Sparkles, Crown, Zap, Loader2, Calculator, ChevronRight } from "lucide-react";
+import { Check, Sparkles, Crown, Zap, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 const PLANS = [
@@ -54,143 +54,6 @@ const PLANS = [
     ]
   }
 ];
-
-// Credit calculator logic
-function CreditCalculator() {
-  const [fullGens, setFullGens] = useState(5);
-  const [fineTunes, setFineTunes] = useState(10);
-
-  const totalCredits = fullGens * 2 + fineTunes * 1;
-
-  const recommendedPlan = totalCredits <= 2
-    ? PLANS[0]
-    : totalCredits <= 20
-    ? PLANS[1]
-    : totalCredits <= 100
-    ? PLANS[2]
-    : null; // custom — needs pro+ multiple packs
-
-  const estimatedCost = totalCredits <= 2
-    ? "€0"
-    : totalCredits <= 20
-    ? "€5"
-    : totalCredits <= 100
-    ? "€20"
-    : `€${Math.ceil(totalCredits / 100) * 20}`;
-
-  return (
-    <div className="rounded-3xl border border-white/10 overflow-hidden" style={{ background: "rgba(255,255,255,0.02)" }}>
-      {/* Header */}
-      <div className="px-8 py-6 border-b border-white/8 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(27,143,160,0.15)", border: "1px solid rgba(27,143,160,0.3)" }}>
-          <Calculator className="w-4 h-4" style={{ color: "#1B8FA0" }} />
-        </div>
-        <div>
-          <h3 className="text-base font-bold text-white">Credit Calculator</h3>
-          <p className="text-xs text-white/40">Estimate how many credits you need</p>
-        </div>
-      </div>
-
-      <div className="px-8 py-6 grid md:grid-cols-2 gap-8">
-        {/* Sliders */}
-        <div className="space-y-7">
-          {/* Full generations */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-sm font-semibold text-white">Full AI Generations</p>
-                <p className="text-xs text-white/40 mt-0.5">New room renders from your photo</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold" style={{ color: "#1B8FA0" }}>{fullGens}</span>
-                <span className="text-xs text-white/30">× 2 credits</span>
-              </div>
-            </div>
-            <input
-              type="range" min={0} max={50} value={fullGens}
-              onChange={(e) => setFullGens(parseInt(e.target.value))}
-              className="w-full" style={{ accentColor: "#1B8FA0" }}
-            />
-            <div className="flex justify-between text-[10px] text-white/25 mt-1">
-              <span>0</span><span>50</span>
-            </div>
-          </div>
-
-          {/* Fine-tune edits */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-sm font-semibold text-white">Fine-Tune Edits</p>
-                <p className="text-xs text-white/40 mt-0.5">Wall color, sofa, floor, ceiling tweaks</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold" style={{ color: "#C9963A" }}>{fineTunes}</span>
-                <span className="text-xs text-white/30">× 1 credit</span>
-              </div>
-            </div>
-            <input
-              type="range" min={0} max={100} value={fineTunes}
-              onChange={(e) => setFineTunes(parseInt(e.target.value))}
-              className="w-full" style={{ accentColor: "#C9963A" }}
-            />
-            <div className="flex justify-between text-[10px] text-white/25 mt-1">
-              <span>0</span><span>100</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Result */}
-        <div className="flex flex-col justify-center">
-          <div className="rounded-2xl p-6 border border-white/8" style={{ background: "rgba(27,143,160,0.05)" }}>
-            {/* Credit breakdown */}
-            <div className="space-y-2 mb-5">
-              <div className="flex justify-between text-sm">
-                <span className="text-white/50">Full gens ({fullGens} × 2)</span>
-                <span className="text-white font-semibold">{fullGens * 2} credits</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-white/50">Fine-tunes ({fineTunes} × 1)</span>
-                <span className="text-white font-semibold">{fineTunes} credits</span>
-              </div>
-              <div className="h-px bg-white/10 my-3" />
-              <div className="flex justify-between">
-                <span className="text-sm font-semibold text-white">Total credits needed</span>
-                <span className="text-lg font-bold" style={{ color: "#1B8FA0" }}>{totalCredits}</span>
-              </div>
-            </div>
-
-            {/* Recommendation */}
-            {recommendedPlan ? (
-              <div className="rounded-xl p-4 border" style={{ background: "rgba(27,143,160,0.1)", borderColor: "rgba(27,143,160,0.3)" }}>
-                <p className="text-xs text-white/50 mb-1">Recommended plan</p>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-white">{recommendedPlan.name}</p>
-                    <p className="text-xs text-white/40">{recommendedPlan.credits} credits included</p>
-                  </div>
-                  <span className="text-2xl font-bold" style={{ color: "#1B8FA0" }}>{estimatedCost}</span>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-xl p-4 border" style={{ background: "rgba(201,150,58,0.1)", borderColor: "rgba(201,150,58,0.3)" }}>
-                <p className="text-xs text-white/50 mb-1">For heavy usage</p>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-white">Multiple Pro packs</p>
-                    <p className="text-xs text-white/40">{Math.ceil(totalCredits / 100)} × Pro = {Math.ceil(totalCredits / 100) * 100} credits</p>
-                  </div>
-                  <span className="text-2xl font-bold" style={{ color: "#C9963A" }}>{estimatedCost}</span>
-                </div>
-              </div>
-            )}
-
-            <p className="text-[10px] text-white/25 mt-3 text-center">Credits never expire</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function Pricing() {
   const [user, setUser] = useState(null);
@@ -366,30 +229,21 @@ export default function Pricing() {
           })}
         </div>
 
-        {/* Credit Calculator */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4" style={{ background: "rgba(201,150,58,0.1)", border: "1px solid rgba(201,150,58,0.25)" }}>
-            <Calculator className="w-4 h-4" style={{ color: "#C9963A" }} />
-            <span className="text-sm font-semibold" style={{ color: "#C9963A" }}>Not sure which plan fits?</span>
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Custom Credit Calculator</h2>
-          <p className="text-white/40 text-sm">Tell us how much you plan to design — we'll show you exactly what you need.</p>
+        {/* Bottom note + business contact */}
+        <div className="text-center text-sm text-white/35 max-w-2xl mx-auto mb-6">
+          <p>Credits never expire. Full AI generation = 2 credits. Fine-tune edits = 1 credit each.</p>
         </div>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="mb-10"
-        >
-          <CreditCalculator />
-        </motion.div>
 
-        {/* FAQ note */}
-        <div className="text-center text-sm text-white/35 max-w-2xl mx-auto">
-          <p>
-            Credits never expire. Full AI generation = 2 credits. Fine-tune edits (wall color, sofa, floor, ceiling) = 1 credit each.
-            Pro users get AI product matching from generated renders.
-          </p>
+        <div className="rounded-2xl border border-white/8 px-8 py-6 text-center max-w-xl mx-auto" style={{ background: "rgba(255,255,255,0.02)" }}>
+          <p className="text-sm font-semibold text-white mb-1">Need custom credits or a business plan?</p>
+          <p className="text-sm text-white/40 mb-4">For high-volume usage, agencies, or enterprise — reach out and we'll sort you out.</p>
+          <a
+            href="mailto:support@ambientspace.ai"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
+            style={{ background: "rgba(27,143,160,0.12)", border: "1px solid rgba(27,143,160,0.3)", color: "#1B8FA0" }}
+          >
+            support@ambientspace.ai
+          </a>
         </div>
       </div>
     </div>
