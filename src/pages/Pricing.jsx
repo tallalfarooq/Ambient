@@ -85,7 +85,7 @@ export default function Pricing() {
     }
     setPurchasing(planId);
     try {
-      const response = await base44.functions.invoke('createCheckout', { plan: planId });
+      const response = await base44.functions.invoke('createCheckout', { plan: planId, returnUrl: window.location.origin });
       if (response.data?.url) {
         window.location.href = response.data.url;
       }

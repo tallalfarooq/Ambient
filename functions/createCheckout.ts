@@ -17,14 +17,15 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { plan } = await req.json();
+    const { plan, returnUrl } = await req.json();
     const selectedPlan = PLANS[plan];
 
     if (!selectedPlan) {
       return Response.json({ error: 'Invalid plan' }, { status: 400 });
     }
 
-    const { origin } = new URL(req.url);
+    // Use the frontend origin passed by the client — NOT req.url which is the Deno backend URL
+    const appOrigin = returnUrl || 'https://ambientspace.ai';
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -42,8 +43,8 @@ Deno.serve(async (req) => {
         },
       ],
       mode: 'payment',
-      success_url: `${origin}/Studio?payment=success`,
-      cancel_url: `${origin}/Pricing?payment=cancelled`,
+      success_url: `${appOrigin}/Studio?payment=success`,
+      cancel_url: `${appOrigin}/Pricing?payment=cancelled`,
       customer_email: user.email,
       metadata: {
         base44_app_id: Deno.env.get('BASE44_APP_ID'),
