@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Upload, Image as ImageIcon, Box, Loader2, Camera, Sparkles, X, CheckCircle2, Armchair, Wand2 } from "lucide-react";
+import heic2any from "heic2any";
 
 const ROOM_TYPES = ["Living Room", "Bedroom", "Kitchen", "Dining Room", "Home Office", "Bathroom", "Hallway", "Kids Room", "Outdoor"];
 
@@ -9,27 +10,18 @@ const ROOM_ICONS = {
   "Home Office": "💻", "Bathroom": "🚿", "Hallway": "🚪", "Kids Room": "🧸", "Outdoor": "🌿",
 };
 
-// Convert HEIC/HEIF to JPEG using canvas (works natively in Safari; best-effort elsewhere)
+// Convert HEIC/HEIF to JPEG using heic2any (works in all browsers including Chrome)
 const convertToJpeg = async (file) => {
   const isHeic = file.type === "image/heic" || file.type === "image/heif" ||
     /\.(heic|heif)$/i.test(file.name);
   if (!isHeic) return file;
 
   try {
-    const bitmap = await createImageBitmap(file);
-    const canvas = document.createElement("canvas");
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    canvas.getContext("2d").drawImage(bitmap, 0, 0);
-    bitmap.close();
-    return await new Promise((resolve, reject) => {
-      canvas.toBlob((blob) => {
-        if (blob) resolve(new File([blob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg" }));
-        else reject(new Error("canvas toBlob failed"));
-      }, "image/jpeg", 0.92);
-    });
+    const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+    const blob = Array.isArray(converted) ? converted[0] : converted;
+    return new File([blob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg" });
   } catch {
-    throw new Error("HEIC_NOT_SUPPORTED");
+    throw new Error("HEIC_FAILED");
   }
 };
 
@@ -52,7 +44,7 @@ export default function StepUpload({ data, update, onNext }) {
       if (isImage) { update({ room_image_url: file_url }); setPreview(file_url); }
       else          { update({ room_file_url: file_url }); }
     } catch (err) {
-      if (err.message === "HEIC_NOT_SUPPORTED") {
+      if (err.message === "HEIC_FAILED" || err.message === "HEIC_NOT_SUPPORTED") {
         setHeicError(true);
       }
     }
@@ -117,17 +109,18 @@ export default function StepUpload({ data, update, onNext }) {
 
       {/* ── Drop zone ── */}
       <div
-        onClick={() => !uploading && fileRef.current.click()}
+        onClick={() => !uploading && !preview && fileRef.current.click()}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
-        className="relative rounded-2xl overflow-hidden cursor-pointer transition-all duration-300"
+        className="relative rounded-2xl overflow-hidden transition-all duration-300"
         style={{
-          minHeight: 240,
+          minHeight: preview ? "auto" : 240,
+          cursor: preview ? "default" : "pointer",
           border: `1.5px dashed ${dragOver ? "rgba(27,143,160,0.8)" : preview ? "rgba(27,143,160,0.5)" : "rgba(255,255,255,0.1)"}`,
           background: dragOver
             ? "radial-gradient(ellipse at center, rgba(27,143,160,0.1) 0%, rgba(0,0,0,0) 80%)"
-            : preview ? "transparent" : "rgba(255,255,255,0.015)",
+            : preview ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.015)",
         }}
       >
         <input ref={fileRef} type="file" className="hidden" accept="image/*,.heic,.heif,.obj,.gltf,.glb"
@@ -136,7 +129,7 @@ export default function StepUpload({ data, update, onNext }) {
           onChange={(e) => handleFile(e.target.files[0])} />
 
         {uploading ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+          <div className="flex flex-col items-center justify-center gap-3 py-16">
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "rgba(27,143,160,0.15)" }}>
               <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#1B8FA0" }} />
             </div>
@@ -144,7 +137,8 @@ export default function StepUpload({ data, update, onNext }) {
           </div>
         ) : preview ? (
           <>
-            <img src={preview} alt="Room" className="w-full h-60 object-cover" />
+            {/* Full image, no cropping — user sees exactly what they uploaded */}
+            <img src={preview} alt="Room" className="w-full h-auto block" style={{ maxHeight: "420px", objectFit: "contain" }} />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
             <button
               onClick={clearPreview}
