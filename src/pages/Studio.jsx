@@ -50,18 +50,38 @@ export default function Studio() {
     custom_note:         "",
   });
 
-  const update    = (patch) => setData((d) => ({ ...d, ...patch }));
+  const update = (patch) => setData((d) => ({ ...d, ...patch }));
   const stepProps = { data, update, onNext: () => setStep((s) => s + 1), onBack: () => setStep((s) => s - 1) };
 
-  // Restore draft saved before login redirect
+  // ── Auto-save wizard state to localStorage on every change ──────────────
+  useEffect(() => {
+    if (!data.room_image_url) return; // don't save empty state
+    try {
+      localStorage.setItem("ambient_studio_session", JSON.stringify({ ...data, _step: step }));
+    } catch {}
+  }, [data, step]);
+
+  // ── Restore state on mount: login-draft takes priority, then session ─────
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("ambient_studio_draft");
-      if (raw) {
-        const { _step, ...savedData } = JSON.parse(raw);
+      // 1. One-time login redirect draft (highest priority)
+      const loginDraft = localStorage.getItem("ambient_studio_draft");
+      if (loginDraft) {
+        const { _step, ...savedData } = JSON.parse(loginDraft);
         setData((d) => ({ ...d, ...savedData }));
         if (_step != null) setStep(_step);
         localStorage.removeItem("ambient_studio_draft");
+        return;
+      }
+      // 2. Persistent session — restore after Pricing visit, page refresh, etc.
+      const session = localStorage.getItem("ambient_studio_session");
+      if (session) {
+        const { _step, ...savedData } = JSON.parse(session);
+        // Only restore if there is meaningful state (an uploaded image)
+        if (savedData.room_image_url) {
+          setData((d) => ({ ...d, ...savedData }));
+          if (_step != null) setStep(_step);
+        }
       }
     } catch {}
   }, []);
@@ -78,10 +98,15 @@ export default function Studio() {
     const params = new URLSearchParams(window.location.search);
 
     if (params.get("payment") === "success") {
-      toast.success("Payment successful! Credits added to your account.");
+      toast.success("Payment successful! Credits added. Resuming your design…");
       window.history.replaceState({}, "", "/Studio");
+      // Force re-fetch credits so the generate button unlocks immediately
+      base44.auth.me().then(async (u) => {
+        const uc = await base44.entities.UserCredits.filter({ user_email: u.email });
+        if (uc.length > 0) setCredits(uc[0]);
+      }).catch(() => {});
     } else if (params.get("payment") === "cancelled") {
-      toast.error("Payment cancelled.");
+      toast.info("Payment cancelled. Your design is still here — ready when you are.");
       window.history.replaceState({}, "", "/Studio");
     }
 
@@ -143,7 +168,28 @@ export default function Studio() {
       <div className="relative z-10 max-w-3xl mx-auto px-4 pb-24 pt-10">
 
         {/* ── Mode Switcher ─────────────────────────────────────── */}
-        <div className="flex items-center justify-center mb-10">
+        <div className="flex items-center justify-center mb-10" style={{ position: "relative" }}>
+          {/* "Start new design" shortcut — only shown if a session exists */}
+          {step > 0 && (
+            <button
+              onClick={() => {
+                try { localStorage.removeItem("ambient_studio_session"); } catch {}
+                setStep(0);
+                setData({
+                  name: "My Room Design", room_type: null, room_mode: "redesign",
+                  room_image_url: null, room_file_url: null, style: null,
+                  color_palette: "", vibes: [], budget_min: 500, budget_max: 3000,
+                  budget_tier: "mid", sustainability_mode: false, intensity: 65,
+                  room_dimensions: { width: 4, length: 5, height: 2.8 },
+                  wall_color: null, sofa_color: null, floor_type: null,
+                  ceiling_design: null, custom_note: "",
+                });
+              }}
+              className="absolute right-0 text-xs text-white/30 hover:text-white/60 transition-colors flex items-center gap-1"
+            >
+              + New design
+            </button>
+          )}
           <div
             className="flex items-center gap-1 p-1 rounded-2xl"
             style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}

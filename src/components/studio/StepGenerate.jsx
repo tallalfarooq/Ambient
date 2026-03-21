@@ -174,8 +174,9 @@ function FineTuneRow({ label, presets, selected, accentColor, accentBg, accentTe
 }
 
 function BeforeAfterSlider({ before, after }) {
-  const [pos, setPos] = useState(50);
+  const [pos, setPos] = useState(100); // default: show "after" (generated) fully
   const [dragging, setDragging] = useState(false);
+  const [hinted, setHinted] = useState(false); // show drag hint once
   const containerRef = useRef(null);
 
   const clamp = (v) => Math.max(0, Math.min(100, v));
@@ -186,10 +187,10 @@ function BeforeAfterSlider({ before, after }) {
     setPos(clamp(((clientX - rect.left) / rect.width) * 100));
   }, []);
 
-  const onMouseDown = (e) => { setDragging(true); updateFromClientX(e.clientX); };
+  const onMouseDown = (e) => { setDragging(true); setHinted(true); updateFromClientX(e.clientX); };
   const onMouseMove = (e) => { if (dragging) updateFromClientX(e.clientX); };
   const onMouseUp   = ()  => setDragging(false);
-  const onTouchStart = (e) => { setDragging(true); updateFromClientX(e.touches[0].clientX); };
+  const onTouchStart = (e) => { setDragging(true); setHinted(true); updateFromClientX(e.touches[0].clientX); };
   const onTouchMove  = (e) => { if (dragging) updateFromClientX(e.touches[0].clientX); };
 
   return (
@@ -233,12 +234,27 @@ function BeforeAfterSlider({ before, after }) {
           </svg>
         </div>
       </div>
-      <span className="absolute top-3 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-white/70 pointer-events-none">
+      {/* Before label — only visible when slider is dragged left */}
+      <span
+        className="absolute top-3 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-white/70 pointer-events-none transition-opacity duration-300"
+        style={{ opacity: pos < 90 ? 1 : 0 }}
+      >
         Before
       </span>
+      {/* After badge always shown */}
       <span className="absolute top-3 right-3 text-[10px] font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm text-white pointer-events-none" style={{ background: "rgba(27,143,160,0.8)" }}>
         After ✦
       </span>
+      {/* Drag-to-compare hint — shown until user first touches slider */}
+      {!hinted && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full pointer-events-none animate-pulse"
+          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" opacity="0.7">
+            <path d="M8 9l-4 3 4 3M16 9l4 3-4 3" />
+          </svg>
+          <span className="text-[10px] text-white/70 font-medium">Drag to compare</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -329,6 +345,10 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
 
   const handleBuyCredits = async () => {
     if (!user) return;
+    // Save current wizard state so it survives the Pricing page visit and Stripe redirect
+    try {
+      localStorage.setItem("ambient_studio_session", JSON.stringify({ ...data, _step: 3 }));
+    } catch {}
     navigate(createPageUrl("Pricing"));
   };
 
