@@ -73,6 +73,7 @@ const buildPrompt = (data) => {
   if (data.sofa_color)      customParts.push(`Sofa/seating upholstery: ${data.sofa_color}`);
   if (data.floor_type)      customParts.push(`Flooring: ${data.floor_type}`);
   if (data.ceiling_design)  customParts.push(`Ceiling: ${data.ceiling_design}`);
+  if (data.custom_note?.trim()) customParts.push(data.custom_note.trim());
   const customStr = customParts.length ? ` ${customParts.join(". ")}.` : "";
   const furnitureStr = roomFurniture ? ` This is a ${roomType} — include: ${roomFurniture}.` : "";
 
@@ -99,6 +100,54 @@ const buildPrompt = (data) => {
     ` Hyperrealistic, 8K resolution, magazine quality. NO AI artifacts. NO distortion. NO structural changes to the room.`
   );
 };
+
+function FineTuneRow({ label, presets, selected, accentColor, accentBg, accentText, onSelect, placeholder }) {
+  const [custom, setCustom] = useState("");
+
+  const handlePreset = (opt) => {
+    const next = selected === opt ? null : opt;
+    onSelect(next);
+    if (next) setCustom(""); // clear custom text when a preset is picked
+  };
+
+  const handleCustomChange = (e) => {
+    setCustom(e.target.value);
+    onSelect(e.target.value || null); // propagate free text as the selection
+  };
+
+  return (
+    <div>
+      <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">{label}</p>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {presets.map((opt) => (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => handlePreset(opt)}
+            className="text-[11px] px-3 py-1 rounded-full border transition-all"
+            style={{
+              borderColor: selected === opt ? accentColor : "rgba(255,255,255,0.1)",
+              background: selected === opt ? accentBg : "transparent",
+              color: selected === opt ? accentText : "rgba(255,255,255,0.45)",
+            }}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+      <input
+        type="text"
+        value={custom}
+        onChange={handleCustomChange}
+        placeholder={placeholder}
+        className="w-full text-xs px-3 py-2 rounded-xl text-white/60 placeholder-white/20 focus:outline-none transition-all"
+        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = `${accentColor}55`; }}
+        onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; }}
+      />
+    </div>
+  );
+}
 
 function BeforeAfterSlider({ before, after }) {
   const [pos, setPos] = useState(50);
@@ -187,6 +236,16 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [user,         setUser]         = useState(undefined); // undefined = loading, null = not logged in
   const [checkingOut,  setCheckingOut]  = useState(false);
 
+  // Track pending fine-tune changes so we can highlight "Apply changes"
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
+  const prevFineTuneRef = useRef(null);
+  useEffect(() => {
+    const key = [data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design, data.custom_note].join("|");
+    if (prevFineTuneRef.current === null) { prevFineTuneRef.current = key; return; }
+    if (prevFineTuneRef.current !== key && generated) setHasPendingChanges(true);
+    prevFineTuneRef.current = key;
+  }, [data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design, data.custom_note]);
+
   // Save wizard state to localStorage before redirecting to login, so it can be restored after
   const saveAndRedirectToLogin = () => {
     try {
@@ -195,7 +254,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     base44.auth.redirectToLogin(window.location.href);
   };
 
-  useEffect(() => { setPrompt(buildPrompt(data)); }, [data.style, data.color_palette, data.vibes, data.room_mode, data.room_type, data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design]);
+  useEffect(() => { setPrompt(buildPrompt(data)); }, [data.style, data.color_palette, data.vibes, data.room_mode, data.room_type, data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design, data.custom_note]);
 
   useEffect(() => {
     const fetchCredits = async () => {
@@ -290,6 +349,8 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
 
       setProgress(100);
       setGenerated(url);
+      setHasPendingChanges(false);
+      prevFineTuneRef.current = [data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design, data.custom_note].join("|");
       update({ generated_render_url: url, generation_prompt: refinedPrompt, intensity });
     } catch (err) {
       setError(err?.message || "Generation failed. Please try again.");
@@ -535,94 +596,99 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
 
       {/* Fine-tune controls — shown after first generation */}
       {generated && !loading && (
-        <div className="mb-6 rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)" }}>
+        <div className="mb-6 rounded-2xl overflow-hidden" style={{
+          border: `1px solid ${hasPendingChanges ? "rgba(27,143,160,0.4)" : "rgba(255,255,255,0.07)"}`,
+          background: "rgba(255,255,255,0.02)",
+          transition: "border-color 0.3s",
+        }}>
           <div className="px-5 py-4 border-b border-white/5">
-            <p className="text-xs font-semibold text-white/40 tracking-wide uppercase">Fine-tune details</p>
-            <p className="text-white/25 text-[10px] mt-0.5">Pick options below, then hit Regenerate</p>
+            <p className="text-xs font-semibold text-white/60 tracking-wide uppercase">Fine-tune your design</p>
+            <p className="text-white/25 text-[10px] mt-0.5">Pick a preset or type your own — then apply</p>
           </div>
-          <div className="px-5 py-4 space-y-4">
+          <div className="px-5 py-4 space-y-5">
+
             {/* Wall color */}
-            <div>
-              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Wall Color</p>
-              <div className="flex flex-wrap gap-1.5">
-                {FINE_TUNE_OPTIONS.wall_color.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => update({ wall_color: data.wall_color === opt ? null : opt })}
-                    className="text-[11px] px-3 py-1 rounded-full border transition-all"
-                    style={{
-                      borderColor: data.wall_color === opt ? "#1B8FA0" : "rgba(255,255,255,0.1)",
-                      background: data.wall_color === opt ? "rgba(27,143,160,0.2)" : "transparent",
-                      color: data.wall_color === opt ? "#6EC6C6" : "rgba(255,255,255,0.45)",
-                    }}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <FineTuneRow
+              label="Wall Color"
+              presets={FINE_TUNE_OPTIONS.wall_color}
+              selected={data.wall_color}
+              accentColor="#1B8FA0"
+              accentBg="rgba(27,143,160,0.2)"
+              accentText="#6EC6C6"
+              onSelect={(v) => update({ wall_color: v })}
+              placeholder="e.g. dusty blue, olive green, warm terracotta…"
+            />
+
             {/* Sofa / seating */}
-            <div>
-              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Sofa / Seating</p>
-              <div className="flex flex-wrap gap-1.5">
-                {FINE_TUNE_OPTIONS.sofa_color.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => update({ sofa_color: data.sofa_color === opt ? null : opt })}
-                    className="text-[11px] px-3 py-1 rounded-full border transition-all"
-                    style={{
-                      borderColor: data.sofa_color === opt ? "#7c3aed" : "rgba(255,255,255,0.1)",
-                      background: data.sofa_color === opt ? "rgba(124,58,237,0.2)" : "transparent",
-                      color: data.sofa_color === opt ? "#a78bfa" : "rgba(255,255,255,0.45)",
-                    }}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {/* Floor */}
-            <div>
-              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Flooring</p>
-              <div className="flex flex-wrap gap-1.5">
-                {FINE_TUNE_OPTIONS.floor_type.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => update({ floor_type: data.floor_type === opt ? null : opt })}
-                    className="text-[11px] px-3 py-1 rounded-full border transition-all"
-                    style={{
-                      borderColor: data.floor_type === opt ? "#C9963A" : "rgba(255,255,255,0.1)",
-                      background: data.floor_type === opt ? "rgba(201,150,58,0.2)" : "transparent",
-                      color: data.floor_type === opt ? "#C9963A" : "rgba(255,255,255,0.45)",
-                    }}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <FineTuneRow
+              label="Sofa / Seating"
+              presets={FINE_TUNE_OPTIONS.sofa_color}
+              selected={data.sofa_color}
+              accentColor="#7c3aed"
+              accentBg="rgba(124,58,237,0.2)"
+              accentText="#a78bfa"
+              onSelect={(v) => update({ sofa_color: v })}
+              placeholder="e.g. deep teal velvet, cream boucle, cognac leather…"
+            />
+
+            {/* Flooring */}
+            <FineTuneRow
+              label="Flooring"
+              presets={FINE_TUNE_OPTIONS.floor_type}
+              selected={data.floor_type}
+              accentColor="#C9963A"
+              accentBg="rgba(201,150,58,0.2)"
+              accentText="#C9963A"
+              onSelect={(v) => update({ floor_type: v })}
+              placeholder="e.g. terracotta tiles, grey carpet, bleached oak…"
+            />
+
             {/* Ceiling — only in furnish mode */}
             {data.room_mode === "furnish" && (
-              <div>
-                <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Ceiling</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {FINE_TUNE_OPTIONS.ceiling_design.map((opt) => (
-                    <button
-                      key={opt}
-                      onClick={() => update({ ceiling_design: data.ceiling_design === opt ? null : opt })}
-                      className="text-[11px] px-3 py-1 rounded-full border transition-all"
-                      style={{
-                        borderColor: data.ceiling_design === opt ? "#D4A0A0" : "rgba(255,255,255,0.1)",
-                        background: data.ceiling_design === opt ? "rgba(212,160,160,0.2)" : "transparent",
-                        color: data.ceiling_design === opt ? "#D4A0A0" : "rgba(255,255,255,0.45)",
-                      }}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <FineTuneRow
+                label="Ceiling"
+                presets={FINE_TUNE_OPTIONS.ceiling_design}
+                selected={data.ceiling_design}
+                accentColor="#D4A0A0"
+                accentBg="rgba(212,160,160,0.2)"
+                accentText="#D4A0A0"
+                onSelect={(v) => update({ ceiling_design: v })}
+                placeholder="e.g. skylights, dark painted ceiling, decorative plaster…"
+              />
             )}
+
+            {/* Free-text additional note */}
+            <div>
+              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Anything else?</p>
+              <textarea
+                rows={2}
+                value={data.custom_note || ""}
+                onChange={(e) => update({ custom_note: e.target.value })}
+                placeholder="e.g. add more plants, make it feel cosier, include a fireplace, use warmer lighting…"
+                className="w-full text-sm px-4 py-3 rounded-xl text-white/70 placeholder-white/20 focus:outline-none resize-none leading-relaxed"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(27,143,160,0.35)"; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+              />
+            </div>
+
+            {/* Apply changes button — lives inside the fine-tune section */}
+            <button
+              onClick={generate}
+              disabled={loading || !credits || credits.credits_remaining < 2}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
+              style={{
+                background: hasPendingChanges
+                  ? "linear-gradient(135deg, #1B8FA0, #C9963A)"
+                  : "rgba(27,143,160,0.12)",
+                border: hasPendingChanges ? "none" : "1px solid rgba(27,143,160,0.3)",
+                color: "white",
+                boxShadow: hasPendingChanges ? "0 4px 20px rgba(27,143,160,0.4)" : "none",
+              }}
+            >
+              <RefreshCw className="w-4 h-4" />
+              {hasPendingChanges ? "Apply changes & regenerate" : "Regenerate with current settings"}
+            </button>
           </div>
         </div>
       )}

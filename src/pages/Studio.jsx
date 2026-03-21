@@ -47,6 +47,7 @@ export default function Studio() {
     sofa_color:          null,
     floor_type:          null,
     ceiling_design:      null,
+    custom_note:         "",
   });
 
   const update    = (patch) => setData((d) => ({ ...d, ...patch }));
