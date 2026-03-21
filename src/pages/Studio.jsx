@@ -52,6 +52,19 @@ export default function Studio() {
   const update    = (patch) => setData((d) => ({ ...d, ...patch }));
   const stepProps = { data, update, onNext: () => setStep((s) => s + 1), onBack: () => setStep((s) => s - 1) };
 
+  // Restore draft saved before login redirect
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("ambient_studio_draft");
+      if (raw) {
+        const { _step, ...savedData } = JSON.parse(raw);
+        setData((d) => ({ ...d, ...savedData }));
+        if (_step != null) setStep(_step);
+        localStorage.removeItem("ambient_studio_draft");
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     base44.auth.me().then(async (u) => {
       setUser(u);

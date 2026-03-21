@@ -9,20 +9,53 @@ const ROOM_ICONS = {
   "Home Office": "💻", "Bathroom": "🚿", "Hallway": "🚪", "Kids Room": "🧸", "Outdoor": "🌿",
 };
 
+// Convert HEIC/HEIF to JPEG using canvas (works natively in Safari; best-effort elsewhere)
+const convertToJpeg = async (file) => {
+  const isHeic = file.type === "image/heic" || file.type === "image/heif" ||
+    /\.(heic|heif)$/i.test(file.name);
+  if (!isHeic) return file;
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext("2d").drawImage(bitmap, 0, 0);
+    bitmap.close();
+    return await new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(new File([blob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg" }));
+        else reject(new Error("canvas toBlob failed"));
+      }, "image/jpeg", 0.92);
+    });
+  } catch {
+    throw new Error("HEIC_NOT_SUPPORTED");
+  }
+};
+
 export default function StepUpload({ data, update, onNext }) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview]     = useState(data.room_image_url);
   const [dragOver, setDragOver]   = useState(false);
+  const [heicError, setHeicError] = useState(false);
   const fileRef   = useRef();
   const cameraRef = useRef();
 
   const handleFile = async (file) => {
     if (!file) return;
+    setHeicError(false);
     setUploading(true);
-    const isImage = file.type.startsWith("image/");
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    if (isImage) { update({ room_image_url: file_url }); setPreview(file_url); }
-    else          { update({ room_file_url: file_url }); }
+    try {
+      const processedFile = await convertToJpeg(file);
+      const isImage = processedFile.type.startsWith("image/");
+      const { file_url } = await base44.integrations.Core.UploadFile({ file: processedFile });
+      if (isImage) { update({ room_image_url: file_url }); setPreview(file_url); }
+      else          { update({ room_file_url: file_url }); }
+    } catch (err) {
+      if (err.message === "HEIC_NOT_SUPPORTED") {
+        setHeicError(true);
+      }
+    }
     setUploading(false);
   };
 
@@ -97,7 +130,7 @@ export default function StepUpload({ data, update, onNext }) {
             : preview ? "transparent" : "rgba(255,255,255,0.015)",
         }}
       >
-        <input ref={fileRef} type="file" className="hidden" accept="image/*,.obj,.gltf,.glb"
+        <input ref={fileRef} type="file" className="hidden" accept="image/*,.heic,.heif,.obj,.gltf,.glb"
           onChange={(e) => handleFile(e.target.files[0])} />
         <input ref={cameraRef} type="file" className="hidden" accept="image/*" capture="environment"
           onChange={(e) => handleFile(e.target.files[0])} />
@@ -138,7 +171,7 @@ export default function StepUpload({ data, update, onNext }) {
               <p className="text-white/80 font-semibold text-base mb-1">
                 {dragOver ? "Release to upload" : roomMode === "furnish" ? "Drop your empty room photo here" : "Drop your room photo here"}
               </p>
-              <p className="text-white/30 text-xs">JPG, PNG, HEIC · Up to 20MB</p>
+              <p className="text-white/30 text-xs">JPG, PNG, HEIC (Safari/iPhone) · Up to 20MB</p>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
               style={{ background: "rgba(27,143,160,0.1)", border: "1px solid rgba(27,143,160,0.2)" }}>
@@ -150,6 +183,13 @@ export default function StepUpload({ data, update, onNext }) {
           </div>
         )}
       </div>
+
+      {/* HEIC conversion error */}
+      {heicError && (
+        <div className="px-4 py-3 rounded-2xl text-sm" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#fca5a5" }}>
+          <strong>HEIC photo not supported in this browser.</strong> On your iPhone, open the photo in the Photos app, tap Share → Save to Files as JPEG. Or use Safari on Mac which supports HEIC natively.
+        </div>
+      )}
 
       {/* ── Upload actions ── */}
       <div className="flex gap-2">

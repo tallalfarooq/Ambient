@@ -4,6 +4,18 @@ import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers } from "lucide-react";
 
+const ROOM_FURNITURE_CONTEXT = {
+  "Living Room":  "sofa set, coffee table, accent armchair, TV media console, floor lamp, decorative rug, bookshelf or display shelving",
+  "Bedroom":      "king or queen bed with upholstered headboard, two matching nightstands with bedside lamps, wardrobe or walk-in closet doors, dresser, bedroom rug at foot of bed",
+  "Kitchen":      "kitchen island with bar stools, pendant lights hanging above island, open shelving on walls, small counter herb plants, kitchen trolley",
+  "Dining Room":  "rectangular dining table, 4-6 matching dining chairs, sideboard or buffet cabinet against wall, statement chandelier centered above table, table runner and centerpiece",
+  "Home Office":  "large wooden work desk, ergonomic office chair, tall bookshelf with books, adjustable task lamp, small potted plant, cable management accessories",
+  "Bathroom":     "floating wall-mounted vanity, framed bathroom mirror with lighting, freestanding or built-in bathtub, towel rail, ceramic soap dispenser, bath mat",
+  "Hallway":      "slim console table against wall, large round or rectangular wall mirror, coat rack or hooks, narrow runner rug, small decorative vase or plant",
+  "Kids Room":    "children's single bed with safety rails and fun bedding, colorful storage unit with bins, kids study desk and chair, wall-mounted shelves with toys, play rug",
+  "Outdoor":      "weather-resistant outdoor lounge sofa, outdoor coffee table, string or lantern lighting, large terracotta planters with plants, outdoor side table",
+};
+
 const STYLE_MAP = {
   "Japandi":           "neutral linen/cotton textiles, low-profile solid oak furniture, wabi-sabi ceramics, muted beige and sage color palette, minimalist open shelving, paper lantern and rattan pendant lighting",
   "Industrial":        "exposed brick or raw concrete walls, dark metal frame furniture, reclaimed wood tabletops, Edison bulb pendant lights, iron pipe shelving, leather and canvas upholstery",
@@ -25,6 +37,8 @@ const FINE_TUNE_OPTIONS = {
 const buildPrompt = (data) => {
   const style = data.style || "modern";
   const styleDetail = STYLE_MAP[style] || style;
+  const roomType = data.room_type || "room";
+  const roomFurniture = ROOM_FURNITURE_CONTEXT[data.room_type] || "";
   const vibeStr = data.vibes?.length ? ` Mood: ${data.vibes.join(", ")}.` : "";
   const palette = data.color_palette ? ` Color palette: ${data.color_palette}.` : "";
 
@@ -34,12 +48,13 @@ const buildPrompt = (data) => {
   if (data.floor_type)      customParts.push(`Flooring: ${data.floor_type}`);
   if (data.ceiling_design)  customParts.push(`Ceiling: ${data.ceiling_design}`);
   const customStr = customParts.length ? ` ${customParts.join(". ")}.` : "";
+  const furnitureStr = roomFurniture ? ` This is a ${roomType} — include: ${roomFurniture}.` : "";
 
   if (data.room_mode === "furnish") {
     return (
-      `Photorealistic interior design photograph of a fully furnished ${data.room_type || "room"}.` +
+      `Photorealistic interior design photograph of a fully furnished ${roomType}.` +
       ` CRITICAL: Preserve the EXACT same camera angle, perspective, window positions, room proportions, wall surfaces, and natural lighting from the reference empty room photo. Do NOT alter the architecture.` +
-      ` Fill the room with realistic furniture and decor in ${style} interior design style: ${styleDetail}.` +
+      ` Fill the room with realistic furniture and decor in ${style} interior design style: ${styleDetail}.${furnitureStr}` +
       ` Every furniture piece must look like a real purchasable product — crisp edges, realistic fabric/wood/metal textures, accurate proportions, proper contact shadows on the floor.` +
       `${palette}${customStr}${vibeStr}` +
       ` Shot on Canon EOS R5, 24mm wide-angle lens, soft natural daylight through windows, HDR.` +
@@ -49,10 +64,10 @@ const buildPrompt = (data) => {
 
   // Default: redesign mode
   return (
-    `Photorealistic interior design photograph.` +
+    `Photorealistic interior design photograph of a ${roomType}.` +
     ` Keep the EXACT same room structure as the reference: same walls, windows, doors, floor layout, ceiling height, room dimensions, camera angle, and perspective. Do NOT change any architecture.` +
     ` Only replace: furniture style, upholstery, colors, materials, and decorative accessories.` +
-    ` Apply ${style} interior design style: ${styleDetail}.` +
+    ` Apply ${style} interior design style: ${styleDetail}.${furnitureStr}` +
     `${palette}${customStr}${vibeStr}` +
     ` Shot on Canon EOS R5, 24mm lens, natural daylight, professional interior photography.` +
     ` Hyperrealistic, 8K resolution, magazine quality. NO AI artifacts. NO distortion. NO structural changes to the room.`
@@ -145,6 +160,14 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [credits,      setCredits]      = useState(null);
   const [user,         setUser]         = useState(undefined); // undefined = loading, null = not logged in
   const [checkingOut,  setCheckingOut]  = useState(false);
+
+  // Save wizard state to localStorage before redirecting to login, so it can be restored after
+  const saveAndRedirectToLogin = () => {
+    try {
+      localStorage.setItem("ambient_studio_draft", JSON.stringify({ ...data, _step: 3 }));
+    } catch {}
+    base44.auth.redirectToLogin(window.location.href);
+  };
 
   useEffect(() => { setPrompt(buildPrompt(data)); }, [data.style, data.color_palette, data.vibes, data.room_mode, data.room_type, data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design]);
 
@@ -338,7 +361,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           </p>
         </div>
         <button
-          onClick={() => base44.auth.redirectToLogin(window.location.href)}
+          onClick={saveAndRedirectToLogin}
           className="flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl transition-all hover:opacity-90"
           style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)", color: "#0A0A12" }}
         >
@@ -377,23 +400,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         }{" "}Each generation uses 2 credits.
       </p>
 
-      {/* Prompt editor */}
-      <div className="mb-5">
-        <label className="text-xs text-white/40 block mb-2">
-          Generation prompt{" "}
-          <span className="text-white/25">(editable — describe anything custom)</span>
-        </label>
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          rows={3}
-          disabled={loading}
-          className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white/80
-                     focus:outline-none resize-none leading-relaxed
-                     disabled:opacity-50"
-          style={{ '--tw-ring-color': '#1B8FA0' }}
-        />
-      </div>
+      {/* Prompt is built internally — not shown to users */}
 
       {/* Intensity slider */}
       <div className="mb-6">

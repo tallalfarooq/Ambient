@@ -75,6 +75,7 @@ export default function Design() {
   const [showShareModal,  setShowShareModal]  = useState(false);
   const [shareLink,       setShareLink]       = useState("");
   const [copied,          setCopied]          = useState(false);
+  const [showComparison,  setShowComparison]  = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => setUser(null));
@@ -180,7 +181,8 @@ Budget: €${design.budget_min ?? 0}–€${design.budget_max ?? 5000} (tier: ${
 TASK: Identify 8-12 distinct furniture or decor items clearly visible in this room render. For each item provide:
 - label: descriptive English name including COLOR + MATERIAL + TYPE (e.g. "Beige Linen Low-Profile Sofa", "Walnut Wood Tapered-Leg Coffee Table", "Rattan Wicker Pendant Light")
 - style_tags: 2-3 English style tags matching the item's visual style (e.g. ["japandi", "natural oak", "minimalist"])
-- position_x, position_y: percentage position on the image (0-100) where the item center appears
+- position_x: horizontal % (0=far left, 50=center, 100=far right) of the item's VISUAL CENTER in the image. Be precise — a sofa that spans the lower center should be ~50. A lamp in the right third should be ~75.
+- position_y: vertical % (0=top, 50=middle, 100=bottom) of the item's VISUAL CENTER. A pendant light near the ceiling is ~15. A coffee table on the floor is ~70. A sofa seat is ~65.
 - search_query: a precise GERMAN Amazon.de search query (5-7 words) that targets this EXACT item. ALWAYS include: COLOR in German + MATERIAL in German + STYLE keyword + PRODUCT TYPE in German. Examples: "beige Leinen Sofa niedrig Japandi Wohnzimmer", "Walnuss Holz Couchtisch Mid-Century konische Beine", "Rattan Pendelleuchte Boho natur", "Eichenholz Regal minimalistisch schwarz Stahl".
 CRITICAL: The budget tier is "${tier}" — your query MUST include these German keywords: "${budgetHint}".
 Budget-tier query examples: ${
@@ -330,23 +332,42 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
               </div>
             ) : design.generated_render_url ? (
               <div className="relative w-full">
-                {design.room_image_url ? (
+                {/* Show generated image by default; comparison is opt-in */}
+                {showComparison && design.room_image_url ? (
                   <BeforeAfterSlider before={design.room_image_url} after={design.generated_render_url} />
                 ) : (
                   <img src={design.generated_render_url} alt="Generated room" className="w-full h-auto block" />
                 )}
-                {items.map((item) => (
+
+                {/* Compare toggle button */}
+                {design.room_image_url && (
+                  <button
+                    onClick={() => setShowComparison((v) => !v)}
+                    className="absolute top-3 left-3 text-[10px] font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm transition-all"
+                    style={{
+                      background: showComparison ? "rgba(27,143,160,0.85)" : "rgba(0,0,0,0.55)",
+                      color: "white",
+                    }}
+                  >
+                    {showComparison ? "Hide original" : "Compare ⇄"}
+                  </button>
+                )}
+
+                {/* Product pins — numbered for clarity */}
+                {items.map((item, idx) => (
                   <button
                     key={item.id}
                     onClick={() => setSelectedItem(item)}
-                    style={{ left: `${item.position_x}%`, top: `${item.position_y}%`, ...(selectedItem?.id === item.id ? { background: "#1B8FA0", borderColor: "rgba(255,255,255,0.8)" } : {}) }}
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
-                      selectedItem?.id === item.id
-                        ? "scale-125"
-                        : "bg-black/60 border-white/50 hover:scale-110"
-                    }`}
+                    className="absolute w-6 h-6 rounded-full border-2 transition-all duration-200 flex items-center justify-center text-white text-[10px] font-bold hover:scale-110"
+                    style={{
+                      left: `${item.position_x}%`,
+                      top: `${item.position_y}%`,
+                      transform: `translate(-50%, -50%) scale(${selectedItem?.id === item.id ? 1.25 : 1})`,
+                      background: selectedItem?.id === item.id ? "#1B8FA0" : "rgba(0,0,0,0.72)",
+                      borderColor: selectedItem?.id === item.id ? "white" : "rgba(255,255,255,0.55)",
+                    }}
                   >
-                    <ShoppingBag className="w-3 h-3 text-white" />
+                    {idx + 1}
                   </button>
                 ))}
               </div>
@@ -401,7 +422,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
 
           {items.length > 0 && (
             <div className="mt-4 grid grid-cols-3 gap-2">
-              {items.map((item) => (
+              {items.map((item, idx) => (
                 <button
                   key={item.id}
                   onClick={() => setSelectedItem(item)}
@@ -411,8 +432,14 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                       : "border-white/8 bg-white/3 hover:border-white/15"
                   }`}
                 >
-                  <div className="font-medium text-white/80 truncate">{item.label}</div>
-                  <div className="text-white/30 mt-0.5 truncate">{item.style_tags?.join(", ")}</div>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+                      style={{ background: selectedItem?.id === item.id ? "#1B8FA0" : "rgba(255,255,255,0.15)" }}>
+                      {idx + 1}
+                    </span>
+                    <span className="font-medium text-white/80 truncate">{item.label}</span>
+                  </div>
+                  <div className="text-white/30 truncate pl-5">{item.style_tags?.join(", ")}</div>
                 </button>
               ))}
             </div>
