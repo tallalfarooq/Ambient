@@ -338,8 +338,12 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       return;
     }
 
-    if (!credits || credits.credits_remaining < 2) {
-      setError("You need at least 2 credits to generate a design. Purchase more to continue.");
+    const creditsNeeded = isFineTune ? 1 : 2;
+    if (!credits || credits.credits_remaining < creditsNeeded) {
+      setError(isFineTune
+        ? "You need at least 1 credit to fine-tune. Purchase more to continue."
+        : "You need at least 2 credits to generate a design. Purchase more to continue."
+      );
       return;
     }
 
@@ -388,9 +392,9 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       if (!url) throw new Error("No image returned. Please try again.");
 
       await base44.entities.UserCredits.update(credits.id, {
-        credits_remaining: credits.credits_remaining - 2,
+        credits_remaining: credits.credits_remaining - creditsNeeded,
       });
-      setCredits({ ...credits, credits_remaining: credits.credits_remaining - 2 });
+      setCredits({ ...credits, credits_remaining: credits.credits_remaining - creditsNeeded });
 
       clearInterval(timerRef.current);
       setProgress(100);
@@ -500,7 +504,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         <div>
           <h2 className="text-2xl font-bold mb-2">Sign in to generate</h2>
           <p className="text-white/40 text-sm max-w-xs mx-auto">
-            Create a free account to generate AI room designs. You get 2 free credits to start.
+            Create a free account to get your first AI design free. Buy credits to continue designing.
           </p>
         </div>
         <button
@@ -540,7 +544,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         {data.room_mode === "furnish"
           ? <>AI will place realistic <strong className="text-white/70">{data.style}</strong>-style furniture into your empty room — keeping your walls, windows and perspective.</>
           : <>Stable Diffusion will redesign your room in the <strong className="text-white/70">{data.style}</strong> style, keeping your room structure intact.</>
-        }{" "}Each generation uses 2 credits.
+        }{" "}Full generation uses 2 credits. Fine-tuning uses 1 credit.
       </p>
 
       {/* Prompt is built internally — not shown to users */}

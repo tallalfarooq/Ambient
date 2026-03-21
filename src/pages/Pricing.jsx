@@ -1,20 +1,20 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Check, Sparkles, Crown, Zap, Loader2 } from "lucide-react";
+import { Check, Sparkles, Crown, Zap, Loader2, Calculator, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 
 const PLANS = [
   {
     id: "free",
-    name: "Free",
+    name: "Starter",
     price: "€0",
     credits: 2,
     icon: Sparkles,
     color: "from-gray-500 to-gray-600",
     features: [
-      "1 free AI generation",
+      "1 free AI generation (2 credits)",
       "All 8 design styles",
-      "HD image download",
+      "Watermarked renders",
       "Basic support"
     ]
   },
@@ -27,12 +27,12 @@ const PLANS = [
     color: "from-teal-500 to-cyan-600",
     popular: true,
     features: [
-      "10 AI generations",
+      "10 full AI generations",
+      "20 fine-tune edits",
       "All 8 design styles",
-      "HD image download",
-      "Priority support",
+      "HD download (no watermark)",
       "Before/after comparison",
-      "Custom prompts"
+      "Priority support"
     ]
   },
   {
@@ -43,17 +43,154 @@ const PLANS = [
     icon: Crown,
     color: "from-amber-500 to-orange-600",
     features: [
-      "50 AI generations",
+      "50 full AI generations",
+      "100 fine-tune edits",
       "All 8 design styles",
-      "HD image download",
-      "Priority support",
-      "Before/after comparison",
-      "Custom prompts",
+      "HD download (no watermark)",
       "AI product matching from renders",
-      "Unlimited saves & shares"
+      "Before/after comparison",
+      "Unlimited saves & shares",
+      "Priority support"
     ]
   }
 ];
+
+// Credit calculator logic
+function CreditCalculator() {
+  const [fullGens, setFullGens] = useState(5);
+  const [fineTunes, setFineTunes] = useState(10);
+
+  const totalCredits = fullGens * 2 + fineTunes * 1;
+
+  const recommendedPlan = totalCredits <= 2
+    ? PLANS[0]
+    : totalCredits <= 20
+    ? PLANS[1]
+    : totalCredits <= 100
+    ? PLANS[2]
+    : null; // custom — needs pro+ multiple packs
+
+  const estimatedCost = totalCredits <= 2
+    ? "€0"
+    : totalCredits <= 20
+    ? "€5"
+    : totalCredits <= 100
+    ? "€20"
+    : `€${Math.ceil(totalCredits / 100) * 20}`;
+
+  return (
+    <div className="rounded-3xl border border-white/10 overflow-hidden" style={{ background: "rgba(255,255,255,0.02)" }}>
+      {/* Header */}
+      <div className="px-8 py-6 border-b border-white/8 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(27,143,160,0.15)", border: "1px solid rgba(27,143,160,0.3)" }}>
+          <Calculator className="w-4 h-4" style={{ color: "#1B8FA0" }} />
+        </div>
+        <div>
+          <h3 className="text-base font-bold text-white">Credit Calculator</h3>
+          <p className="text-xs text-white/40">Estimate how many credits you need</p>
+        </div>
+      </div>
+
+      <div className="px-8 py-6 grid md:grid-cols-2 gap-8">
+        {/* Sliders */}
+        <div className="space-y-7">
+          {/* Full generations */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-semibold text-white">Full AI Generations</p>
+                <p className="text-xs text-white/40 mt-0.5">New room renders from your photo</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold" style={{ color: "#1B8FA0" }}>{fullGens}</span>
+                <span className="text-xs text-white/30">× 2 credits</span>
+              </div>
+            </div>
+            <input
+              type="range" min={0} max={50} value={fullGens}
+              onChange={(e) => setFullGens(parseInt(e.target.value))}
+              className="w-full" style={{ accentColor: "#1B8FA0" }}
+            />
+            <div className="flex justify-between text-[10px] text-white/25 mt-1">
+              <span>0</span><span>50</span>
+            </div>
+          </div>
+
+          {/* Fine-tune edits */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-semibold text-white">Fine-Tune Edits</p>
+                <p className="text-xs text-white/40 mt-0.5">Wall color, sofa, floor, ceiling tweaks</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold" style={{ color: "#C9963A" }}>{fineTunes}</span>
+                <span className="text-xs text-white/30">× 1 credit</span>
+              </div>
+            </div>
+            <input
+              type="range" min={0} max={100} value={fineTunes}
+              onChange={(e) => setFineTunes(parseInt(e.target.value))}
+              className="w-full" style={{ accentColor: "#C9963A" }}
+            />
+            <div className="flex justify-between text-[10px] text-white/25 mt-1">
+              <span>0</span><span>100</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Result */}
+        <div className="flex flex-col justify-center">
+          <div className="rounded-2xl p-6 border border-white/8" style={{ background: "rgba(27,143,160,0.05)" }}>
+            {/* Credit breakdown */}
+            <div className="space-y-2 mb-5">
+              <div className="flex justify-between text-sm">
+                <span className="text-white/50">Full gens ({fullGens} × 2)</span>
+                <span className="text-white font-semibold">{fullGens * 2} credits</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-white/50">Fine-tunes ({fineTunes} × 1)</span>
+                <span className="text-white font-semibold">{fineTunes} credits</span>
+              </div>
+              <div className="h-px bg-white/10 my-3" />
+              <div className="flex justify-between">
+                <span className="text-sm font-semibold text-white">Total credits needed</span>
+                <span className="text-lg font-bold" style={{ color: "#1B8FA0" }}>{totalCredits}</span>
+              </div>
+            </div>
+
+            {/* Recommendation */}
+            {recommendedPlan ? (
+              <div className="rounded-xl p-4 border" style={{ background: "rgba(27,143,160,0.1)", borderColor: "rgba(27,143,160,0.3)" }}>
+                <p className="text-xs text-white/50 mb-1">Recommended plan</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-white">{recommendedPlan.name}</p>
+                    <p className="text-xs text-white/40">{recommendedPlan.credits} credits included</p>
+                  </div>
+                  <span className="text-2xl font-bold" style={{ color: "#1B8FA0" }}>{estimatedCost}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl p-4 border" style={{ background: "rgba(201,150,58,0.1)", borderColor: "rgba(201,150,58,0.3)" }}>
+                <p className="text-xs text-white/50 mb-1">For heavy usage</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-white">Multiple Pro packs</p>
+                    <p className="text-xs text-white/40">{Math.ceil(totalCredits / 100)} × Pro = {Math.ceil(totalCredits / 100) * 100} credits</p>
+                  </div>
+                  <span className="text-2xl font-bold" style={{ color: "#C9963A" }}>{estimatedCost}</span>
+                </div>
+              </div>
+            )}
+
+            <p className="text-[10px] text-white/25 mt-3 text-center">Credits never expire</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Pricing() {
   const [user, setUser] = useState(null);
@@ -108,8 +245,20 @@ export default function Pricing() {
             Choose Your Plan
           </h1>
           <p className="text-white/50 text-lg max-w-2xl mx-auto">
-            Start free, upgrade when you need more. Each generation costs 2 credits.
+            Your first AI design is free. Buy credits when you need more — they never expire.
           </p>
+        </div>
+
+        {/* Credit cost legend */}
+        <div className="flex flex-wrap items-center justify-center gap-4 mb-10">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full" style={{ background: "rgba(27,143,160,0.08)", border: "1px solid rgba(27,143,160,0.2)" }}>
+            <Sparkles className="w-3.5 h-3.5" style={{ color: "#1B8FA0" }} />
+            <span className="text-sm text-white/70"><strong className="text-white">2 credits</strong> per full generation</span>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full" style={{ background: "rgba(201,150,58,0.08)", border: "1px solid rgba(201,150,58,0.2)" }}>
+            <Zap className="w-3.5 h-3.5" style={{ color: "#C9963A" }} />
+            <span className="text-sm text-white/70"><strong className="text-white">1 credit</strong> per fine-tune edit</span>
+          </div>
         </div>
 
         {/* Current plan indicator */}
@@ -129,19 +278,18 @@ export default function Pricing() {
           {PLANS.map((plan, i) => {
             const Icon = plan.icon;
             const isCurrentPlan = credits?.plan_type === plan.id;
-            
+
             return (
               <motion.div
                 key={plan.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className={`relative rounded-3xl p-8 border transition-all ${
-                  plan.popular
-                    ? "border-white/20 bg-white/3"
-                    : "border-white/10 bg-white/3 hover:border-white/20"
-                }`}
-                style={plan.popular ? { borderColor: "rgba(27,143,160,0.4)", background: "rgba(27,143,160,0.05)" } : {}}
+                className="relative rounded-3xl p-8 border transition-all hover:border-white/20"
+                style={plan.popular
+                  ? { borderColor: "rgba(27,143,160,0.4)", background: "rgba(27,143,160,0.05)" }
+                  : { borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.02)" }
+                }
               >
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-white text-xs font-bold" style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}>
@@ -165,17 +313,24 @@ export default function Pricing() {
                   {plan.id !== "free" && <span className="text-white/40 text-sm">one-time</span>}
                 </div>
 
-                <div className="mb-6">
-                  <div className="text-sm text-white/60 mb-1">Credits included:</div>
-                  <div className="text-2xl font-bold" style={{ color: "#1B8FA0" }}>{plan.credits}</div>
-                  <div className="text-xs text-white/40 mt-1">= {Math.floor(plan.credits / 2)} AI generations</div>
+                <div className="mb-6 p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div className="text-xs text-white/40 mb-2 font-medium uppercase tracking-wide">Includes</div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-white/60">Full generations</span>
+                    <span className="text-sm font-bold" style={{ color: "#1B8FA0" }}>{Math.floor(plan.credits / 2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-white/60">Fine-tune edits</span>
+                    <span className="text-sm font-bold" style={{ color: "#C9963A" }}>{plan.credits}</span>
+                  </div>
+                  <div className="text-[10px] text-white/25 mt-2">({plan.credits} credits total)</div>
                 </div>
 
                 <button
                   onClick={() => handlePurchase(plan.id)}
                   disabled={isCurrentPlan || purchasing === plan.id || (plan.id === "free" && user)}
                   className={`w-full py-3 rounded-2xl font-semibold mb-6 transition-all ${
-                    isCurrentPlan
+                    isCurrentPlan || (plan.id === "free" && user)
                       ? "bg-white/5 text-white/40 cursor-not-allowed"
                       : plan.popular
                       ? "text-white hover:opacity-90"
@@ -190,7 +345,9 @@ export default function Pricing() {
                   ) : isCurrentPlan ? (
                     "Current Plan"
                   ) : plan.id === "free" && user ? (
-                    "Already Used"
+                    "Sign up to claim"
+                  ) : plan.id === "free" ? (
+                    "Get started free"
                   ) : (
                     `Get ${plan.name}`
                   )}
@@ -209,11 +366,21 @@ export default function Pricing() {
           })}
         </div>
 
-        {/* Info note */}
-        <div className="text-center text-sm text-white/40 max-w-2xl mx-auto">
+        {/* Credit Calculator */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mb-10"
+        >
+          <CreditCalculator />
+        </motion.div>
+
+        {/* FAQ note */}
+        <div className="text-center text-sm text-white/35 max-w-2xl mx-auto">
           <p>
-            Each AI design generation costs 2 credits. Credits never expire and can be used anytime.
-            Pro users get exclusive access to AI product matching from their generated renders.
+            Credits never expire. Full AI generation = 2 credits. Fine-tune edits (wall color, sofa, floor, ceiling) = 1 credit each.
+            Pro users get AI product matching from generated renders.
           </p>
         </div>
       </div>

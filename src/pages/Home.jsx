@@ -825,8 +825,7 @@ export default function Home() {
             </span>
           </h2>
           <p className="mb-12 text-lg" style={{ color: "#8B9A9D" }}>
-            No credit card. No downloads. Upload a photo and watch AI redesign
-            your space.
+            Upload a photo and watch AI redesign your space. First design is on us.
           </p>
           <button
             onClick={handleStart}
@@ -881,13 +880,12 @@ export default function Home() {
               >
                 <Layers className="w-7 h-7 text-white" />
               </div>
-              <h2 className="text-xl font-bold mb-2">Start designing for free</h2>
+              <h2 className="text-xl font-bold mb-2">Your first design is free</h2>
               <p
                 className="text-sm mb-8 leading-relaxed"
                 style={{ color: "rgba(255,255,255,0.45)" }}
               >
-                Create a free account to access the AI studio, save your designs,
-                and shop furniture from your renders.
+                Create a free account to get 1 free AI design. Buy credits to keep designing — they never expire.
               </p>
               <div className="flex flex-col gap-3">
                 <button
@@ -924,7 +922,7 @@ export default function Home() {
                 className="text-xs mt-6"
                 style={{ color: "rgba(255,255,255,0.25)" }}
               >
-                No credit card required. Free to use.
+                No credit card required for your first design.
               </p>
             </motion.div>
           </motion.div>
