@@ -104,25 +104,25 @@ const buildPrompt = (data) => {
 // Targeted fine-tune prompt — only describes what to change, locks everything else
 const buildFineTunePrompt = (data) => {
   const style = data.style || "modern";
-  const changesList = [];
-  if (data.wall_color)         changesList.push(`wall color to ${data.wall_color}`);
-  if (data.sofa_color)         changesList.push(`sofa and seating color/material to ${data.sofa_color}`);
-  if (data.floor_type)         changesList.push(`flooring to ${data.floor_type}`);
-  if (data.ceiling_design)     changesList.push(`ceiling to ${data.ceiling_design}`);
-  if (data.custom_note?.trim()) changesList.push(data.custom_note.trim());
-  if (changesList.length === 0) return buildPrompt(data);
+  const roomType = data.room_type || "room";
+  if (!data.wall_color && !data.sofa_color && !data.floor_type && !data.ceiling_design && !data.custom_note?.trim()) {
+    return buildPrompt(data);
+  }
 
-  return (
-    `Photorealistic interior design photograph. ${style} interior design style.` +
-    ` TARGETED MICRO-EDIT — Apply ONLY these specific changes to the reference image: ${changesList.join("; ")}.` +
-    ` STRICT PRESERVATION RULE — Everything else must remain IDENTICAL to the reference:` +
-    ` every furniture piece stays in its exact position with the same color, fabric, material, and shape.` +
-    ` All lighting fixtures (pendants, floor lamps, ceiling lights) stay unchanged.` +
-    ` All decorative accessories (plants, rugs, cushions, vases, artwork, shelving contents) stay unchanged.` +
-    ` Room layout, camera angle, perspective, and natural lighting stay unchanged.` +
-    ` Do NOT add or remove any furniture. Do NOT change any furniture that was not listed above.` +
-    ` Shot on Canon EOS R5, 24mm lens, natural daylight. Photorealistic, 8K, magazine quality.`
-  );
+  // Build a pure Stable Diffusion descriptive prompt — NO instruction/chat language.
+  // The low strength parameter handles preservation; the prompt just describes the desired result.
+  const parts = [
+    `Photorealistic interior design photograph of a ${roomType}, ${style} style.`,
+  ];
+  if (data.wall_color)     parts.push(`${data.wall_color} walls.`);
+  if (data.sofa_color)     parts.push(`${data.sofa_color} sofa and seating.`);
+  if (data.floor_type)     parts.push(`${data.floor_type} flooring.`);
+  if (data.ceiling_design) parts.push(`${data.ceiling_design} ceiling.`);
+  if (data.custom_note?.trim()) parts.push(data.custom_note.trim() + ".");
+  parts.push("Same furniture layout, same room proportions, same camera angle as reference.");
+  parts.push("Shot on Canon EOS R5, 24mm lens, natural daylight. Photorealistic, 8K, magazine quality.");
+
+  return parts.join(" ");
 };
 
 function FineTuneRow({ label, presets, selected, accentColor, accentBg, accentText, onSelect, placeholder }) {
@@ -255,6 +255,8 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [feedbackNote, setFeedbackNote] = useState("");
   const [error,        setError]        = useState(null);
   const [progress,     setProgress]     = useState(0);
+  const [elapsed,      setElapsed]      = useState(0);
+  const timerRef = useRef(null);
   const [copied,       setCopied]       = useState(false);
   const [credits,      setCredits]      = useState(null);
   const [user,         setUser]         = useState(undefined); // undefined = loading, null = not logged in
@@ -345,6 +347,17 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     setLoading(true);
     setFeedback(null);
     setFeedbackNote("");
+    setElapsed(0);
+    setProgress(0);
+    // Start elapsed-time counter so user sees live feedback
+    clearInterval(timerRef.current);
+    const startTime = Date.now();
+    timerRef.current = setInterval(() => {
+      const secs = Math.floor((Date.now() - startTime) / 1000);
+      setElapsed(secs);
+      // Simulate progress: accelerate to 85% in ~25s then stall until done
+      setProgress(Math.min(85, Math.round((secs / 30) * 85)));
+    }, 1000);
 
     let refinedPrompt;
     let strength;
@@ -368,7 +381,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       const result = await base44.integrations.Core.GenerateImage({
         prompt: refinedPrompt,
         existing_image_urls: [data.room_image_url],
-        options: { strength, guidance_scale: 8.5 },
+        options: { strength, guidance_scale: 7.5, num_inference_steps: 25 },
       });
 
       const url = result?.url || result;
@@ -379,14 +392,23 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       });
       setCredits({ ...credits, credits_remaining: credits.credits_remaining - 2 });
 
+      clearInterval(timerRef.current);
       setProgress(100);
       setGenerated(url);
       setHasPendingChanges(false);
       prevFineTuneRef.current = [data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design, data.custom_note].join("|");
       update({ generated_render_url: url, generation_prompt: refinedPrompt, intensity });
     } catch (err) {
-      setError(err?.message || "Generation failed. Please try again.");
+      clearInterval(timerRef.current);
+      const raw = err?.message || "";
+      // If Base44 LLM intercepted the prompt and returned a text response, show a friendly error
+      const isLlmResponse = raw.toLowerCase().startsWith("sure") || raw.toLowerCase().startsWith("here") || raw.length > 120;
+      setError(isLlmResponse
+        ? "Image generation failed. Please try a different style or simpler description and try again."
+        : raw || "Generation failed. Please try again."
+      );
     } finally {
+      clearInterval(timerRef.current);
       setLoading(false);
     }
   };
@@ -549,14 +571,16 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         {loading ? (
           <div className="flex flex-col items-center gap-4 py-10">
             <Loader2 className="w-10 h-10 animate-spin" style={{ color: "#1B8FA0" }} />
-            <p className="text-white/40 text-sm">Painting your room…</p>
-            <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
+            <p className="text-white/60 text-sm font-medium">
+              {elapsed < 5 ? "Starting AI engine…" : elapsed < 15 ? "Rendering your design…" : elapsed < 25 ? "Almost there…" : "Finalising details…"}
+            </p>
+            <div className="w-56 h-1.5 bg-white/10 rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-1000" style={{ background: "linear-gradient(90deg, #1B8FA0, #C9963A)" }}
-                style={{ width: `${progress}%` }}
+                className="h-full rounded-full transition-all duration-1000"
+                style={{ width: `${progress}%`, background: "linear-gradient(90deg, #1B8FA0, #C9963A)" }}
               />
             </div>
-            <p className="text-white/25 text-xs">Usually 30–60 seconds</p>
+            <p className="text-white/30 text-xs tabular-nums">{elapsed}s — usually 20–35 seconds</p>
           </div>
         ) : generated ? (
           <div className="relative w-full">
