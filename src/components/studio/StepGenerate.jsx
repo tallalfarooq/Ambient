@@ -265,6 +265,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [loading,      setLoading]      = useState(false);
   const [saving,       setSaving]       = useState(false);
   const [generated,    setGenerated]    = useState(data.generated_render_url || null);
+  const [prevGenerated,setPrevGenerated]= useState(null); // the render BEFORE the latest fine-tune (for slider "before")
   const [designId,     setDesignId]     = useState(data.design_id || null); // auto-saved draft record
   const [prompt,       setPrompt]       = useState(buildPrompt(data));
   const [intensity,    setIntensity]    = useState(data.intensity ?? 65);
@@ -387,6 +388,10 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     let refinedPrompt;
     let strength;
 
+    // For fine-tune: snapshot the current render as "before", use it as the SD base image
+    const baseImageUrl = (isFineTune && generated) ? generated : data.room_image_url;
+    if (isFineTune && generated) setPrevGenerated(generated);
+
     if (isFineTune) {
       // Targeted edit: use preservation prompt + very low strength so only the requested element changes
       refinedPrompt = buildFineTunePrompt(data);
@@ -405,7 +410,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     try {
       const result = await base44.integrations.Core.GenerateImage({
         prompt: refinedPrompt,
-        existing_image_urls: [data.room_image_url],
+        existing_image_urls: [baseImageUrl],  // fine-tune starts from latest render, not original upload
         options: { strength, guidance_scale: 7.5, num_inference_steps: 25 },
       });
 
@@ -446,9 +451,20 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         status: "draft",
       };
       try {
-        if (designId) {
+        if (isFineTune) {
+          // Each fine-tune iteration = a new record in My Designs so user sees full history
+          const record = await base44.entities.RoomDesign.create({
+            ...designPayload,
+            // Keep original upload as room_image_url so before/after always makes sense
+            room_image_url: data.room_image_url,
+          });
+          setDesignId(record.id);
+          update({ design_id: record.id });
+        } else if (designId) {
+          // Full re-generation: update existing draft (same design, new render)
           await base44.entities.RoomDesign.update(designId, designPayload);
         } else {
+          // First-ever generation: create fresh draft
           const record = await base44.entities.RoomDesign.create(designPayload);
           setDesignId(record.id);
           update({ design_id: record.id });
@@ -651,7 +667,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           </div>
         ) : generated ? (
           <div className="relative w-full">
-            <BeforeAfterSlider before={data.room_image_url} after={generated} />
+            <BeforeAfterSlider before={prevGenerated || data.room_image_url} after={generated} />
             {!isPaidUser && <ImageWatermark />}
           </div>
         ) : (
