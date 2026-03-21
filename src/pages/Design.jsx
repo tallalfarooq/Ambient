@@ -7,6 +7,32 @@ import { motion, AnimatePresence } from "framer-motion";
 import FurnitureMatchCard from "@/components/design/FurnitureMatchCard";
 import CartDrawer from "@/components/design/CartDrawer";
 
+function ImageWatermark() {
+  return (
+    <div
+      className="absolute inset-y-0 right-0 flex items-center justify-center pointer-events-none select-none"
+      style={{ width: 28 }}
+    >
+      <span
+        style={{
+          writingMode: "vertical-rl",
+          textOrientation: "mixed",
+          transform: "rotate(180deg)",
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          color: "rgba(255,255,255,0.45)",
+          textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+          userSelect: "none",
+          whiteSpace: "nowrap",
+        }}
+      >
+        ✦ ambientspace.ai
+      </span>
+    </div>
+  );
+}
+
 function BeforeAfterSlider({ before, after }) {
   const [pos, setPos] = useState(50);
   const [dragging, setDragging] = useState(false);
@@ -76,9 +102,16 @@ export default function Design() {
   const [shareLink,       setShareLink]       = useState("");
   const [copied,          setCopied]          = useState(false);
   const [showComparison,  setShowComparison]  = useState(false);
+  const [isPaidUser,      setIsPaidUser]      = useState(false);
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => setUser(null));
+    base44.auth.me().then(async (u) => {
+      setUser(u);
+      try {
+        const uc = await base44.entities.UserCredits.filter({ user_email: u.email });
+        if (uc.length > 0 && uc[0].plan_type !== "free") setIsPaidUser(true);
+      } catch {}
+    }).catch(() => setUser(null));
   }, []);
 
   useEffect(() => {
@@ -356,6 +389,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                 ) : (
                   <img src={design.generated_render_url} alt="Generated room" className="w-full h-auto block" />
                 )}
+                {!isPaidUser && <ImageWatermark />}
 
                 {/* Compare toggle button */}
                 {design.room_image_url && (

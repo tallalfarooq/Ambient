@@ -2,7 +2,33 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
-import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers } from "lucide-react";
+import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock } from "lucide-react";
+
+function ImageWatermark() {
+  return (
+    <div
+      className="absolute inset-y-0 right-0 flex items-center justify-center pointer-events-none select-none"
+      style={{ width: 28 }}
+    >
+      <span
+        style={{
+          writingMode: "vertical-rl",
+          textOrientation: "mixed",
+          transform: "rotate(180deg)",
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          color: "rgba(255,255,255,0.45)",
+          textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+          userSelect: "none",
+          whiteSpace: "nowrap",
+        }}
+      >
+        ✦ ambientspace.ai
+      </span>
+    </div>
+  );
+}
 
 const ROOM_FURNITURE_CONTEXT = {
   "Living Room":  "sofa set, coffee table, accent armchair, TV media console, floor lamp, decorative rug, bookshelf or display shelving",
@@ -331,6 +357,8 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     }
   };
 
+  const isPaidUser = credits && credits.plan_type !== "free";
+
   const intensityLabel =
     intensity < 35 ? "Subtle refresh"
     : intensity < 55 ? "Balanced redesign"
@@ -438,7 +466,10 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
             <p className="text-white/25 text-xs">Usually 30–60 seconds</p>
           </div>
         ) : generated ? (
-          <BeforeAfterSlider before={data.room_image_url} after={generated} />
+          <div className="relative w-full">
+            <BeforeAfterSlider before={data.room_image_url} after={generated} />
+            {!isPaidUser && <ImageWatermark />}
+          </div>
         ) : (
           <div className="flex flex-col items-center gap-3 p-10">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "rgba(27,143,160,0.1)", border: "1px solid rgba(27,143,160,0.25)" }}>
@@ -657,14 +688,25 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
 
           {generated && !loading && (
             <>
-              <button
-                onClick={handleDownload}
-                title="Download"
-                className="flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-xl text-sm font-medium transition-all"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }}
-              >
-                <Download className="w-4 h-4" />
-              </button>
+              {isPaidUser ? (
+                <button
+                  onClick={handleDownload}
+                  title="Download"
+                  className="flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-xl text-sm font-medium transition-all"
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }}
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate(createPageUrl("Pricing"))}
+                  title="Upgrade to download"
+                  className="flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-xl text-sm font-medium transition-all hover:opacity-80"
+                  style={{ background: "rgba(201,150,58,0.12)", border: "1px solid rgba(201,150,58,0.3)", color: "#C9963A" }}
+                >
+                  <Lock className="w-4 h-4" />
+                </button>
+              )}
               <button
                 onClick={handleShare}
                 title={copied ? "Copied!" : "Share"}
