@@ -17,10 +17,10 @@ const STEPS = [
 ];
 
 const STEP_HEADLINES = [
-  { title: "Upload your room",     sub: "A photo is all it takes. AI handles the rest."  },
-  { title: "Choose your style",    sub: "Pick the aesthetic that speaks to you."          },
-  { title: "Set your budget",      sub: "We'll find real furniture within your range."    },
-  { title: "Generating your room", sub: "Your AI redesign is being crafted…"             },
+  { title: "Upload your room",        sub: "A photo is all it takes. AI handles the rest."                   },
+  { title: "Choose your style",       sub: "Pick the aesthetic that speaks to you."                          },
+  { title: "Set your budget",         sub: "We'll find real furniture within your range."                    },
+  { title: "Fine-tune your design",   sub: "Adjust details or apply changes to generate a new version."      },
 ];
 
 export default function Studio() {
@@ -76,12 +76,43 @@ export default function Studio() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+
     if (params.get("payment") === "success") {
       toast.success("Payment successful! Credits added to your account.");
       window.history.replaceState({}, "", "/Studio");
     } else if (params.get("payment") === "cancelled") {
       toast.error("Payment cancelled.");
       window.history.replaceState({}, "", "/Studio");
+    }
+
+    // Redesign continuation — load existing design as starting point
+    const redesignId = params.get("redesign_id");
+    if (redesignId) {
+      window.history.replaceState({}, "", "/Studio");
+      base44.entities.RoomDesign.filter({ id: redesignId })
+        .then((results) => {
+          if (!results.length) return;
+          const d = results[0];
+          setData((prev) => ({
+            ...prev,
+            name:                d.name || "My Room Design",
+            room_type:           d.room_type || prev.room_type,
+            room_mode:           "redesign",
+            // Use the generated render as the new starting image — not the original bare room
+            room_image_url:      d.generated_render_url || d.room_image_url,
+            style:               d.style || prev.style,
+            color_palette:       d.color_palette || prev.color_palette,
+            vibes:               d.vibes || prev.vibes,
+            budget_min:          d.budget_min ?? prev.budget_min,
+            budget_max:          d.budget_max ?? prev.budget_max,
+            budget_tier:         d.budget_tier || prev.budget_tier,
+            sustainability_mode: d.sustainability_mode ?? prev.sustainability_mode,
+            intensity:           50, // subtle by default when refining an existing design
+            generated_render_url: d.generated_render_url || null,
+          }));
+          setStep(3); // Land directly on the Generate / fine-tune step
+        })
+        .catch(() => {});
     }
   }, []);
 

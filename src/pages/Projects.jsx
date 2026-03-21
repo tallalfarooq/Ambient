@@ -69,7 +69,7 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
               <ShoppingBag className="w-3.5 h-3.5" /> Shop
             </Link>
             <Link
-              to={createPageUrl("Studio")}
+              to={createPageUrl("Studio") + `?redesign_id=${design.id}`}
               className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white font-medium px-4 py-2 rounded-xl text-xs hover:bg-white/25 transition-colors"
             >
               <Pencil className="w-3.5 h-3.5" /> Redesign
