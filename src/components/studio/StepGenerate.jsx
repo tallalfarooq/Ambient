@@ -265,6 +265,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [loading,      setLoading]      = useState(false);
   const [saving,       setSaving]       = useState(false);
   const [generated,    setGenerated]    = useState(data.generated_render_url || null);
+  const [designId,     setDesignId]     = useState(data.design_id || null); // auto-saved draft record
   const [prompt,       setPrompt]       = useState(buildPrompt(data));
   const [intensity,    setIntensity]    = useState(data.intensity ?? 65);
   const [feedback,     setFeedback]     = useState(null);
@@ -422,6 +423,39 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       setHasPendingChanges(false);
       prevFineTuneRef.current = [data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design, data.custom_note].join("|");
       update({ generated_render_url: url, generation_prompt: refinedPrompt, intensity });
+
+      // ── Auto-save draft so the design is never lost ──────────────────────
+      // If we already have a draft record from a previous generation, update it.
+      // Otherwise create a new draft. Status stays "draft" until user clicks Save & Shop.
+      const designPayload = {
+        name:                 data.name || "My Room Design",
+        style:                data.style,
+        room_type:            data.room_type,
+        color_palette:        data.color_palette,
+        vibes:                data.vibes,
+        budget_min:           data.budget_min,
+        budget_max:           data.budget_max,
+        budget_tier:          data.budget_tier,
+        sustainability_mode:  data.sustainability_mode,
+        room_image_url:       data.room_image_url,
+        room_file_url:        data.room_file_url,
+        room_dimensions:      data.room_dimensions,
+        generated_render_url: url,
+        generation_prompt:    refinedPrompt,
+        intensity,
+        status: "draft",
+      };
+      try {
+        if (designId) {
+          await base44.entities.RoomDesign.update(designId, designPayload);
+        } else {
+          const record = await base44.entities.RoomDesign.create(designPayload);
+          setDesignId(record.id);
+          update({ design_id: record.id });
+        }
+      } catch {
+        // Auto-save failure is silent — user can still manually Save & Shop
+      }
     } catch (err) {
       clearInterval(timerRef.current);
       const raw = err?.message || "";
@@ -441,24 +475,33 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     if (!generated) return;
     setSaving(true);
     try {
-      const record = await base44.entities.RoomDesign.create({
-        name:                 data.name || "My Room Design",
-        style:                data.style,
-        color_palette:        data.color_palette,
-        vibes:                data.vibes,
-        budget_min:           data.budget_min,
-        budget_max:           data.budget_max,
-        budget_tier:          data.budget_tier,
-        sustainability_mode:  data.sustainability_mode,
-        room_image_url:       data.room_image_url,
-        room_file_url:        data.room_file_url,
-        room_dimensions:      data.room_dimensions,
-        generated_render_url: generated,
-        generation_prompt:    refinedPromptRef.current || prompt,
-        intensity,
-        status: "ready",
-      });
-      navigate(createPageUrl(`Design`) + `?id=${record.id}`);
+      let id = designId;
+      if (id) {
+        // Upgrade the existing draft to "ready" so product matching becomes available
+        await base44.entities.RoomDesign.update(id, { status: "ready", generated_render_url: generated });
+      } else {
+        // Fallback: no draft yet (shouldn't normally happen), create fresh
+        const record = await base44.entities.RoomDesign.create({
+          name:                 data.name || "My Room Design",
+          style:                data.style,
+          room_type:            data.room_type,
+          color_palette:        data.color_palette,
+          vibes:                data.vibes,
+          budget_min:           data.budget_min,
+          budget_max:           data.budget_max,
+          budget_tier:          data.budget_tier,
+          sustainability_mode:  data.sustainability_mode,
+          room_image_url:       data.room_image_url,
+          room_file_url:        data.room_file_url,
+          room_dimensions:      data.room_dimensions,
+          generated_render_url: generated,
+          generation_prompt:    refinedPromptRef.current || prompt,
+          intensity,
+          status: "ready",
+        });
+        id = record.id;
+      }
+      navigate(createPageUrl(`Design`) + `?id=${id}`);
     } catch (err) {
       setError("Couldn't save. Please try again.");
       setSaving(false);

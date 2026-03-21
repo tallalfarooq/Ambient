@@ -48,6 +48,7 @@ export default function Studio() {
     floor_type:          null,
     ceiling_design:      null,
     custom_note:         "",
+    design_id:           null, // auto-saved draft RoomDesign record ID
   });
 
   const update = (patch) => setData((d) => ({ ...d, ...patch }));
@@ -182,7 +183,7 @@ export default function Studio() {
                   budget_tier: "mid", sustainability_mode: false, intensity: 65,
                   room_dimensions: { width: 4, length: 5, height: 2.8 },
                   wall_color: null, sofa_color: null, floor_type: null,
-                  ceiling_design: null, custom_note: "",
+                  ceiling_design: null, custom_note: "", design_id: null,
                 });
               }}
               className="absolute right-0 text-xs text-white/30 hover:text-white/60 transition-colors flex items-center gap-1"

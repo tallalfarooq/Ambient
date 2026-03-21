@@ -8,9 +8,9 @@ import { formatDistanceToNow } from "date-fns";
 import ProjectFilters from "@/components/projects/ProjectFilters";
 
 const STATUS_CONFIG = {
-  draft:      { label: "Draft",      color: "text-white/40 bg-white/5 border-white/10"                 },
+  draft:      { label: "Saved",      color: "text-white/50 bg-white/5 border-white/10"                 },
   generating: { label: "Generating", color: "border", style: { background: "rgba(27,143,160,0.1)", borderColor: "rgba(27,143,160,0.3)", color: "#6EC6C6" } },
-  ready:      { label: "Ready",      color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
+  ready:      { label: "Shopped ✦",  color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
   shopping:   { label: "Shopping",   color: "text-amber-400 bg-amber-500/10 border-amber-500/20"       },
 };
 
@@ -43,6 +43,7 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
       className="group bg-white/3 border border-white/8 rounded-3xl overflow-hidden hover:border-white/15 transition-all duration-300"
     >
       <div className="relative w-full aspect-video bg-white/5 overflow-hidden">
+        {/* Show generated render as the main image; if draft, show original faintly behind */}
         {design.generated_render_url ? (
           <img src={design.generated_render_url} alt={design.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
         ) : design.room_image_url ? (
@@ -50,6 +51,16 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
         ) : (
           <div className="w-full h-full flex items-center justify-center text-white/15">
             <Sparkles className="w-8 h-8" />
+          </div>
+        )}
+
+        {/* For drafts with both images: show a small "before" thumbnail in corner */}
+        {design.status === "draft" && design.generated_render_url && design.room_image_url && (
+          <div className="absolute bottom-2 left-2 w-16 h-12 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg">
+            <img src={design.room_image_url} alt="Before" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-[8px] font-bold text-white bg-black/60 px-1 rounded">BEFORE</span>
+            </div>
           </div>
         )}
 
@@ -64,9 +75,11 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
             <Link
               to={createPageUrl(`Design`) + `?id=${design.id}`}
-              className="flex items-center gap-1.5 bg-white text-black font-semibold px-4 py-2 rounded-xl text-xs hover:bg-white/90 transition-colors"
+              className="flex items-center gap-1.5 text-black font-semibold px-4 py-2 rounded-xl text-xs hover:opacity-90 transition-all"
+              style={{ background: design.status === "draft" ? "linear-gradient(135deg,#1B8FA0,#C9963A)" : "white", color: design.status === "draft" ? "white" : "black" }}
             >
-              <ShoppingBag className="w-3.5 h-3.5" /> Shop
+              <ShoppingBag className="w-3.5 h-3.5" />
+              {design.status === "draft" ? "Shop this look" : "View & Shop"}
             </Link>
             <Link
               to={createPageUrl("Studio") + `?redesign_id=${design.id}`}
