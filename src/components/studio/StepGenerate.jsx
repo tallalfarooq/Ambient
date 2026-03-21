@@ -92,17 +92,15 @@ const buildPrompt = (data) => {
 
   // Default: redesign mode
   return (
-    `Photorealistic interior design photograph of a ${roomType}.` +
-    ` Keep the EXACT same room structure as the reference: same walls, windows, doors, floor layout, ceiling height, room dimensions, camera angle, and perspective. Do NOT change any architecture.` +
-    ` Only replace: furniture style, upholstery, colors, materials, and decorative accessories.` +
-    ` Apply ${style} interior design style: ${styleDetail}.${furnitureStr}` +
+    `Photorealistic interior design photograph, identical camera angle, identical perspective, identical window positions and sizes, identical room dimensions, identical ceiling height, identical wall layout from reference photo.` +
+    ` ${style} interior design style applied to a ${roomType}: ${styleDetail}.${furnitureStr}` +
+    ` Replace only furniture, upholstery, colors, materials, and decor. Architecture unchanged.` +
     `${palette}${customStr}${vibeStr}` +
-    ` Shot on Canon EOS R5, 24mm lens, natural daylight, professional interior photography.` +
-    ` Hyperrealistic, 8K resolution, magazine quality. NO AI artifacts. NO distortion. NO structural changes to the room.`
+    ` Canon EOS R5, 24mm lens, natural daylight. Hyperrealistic, 8K, magazine quality. No structural changes.`
   );
 };
 
-// Targeted fine-tune prompt — only describes what to change, locks everything else
+// Targeted fine-tune prompt — changes only what user asked, locks room structure completely
 const buildFineTunePrompt = (data) => {
   const style = data.style || "modern";
   const roomType = data.room_type || "room";
@@ -110,18 +108,18 @@ const buildFineTunePrompt = (data) => {
     return buildPrompt(data);
   }
 
-  // Build a pure Stable Diffusion descriptive prompt — NO instruction/chat language.
-  // The low strength parameter handles preservation; the prompt just describes the desired result.
+  // Architecture anchor first — described as fixed attributes of the scene.
+  // SD treats descriptive adjectives as things to preserve when strength is low.
   const parts = [
-    `Photorealistic interior design photograph of a ${roomType}, ${style} style.`,
+    `Photorealistic interior design photograph, identical camera angle, identical perspective, identical room proportions, identical window positions and sizes, identical ceiling height, identical architectural structure.`,
+    `${style} style ${roomType}.`,
   ];
-  if (data.wall_color)     parts.push(`${data.wall_color} walls.`);
-  if (data.sofa_color)     parts.push(`${data.sofa_color} sofa and seating.`);
-  if (data.floor_type)     parts.push(`${data.floor_type} flooring.`);
-  if (data.ceiling_design) parts.push(`${data.ceiling_design} ceiling.`);
+  if (data.wall_color)      parts.push(`${data.wall_color} painted walls.`);
+  if (data.sofa_color)      parts.push(`${data.sofa_color} sofa and seating upholstery.`);
+  if (data.floor_type)      parts.push(`${data.floor_type} floor finish.`);
+  if (data.ceiling_design)  parts.push(`${data.ceiling_design} ceiling.`);
   if (data.custom_note?.trim()) parts.push(data.custom_note.trim() + ".");
-  parts.push("Same furniture layout, same room proportions, same camera angle as reference.");
-  parts.push("Shot on Canon EOS R5, 24mm lens, natural daylight. Photorealistic, 8K, magazine quality.");
+  parts.push("Same furniture positions and layout. Same natural light direction from windows. Canon EOS R5, 24mm wide lens, photorealistic, 8K.");
 
   return parts.join(" ");
 };
@@ -397,7 +395,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     if (isFineTune) {
       // Targeted edit: use preservation prompt + very low strength so only the requested element changes
       refinedPrompt = buildFineTunePrompt(data);
-      strength = 0.28; // low enough to preserve furniture, high enough to change wall/floor/sofa color
+      strength = 0.22; // very low — preserves room structure, camera, windows; only changes colors/materials
     } else {
       refinedPrompt =
         feedback === "dislike" && feedbackNote
@@ -735,210 +733,160 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         </div>
       )}
 
-      {/* Fine-Tune Bottom Sheet Modal */}
+      {/* Fine-Tune compact centered modal */}
       <AnimatePresence>
         {showFineTune && (
           <>
             {/* Backdrop */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 z-40"
-              style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+              style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
               onClick={() => setShowFineTune(false)}
             />
-            {/* Sheet */}
+            {/* Compact centered dialog */}
             <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl overflow-hidden"
-              style={{ background: "#111113", border: "1px solid rgba(255,255,255,0.1)", maxHeight: "85vh", overflowY: "auto" }}
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 rounded-3xl overflow-hidden"
+              style={{ background: "#16181A", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 32px 80px rgba(0,0,0,0.7)", maxWidth: 520, margin: "0 auto", maxHeight: "80vh", overflowY: "auto" }}
             >
-              {/* Handle + header */}
-              <div className="sticky top-0 px-5 pt-4 pb-3 border-b border-white/8" style={{ background: "#111113" }}>
-                <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-4" />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-white">Fine-Tune Your Design</p>
-                    <p className="text-white/35 text-xs mt-0.5">Pick what to change — AI only edits that, nothing else</p>
-                  </div>
-                  <button onClick={() => setShowFineTune(false)} className="w-8 h-8 rounded-xl flex items-center justify-center text-white/40 hover:text-white hover:bg-white/8 transition-all">
-                    <X className="w-4 h-4" />
-                  </button>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+                <div>
+                  <p className="text-sm font-bold text-white">Fine-Tune Your Design</p>
+                  <p className="text-[11px] text-white/35 mt-0.5">Room structure stays fixed — only selected elements change</p>
                 </div>
+                <button onClick={() => setShowFineTune(false)} className="w-7 h-7 rounded-lg flex items-center justify-center text-white/35 hover:text-white hover:bg-white/8 transition-all flex-shrink-0">
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
 
-              <div className="px-5 py-5 space-y-5">
-                <FineTuneRow
-                  label="Wall Color"
-                  presets={FINE_TUNE_OPTIONS.wall_color}
-                  selected={data.wall_color}
+              <div className="px-5 py-4 space-y-4">
+                <FineTuneRow label="Wall Color" presets={FINE_TUNE_OPTIONS.wall_color} selected={data.wall_color}
                   accentColor="#1B8FA0" accentBg="rgba(27,143,160,0.2)" accentText="#6EC6C6"
-                  onSelect={(v) => update({ wall_color: v })}
-                  placeholder="e.g. dusty blue, olive green, warm terracotta…"
-                />
-                <FineTuneRow
-                  label="Sofa / Seating"
-                  presets={FINE_TUNE_OPTIONS.sofa_color}
-                  selected={data.sofa_color}
+                  onSelect={(v) => update({ wall_color: v })} placeholder="e.g. dusty blue, sage green, warm beige…" />
+                <FineTuneRow label="Sofa / Seating" presets={FINE_TUNE_OPTIONS.sofa_color} selected={data.sofa_color}
                   accentColor="#7c3aed" accentBg="rgba(124,58,237,0.2)" accentText="#a78bfa"
-                  onSelect={(v) => update({ sofa_color: v })}
-                  placeholder="e.g. deep teal velvet, cream boucle, cognac leather…"
-                />
-                <FineTuneRow
-                  label="Flooring"
-                  presets={FINE_TUNE_OPTIONS.floor_type}
-                  selected={data.floor_type}
+                  onSelect={(v) => update({ sofa_color: v })} placeholder="e.g. deep teal velvet, cognac leather…" />
+                <FineTuneRow label="Flooring" presets={FINE_TUNE_OPTIONS.floor_type} selected={data.floor_type}
                   accentColor="#C9963A" accentBg="rgba(201,150,58,0.2)" accentText="#C9963A"
-                  onSelect={(v) => update({ floor_type: v })}
-                  placeholder="e.g. terracotta tiles, grey carpet, bleached oak…"
-                />
+                  onSelect={(v) => update({ floor_type: v })} placeholder="e.g. herringbone parquet, grey carpet…" />
                 {data.room_mode === "furnish" && (
-                  <FineTuneRow
-                    label="Ceiling"
-                    presets={FINE_TUNE_OPTIONS.ceiling_design}
-                    selected={data.ceiling_design}
+                  <FineTuneRow label="Ceiling" presets={FINE_TUNE_OPTIONS.ceiling_design} selected={data.ceiling_design}
                     accentColor="#D4A0A0" accentBg="rgba(212,160,160,0.2)" accentText="#D4A0A0"
-                    onSelect={(v) => update({ ceiling_design: v })}
-                    placeholder="e.g. skylights, dark painted ceiling, decorative plaster…"
-                  />
+                    onSelect={(v) => update({ ceiling_design: v })} placeholder="e.g. exposed beams, coffered…" />
                 )}
                 <div>
-                  <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Anything else?</p>
-                  <textarea
-                    rows={2}
-                    value={data.custom_note || ""}
-                    onChange={(e) => update({ custom_note: e.target.value })}
-                    placeholder="e.g. add more plants, make it feel cosier, include a fireplace…"
-                    className="w-full text-sm px-4 py-3 rounded-xl text-white/70 placeholder-white/20 focus:outline-none resize-none leading-relaxed"
+                  <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-1.5">Anything else?</p>
+                  <textarea rows={2} value={data.custom_note || ""} onChange={(e) => update({ custom_note: e.target.value })}
+                    placeholder="e.g. add more plants, warmer lighting, include a fireplace…"
+                    className="w-full text-sm px-3 py-2.5 rounded-xl text-white/70 placeholder-white/20 focus:outline-none resize-none"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
                     onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(27,143,160,0.35)"; }}
                     onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
                   />
                 </div>
 
-                {/* Apply button inside sheet */}
-                <button
-                  onClick={() => { setShowFineTune(false); generate(true); }}
-                  disabled={loading || !credits || credits.credits_remaining < 1}
-                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-bold transition-all disabled:opacity-40"
-                  style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)", color: "white", boxShadow: "0 4px 24px rgba(27,143,160,0.4)" }}
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Apply changes — uses 1 credit
-                </button>
-                <div className="h-4" /> {/* safe-area bottom padding */}
+                <div className="flex gap-2.5 pt-1">
+                  <button onClick={() => setShowFineTune(false)}
+                    className="px-4 py-3 rounded-xl text-sm font-medium transition-all"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.45)" }}>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => { setShowFineTune(false); generate(true); }}
+                    disabled={loading || !credits || credits.credits_remaining < 1}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
+                    style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)", color: "white" }}
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Apply changes — 1 credit
+                  </button>
+                </div>
               </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
 
-      {/* Action buttons */}
-      <div className="space-y-3">
-        {/* Primary CTA row — Save & Shop + Fine-Tune side by side */}
+      {/* ── Action Buttons ───────────────────────────────────────── */}
+      <div className="space-y-2.5">
+
+        {/* Row 1 — PRIMARY: Generate / Regenerate (always visible) */}
+        {!credits ? (
+          <button disabled className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-semibold opacity-50 cursor-not-allowed"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)" }}>
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+          </button>
+        ) : credits.credits_remaining < 2 ? (
+          <button onClick={handleBuyCredits}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-white font-semibold transition-all hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}>
+            <CreditCard className="w-4 h-4" /> Get More Credits to Generate
+          </button>
+        ) : (
+          <button onClick={generate} disabled={loading}
+            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-semibold transition-all disabled:opacity-50"
+            style={{ background: loading ? "rgba(27,143,160,0.12)" : generated ? "rgba(27,143,160,0.15)" : "linear-gradient(135deg, #1B8FA0, #C9963A)",
+              border: generated ? "1px solid rgba(27,143,160,0.4)" : "none",
+              color: generated ? "#6EC6C6" : "white",
+              boxShadow: !generated && !loading ? "0 8px 32px rgba(27,143,160,0.35)" : "none" }}>
+            {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>
+              : generated ? <><RefreshCw className="w-4 h-4" /> Regenerate</>
+              : <><Sparkles className="w-4 h-4" /> Generate Design</>}
+          </button>
+        )}
+
+        {/* Row 2 — SECONDARY: Save & Shop + Fine-Tune (shown after generation) */}
         {generated && !loading && (
           <div className="flex gap-2.5">
-            <button
-              onClick={handleSaveAndShop}
-              disabled={saving}
-              className="flex-1 flex items-center justify-center gap-2 text-white font-semibold py-4 rounded-2xl transition-all disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)", boxShadow: "0 8px 32px rgba(27,143,160,0.3)" }}
-            >
+            <button onClick={handleSaveAndShop} disabled={saving}
+              className="flex-1 flex items-center justify-center gap-2 text-white font-semibold py-3.5 rounded-2xl transition-all disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)", boxShadow: "0 4px 20px rgba(27,143,160,0.3)" }}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookmarkCheck className="w-4 h-4" />}
               {saving ? "Saving…" : "Save & Shop"}
             </button>
-            {/* Fine-Tune button — opens bottom sheet */}
-            <button
-              onClick={() => setShowFineTune(true)}
-              className="relative flex items-center justify-center gap-2 px-5 py-4 rounded-2xl font-semibold text-sm transition-all hover:opacity-90"
-              style={{
-                background: hasPendingChanges ? "rgba(27,143,160,0.2)" : "rgba(255,255,255,0.06)",
-                border: hasPendingChanges ? "1px solid rgba(27,143,160,0.5)" : "1px solid rgba(255,255,255,0.1)",
-                color: hasPendingChanges ? "#6EC6C6" : "rgba(255,255,255,0.6)",
-              }}
-            >
+            <button onClick={() => setShowFineTune(true)}
+              className="relative flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all hover:opacity-90"
+              style={{ background: hasPendingChanges ? "rgba(27,143,160,0.18)" : "rgba(255,255,255,0.06)",
+                border: hasPendingChanges ? "1px solid rgba(27,143,160,0.45)" : "1px solid rgba(255,255,255,0.1)",
+                color: hasPendingChanges ? "#6EC6C6" : "rgba(255,255,255,0.55)" }}>
               <Sliders className="w-4 h-4" />
               Fine-Tune
-              {hasPendingChanges && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-[#0A0A0B]" />
-              )}
+              {hasPendingChanges && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 border border-[#0A0A0B]" />}
             </button>
           </div>
         )}
 
-        {/* Secondary row: Back + Generate/Credits + Download + Share */}
-        <div className="flex gap-2.5">
-          <button
-            onClick={onBack}
-            disabled={loading}
-            className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl text-sm font-medium transition-all disabled:opacity-30"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)" }}
-          >
-            Back
+        {/* Row 3 — UTILITY: Back + Download + Share (small, quiet) */}
+        <div className="flex items-center gap-2">
+          <button onClick={onBack} disabled={loading}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-medium transition-all disabled:opacity-30"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.4)" }}>
+            ← Back
           </button>
-
-          {!credits ? (
-            <button disabled className="flex items-center gap-2 flex-1 justify-center px-5 py-3.5 rounded-xl text-sm font-medium opacity-50 cursor-not-allowed"
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)" }}>
-              <Loader2 className="w-4 h-4 animate-spin" /> Loading…
-            </button>
-          ) : credits.credits_remaining < 2 ? (
-            <button
-              onClick={handleBuyCredits}
-              className="flex items-center gap-2 flex-1 justify-center px-5 py-3.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)", color: "white" }}
-            >
-              <CreditCard className="w-4 h-4" /> Get More Credits
-            </button>
-          ) : (
-            <button
-              onClick={generate}
-              disabled={loading}
-              className="flex items-center gap-2 flex-1 justify-center px-5 py-3.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
-              style={{ background: "rgba(27,143,160,0.15)", border: "1px solid rgba(27,143,160,0.35)", color: "#1B8FA0" }}
-            >
-              {loading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>
-              ) : generated ? (
-                <><RefreshCw className="w-4 h-4" /> Regenerate</>
-              ) : (
-                <><Sparkles className="w-4 h-4" /> Generate Design</>
-              )}
-            </button>
-          )}
-
           {generated && !loading && (
             <>
               {isPaidUser ? (
-                <button
-                  onClick={handleDownload}
-                  title="Download"
-                  className="flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-xl text-sm font-medium transition-all"
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.5)" }}
-                >
-                  <Download className="w-4 h-4" />
+                <button onClick={handleDownload} title="Download HD"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium transition-all hover:bg-white/8"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.45)" }}>
+                  <Download className="w-3.5 h-3.5" /> Download
                 </button>
               ) : (
-                <button
-                  onClick={() => navigate(createPageUrl("Pricing"))}
-                  title="Upgrade to download"
-                  className="flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-xl text-sm font-medium transition-all hover:opacity-80"
-                  style={{ background: "rgba(201,150,58,0.12)", border: "1px solid rgba(201,150,58,0.3)", color: "#C9963A" }}
-                >
-                  <Lock className="w-4 h-4" />
+                <button onClick={() => navigate(createPageUrl("Pricing"))} title="Upgrade to download"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium transition-all"
+                  style={{ background: "rgba(201,150,58,0.08)", border: "1px solid rgba(201,150,58,0.2)", color: "rgba(201,150,58,0.6)" }}>
+                  <Lock className="w-3.5 h-3.5" /> Download
                 </button>
               )}
-              <button
-                onClick={handleShare}
-                title={copied ? "Copied!" : "Share"}
-                className="flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-xl text-sm font-medium transition-all"
-                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: copied ? "#1B8FA0" : "rgba(255,255,255,0.5)" }}
-              >
-                <Share2 className="w-4 h-4" />
+              <button onClick={handleShare} title={copied ? "Copied!" : "Share link"}
+                className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium transition-all hover:bg-white/8"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: copied ? "#1B8FA0" : "rgba(255,255,255,0.45)" }}>
+                <Share2 className="w-3.5 h-3.5" /> {copied ? "Copied!" : "Share"}
               </button>
             </>
           )}
