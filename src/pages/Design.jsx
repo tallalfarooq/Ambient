@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Loader2, ShoppingBag, Sparkles, ArrowLeft, Recycle, Lock, ShoppingCart, Heart, Share2, Check, Copy } from "lucide-react";
+import { Loader2, ShoppingBag, Sparkles, ArrowLeft, Recycle, Lock, ShoppingCart, Heart, Share2, Check, Copy, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import FurnitureMatchCard from "@/components/design/FurnitureMatchCard";
 import CartDrawer from "@/components/design/CartDrawer";
@@ -443,6 +443,28 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                 )}
               </button>
 
+              {/* Global search with Google Lens — paid users only */}
+              {isPaidUser ? (
+                <button
+                  onClick={() => window.open(`https://lens.google.com/uploadbyurl?url=${encodeURIComponent(design.generated_render_url)}`, "_blank")}
+                  className="mt-2 w-full flex items-center justify-center gap-2 font-semibold py-3.5 rounded-2xl hover:opacity-90 transition-all"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
+                >
+                  <Globe className="w-4 h-4" />
+                  Search globally with Google Lens
+                </button>
+              ) : (
+                <div
+                  className="mt-2 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl cursor-not-allowed"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.25)" }}
+                  title="Upgrade to Basic or Pro to search globally"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span className="text-sm">Search globally with Google Lens</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full ml-1" style={{ background: "rgba(201,150,58,0.15)", color: "#C9963A", border: "1px solid rgba(201,150,58,0.3)" }}>PRO</span>
+                </div>
+              )}
+
               <AnimatePresence>
                 {showLoginPrompt && (
                   <motion.div
@@ -475,24 +497,35 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
           {items.length > 0 && (
             <div className="mt-4 grid grid-cols-3 gap-2">
               {items.map((item, idx) => (
-                <button
-                  key={item.id}
-                  onClick={() => setSelectedItem(item)}
-                  className={`text-left p-3 rounded-2xl border text-xs transition-all ${
-                    selectedItem?.id === item.id
-                      ? "border-white/30 bg-white/5"
-                      : "border-white/8 bg-white/3 hover:border-white/15"
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
-                      style={{ background: selectedItem?.id === item.id ? "#1B8FA0" : "rgba(255,255,255,0.15)" }}>
-                      {idx + 1}
-                    </span>
-                    <span className="font-medium text-white/80 truncate">{item.label}</span>
-                  </div>
-                  <div className="text-white/30 truncate pl-5">{item.style_tags?.join(", ")}</div>
-                </button>
+                <div key={item.id} className={`rounded-2xl border text-xs transition-all overflow-hidden ${
+                    selectedItem?.id === item.id ? "border-white/30 bg-white/5" : "border-white/8 bg-white/3"
+                  }`}>
+                  <button
+                    onClick={() => setSelectedItem(item)}
+                    className="text-left p-3 w-full hover:bg-white/3 transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+                        style={{ background: selectedItem?.id === item.id ? "#1B8FA0" : "rgba(255,255,255,0.15)" }}>
+                        {idx + 1}
+                      </span>
+                      <span className="font-medium text-white/80 truncate">{item.label}</span>
+                    </div>
+                    <div className="text-white/30 truncate pl-5">{item.style_tags?.join(", ")}</div>
+                  </button>
+                  {/* Google Lens search for this specific item — paid only */}
+                  {isPaidUser && (
+                    <a
+                      href={`https://www.google.com/search?tbm=shop&q=${encodeURIComponent((item.label || "") + " " + (item.style_tags?.slice(0,2).join(" ") || ""))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-1 px-3 py-1.5 border-t border-white/5 text-[10px] text-white/35 hover:text-white/60 hover:bg-white/3 transition-all"
+                    >
+                      <Globe className="w-2.5 h-2.5 flex-shrink-0" /> Search globally
+                    </a>
+                  )}
+                </div>
               ))}
             </div>
           )}

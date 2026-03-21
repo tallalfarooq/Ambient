@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
-import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock } from "lucide-react";
+import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock, Globe } from "lucide-react";
 
 function ImageWatermark() {
   return (
@@ -923,6 +923,30 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
             </>
           )}
         </div>
+
+        {/* Google Lens global search — paid users, shown after generation */}
+        {generated && !loading && (
+          isPaidUser ? (
+            <button
+              onClick={() => window.open(`https://lens.google.com/uploadbyurl?url=${encodeURIComponent(generated)}`, "_blank")}
+              className="w-full mt-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-medium transition-all hover:opacity-80"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.45)" }}
+            >
+              <Globe className="w-4 h-4" />
+              Search this design globally with Google Lens
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate(createPageUrl("Pricing"))}
+              className="w-full mt-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-medium transition-all hover:opacity-70"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.2)" }}
+            >
+              <Lock className="w-3.5 h-3.5" />
+              Search globally with Google Lens
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(201,150,58,0.15)", color: "#C9963A", border: "1px solid rgba(201,150,58,0.3)" }}>PRO</span>
+            </button>
+          )
+        )}
       </div>
     </div>
   );
