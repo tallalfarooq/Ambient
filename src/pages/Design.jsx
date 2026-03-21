@@ -178,18 +178,27 @@ export default function Design() {
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are an Amazon.de product search expert analyzing an AI-generated interior design render in the ${design.style} style.
 Budget: €${design.budget_min ?? 0}–€${design.budget_max ?? 5000} (tier: ${tier}).
-TASK: Identify 8-12 distinct furniture or decor items clearly visible in this room render. For each item provide:
-- label: descriptive English name including COLOR + MATERIAL + TYPE (e.g. "Beige Linen Low-Profile Sofa", "Walnut Wood Tapered-Leg Coffee Table", "Rattan Wicker Pendant Light")
-- style_tags: 2-3 English style tags matching the item's visual style (e.g. ["japandi", "natural oak", "minimalist"])
-- position_x: horizontal % (0=far left, 50=center, 100=far right) of the item's VISUAL CENTER in the image. Be precise — a sofa that spans the lower center should be ~50. A lamp in the right third should be ~75.
-- position_y: vertical % (0=top, 50=middle, 100=bottom) of the item's VISUAL CENTER. A pendant light near the ceiling is ~15. A coffee table on the floor is ~70. A sofa seat is ~65.
-- search_query: a precise GERMAN Amazon.de search query (5-7 words) that targets this EXACT item. ALWAYS include: COLOR in German + MATERIAL in German + STYLE keyword + PRODUCT TYPE in German. Examples: "beige Leinen Sofa niedrig Japandi Wohnzimmer", "Walnuss Holz Couchtisch Mid-Century konische Beine", "Rattan Pendelleuchte Boho natur", "Eichenholz Regal minimalistisch schwarz Stahl".
-CRITICAL: The budget tier is "${tier}" — your query MUST include these German keywords: "${budgetHint}".
-Budget-tier query examples: ${
-  tier === "budget"  ? '"Teppich Baumwolle günstig Wohnzimmer", "Stehlampe Stoff preiswert modern"' :
-  tier === "mid"     ? '"Sofa Stoff grau Wohnzimmer Qualität", "Couchtisch Eiche rund modern Bestseller"' :
-  tier === "premium" ? '"Designer Sofa Leder schwarz Premium hochwertig", "Stehlampe Messing modern Design"' :
-                       '"Luxus Sofa Leder Rindsleder Designer exklusiv", "Stehlampe vergoldet High-End Messing"'}.
+
+TASK: Identify 8-12 distinct furniture or decor items clearly visible in this room render.
+
+For each item provide:
+- label: descriptive English name including COLOR + MATERIAL + TYPE (e.g. "Beige Linen Low-Profile Sofa", "Walnut Wood Coffee Table", "Rattan Pendant Light")
+- style_tags: 2-3 English style tags (e.g. ["japandi", "natural oak", "minimalist"])
+- bbox_left: left edge of the item as % of image width (0=left edge, 100=right edge)
+- bbox_right: right edge of the item as % of image width
+- bbox_top: top edge of the item as % of image height (0=top, 100=bottom)
+- bbox_bottom: bottom edge of the item as % of image height
+  Example: a sofa that fills the bottom-center of the image → bbox_left:15, bbox_right:70, bbox_top:60, bbox_bottom:90
+  Example: a pendant light in the upper-right quarter → bbox_left:60, bbox_right:80, bbox_top:5, bbox_bottom:25
+- search_query: precise GERMAN Amazon.de search query (5-7 words): COLOR + MATERIAL + STYLE + PRODUCT TYPE in German.
+  Examples: "beige Leinen Sofa niedrig Japandi", "Walnuss Couchtisch Mid-Century konische Beine", "Rattan Pendelleuchte Boho natur"
+
+CRITICAL: Budget tier is "${tier}" — queries MUST include: "${budgetHint}".
+Examples: ${
+  tier === "budget"  ? '"Teppich Baumwolle günstig", "Stehlampe preiswert modern"' :
+  tier === "mid"     ? '"Sofa Stoff grau Qualität", "Couchtisch Eiche rund Bestseller"' :
+  tier === "premium" ? '"Designer Sofa Leder Premium", "Stehlampe Messing hochwertig"' :
+                       '"Luxus Sofa Leder exklusiv", "Stehlampe vergoldet High-End"'}.
 ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand options where possible." : ""}`,
       file_urls: [design.generated_render_url].filter(Boolean),
       response_json_schema: {
@@ -202,8 +211,10 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
               properties: {
                 label:        { type: "string" },
                 style_tags:   { type: "array", items: { type: "string" } },
-                position_x:   { type: "number" },
-                position_y:   { type: "number" },
+                bbox_left:    { type: "number" },
+                bbox_right:   { type: "number" },
+                bbox_top:     { type: "number" },
+                bbox_bottom:  { type: "number" },
                 search_query: { type: "string" },
               },
             },
@@ -212,8 +223,15 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
       },
     });
 
+    // Compute pin center from bounding box — much more accurate than a single point estimate
+    const withPositions = (result.items || []).map((item) => ({
+      ...item,
+      position_x: Math.round(((item.bbox_left ?? 10) + (item.bbox_right ?? 90)) / 2 * 10) / 10,
+      position_y: Math.round(((item.bbox_top  ?? 10) + (item.bbox_bottom ?? 90)) / 2 * 10) / 10,
+    }));
+
     const itemsWithMatches = await Promise.all(
-      (result.items || []).map(async (item) => {
+      withPositions.map(async (item) => {
         let matches = [];
         try {
           const res = await base44.functions.invoke("getAmazonProducts", {
