@@ -174,7 +174,7 @@ function FineTuneRow({ label, presets, selected, accentColor, accentBg, accentTe
 }
 
 function BeforeAfterSlider({ before, after }) {
-  const [pos, setPos] = useState(100); // default: show "after" (generated) fully
+  const [pos, setPos] = useState(0); // 0 = only after visible, 100 = only before visible
   const [dragging, setDragging] = useState(false);
   const [hinted, setHinted] = useState(false); // show drag hint once
   const containerRef = useRef(null);
@@ -234,10 +234,10 @@ function BeforeAfterSlider({ before, after }) {
           </svg>
         </div>
       </div>
-      {/* Before label — only visible when slider is dragged left */}
+      {/* Before label — only visible when slider is dragged right */}
       <span
         className="absolute top-3 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-white/70 pointer-events-none transition-opacity duration-300"
-        style={{ opacity: pos < 90 ? 1 : 0 }}
+        style={{ opacity: pos > 10 ? 1 : 0 }}
       >
         Before
       </span>
