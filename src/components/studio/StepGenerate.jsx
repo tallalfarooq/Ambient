@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
-import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock, Globe } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock, Globe, Sliders, X } from "lucide-react";
 
 function ImageWatermark() {
   return (
@@ -279,6 +280,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [credits,      setCredits]      = useState(null);
   const [user,         setUser]         = useState(undefined); // undefined = loading, null = not logged in
   const [checkingOut,  setCheckingOut]  = useState(false);
+  const [showFineTune, setShowFineTune] = useState(false); // fine-tune bottom sheet
 
   // Track pending fine-tune changes so we can highlight "Apply changes"
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
@@ -733,124 +735,142 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         </div>
       )}
 
-      {/* Fine-tune controls — shown after first generation */}
-      {generated && !loading && (
-        <div className="mb-6 rounded-2xl overflow-hidden" style={{
-          border: `1px solid ${hasPendingChanges ? "rgba(27,143,160,0.4)" : "rgba(255,255,255,0.07)"}`,
-          background: "rgba(255,255,255,0.02)",
-          transition: "border-color 0.3s",
-        }}>
-          <div className="px-5 py-4 border-b border-white/5">
-            <p className="text-xs font-semibold text-white/60 tracking-wide uppercase">Fine-tune your design</p>
-            <p className="text-white/25 text-[10px] mt-0.5">Pick a preset or type your own — then apply</p>
-          </div>
-          <div className="px-5 py-4 space-y-5">
-
-            {/* Wall color */}
-            <FineTuneRow
-              label="Wall Color"
-              presets={FINE_TUNE_OPTIONS.wall_color}
-              selected={data.wall_color}
-              accentColor="#1B8FA0"
-              accentBg="rgba(27,143,160,0.2)"
-              accentText="#6EC6C6"
-              onSelect={(v) => update({ wall_color: v })}
-              placeholder="e.g. dusty blue, olive green, warm terracotta…"
+      {/* Fine-Tune Bottom Sheet Modal */}
+      <AnimatePresence>
+        {showFineTune && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40"
+              style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+              onClick={() => setShowFineTune(false)}
             />
-
-            {/* Sofa / seating */}
-            <FineTuneRow
-              label="Sofa / Seating"
-              presets={FINE_TUNE_OPTIONS.sofa_color}
-              selected={data.sofa_color}
-              accentColor="#7c3aed"
-              accentBg="rgba(124,58,237,0.2)"
-              accentText="#a78bfa"
-              onSelect={(v) => update({ sofa_color: v })}
-              placeholder="e.g. deep teal velvet, cream boucle, cognac leather…"
-            />
-
-            {/* Flooring */}
-            <FineTuneRow
-              label="Flooring"
-              presets={FINE_TUNE_OPTIONS.floor_type}
-              selected={data.floor_type}
-              accentColor="#C9963A"
-              accentBg="rgba(201,150,58,0.2)"
-              accentText="#C9963A"
-              onSelect={(v) => update({ floor_type: v })}
-              placeholder="e.g. terracotta tiles, grey carpet, bleached oak…"
-            />
-
-            {/* Ceiling — only in furnish mode */}
-            {data.room_mode === "furnish" && (
-              <FineTuneRow
-                label="Ceiling"
-                presets={FINE_TUNE_OPTIONS.ceiling_design}
-                selected={data.ceiling_design}
-                accentColor="#D4A0A0"
-                accentBg="rgba(212,160,160,0.2)"
-                accentText="#D4A0A0"
-                onSelect={(v) => update({ ceiling_design: v })}
-                placeholder="e.g. skylights, dark painted ceiling, decorative plaster…"
-              />
-            )}
-
-            {/* Free-text additional note */}
-            <div>
-              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Anything else?</p>
-              <textarea
-                rows={2}
-                value={data.custom_note || ""}
-                onChange={(e) => update({ custom_note: e.target.value })}
-                placeholder="e.g. add more plants, make it feel cosier, include a fireplace, use warmer lighting…"
-                className="w-full text-sm px-4 py-3 rounded-xl text-white/70 placeholder-white/20 focus:outline-none resize-none leading-relaxed"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(27,143,160,0.35)"; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
-              />
-            </div>
-
-            {/* Apply changes button — uses targeted fine-tune mode (low strength, preservation prompt) */}
-            <button
-              onClick={() => generate(true)}
-              disabled={loading || !credits || credits.credits_remaining < 2}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
-              style={{
-                background: hasPendingChanges
-                  ? "linear-gradient(135deg, #1B8FA0, #C9963A)"
-                  : "rgba(27,143,160,0.12)",
-                border: hasPendingChanges ? "none" : "1px solid rgba(27,143,160,0.3)",
-                color: "white",
-                boxShadow: hasPendingChanges ? "0 4px 20px rgba(27,143,160,0.4)" : "none",
-              }}
+            {/* Sheet */}
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl overflow-hidden"
+              style={{ background: "#111113", border: "1px solid rgba(255,255,255,0.1)", maxHeight: "85vh", overflowY: "auto" }}
             >
-              <RefreshCw className="w-4 h-4" />
-              {hasPendingChanges ? "Apply changes & regenerate" : "Regenerate with current settings"}
-            </button>
-          </div>
-        </div>
-      )}
+              {/* Handle + header */}
+              <div className="sticky top-0 px-5 pt-4 pb-3 border-b border-white/8" style={{ background: "#111113" }}>
+                <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-4" />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-white">Fine-Tune Your Design</p>
+                    <p className="text-white/35 text-xs mt-0.5">Pick what to change — AI only edits that, nothing else</p>
+                  </div>
+                  <button onClick={() => setShowFineTune(false)} className="w-8 h-8 rounded-xl flex items-center justify-center text-white/40 hover:text-white hover:bg-white/8 transition-all">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="px-5 py-5 space-y-5">
+                <FineTuneRow
+                  label="Wall Color"
+                  presets={FINE_TUNE_OPTIONS.wall_color}
+                  selected={data.wall_color}
+                  accentColor="#1B8FA0" accentBg="rgba(27,143,160,0.2)" accentText="#6EC6C6"
+                  onSelect={(v) => update({ wall_color: v })}
+                  placeholder="e.g. dusty blue, olive green, warm terracotta…"
+                />
+                <FineTuneRow
+                  label="Sofa / Seating"
+                  presets={FINE_TUNE_OPTIONS.sofa_color}
+                  selected={data.sofa_color}
+                  accentColor="#7c3aed" accentBg="rgba(124,58,237,0.2)" accentText="#a78bfa"
+                  onSelect={(v) => update({ sofa_color: v })}
+                  placeholder="e.g. deep teal velvet, cream boucle, cognac leather…"
+                />
+                <FineTuneRow
+                  label="Flooring"
+                  presets={FINE_TUNE_OPTIONS.floor_type}
+                  selected={data.floor_type}
+                  accentColor="#C9963A" accentBg="rgba(201,150,58,0.2)" accentText="#C9963A"
+                  onSelect={(v) => update({ floor_type: v })}
+                  placeholder="e.g. terracotta tiles, grey carpet, bleached oak…"
+                />
+                {data.room_mode === "furnish" && (
+                  <FineTuneRow
+                    label="Ceiling"
+                    presets={FINE_TUNE_OPTIONS.ceiling_design}
+                    selected={data.ceiling_design}
+                    accentColor="#D4A0A0" accentBg="rgba(212,160,160,0.2)" accentText="#D4A0A0"
+                    onSelect={(v) => update({ ceiling_design: v })}
+                    placeholder="e.g. skylights, dark painted ceiling, decorative plaster…"
+                  />
+                )}
+                <div>
+                  <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Anything else?</p>
+                  <textarea
+                    rows={2}
+                    value={data.custom_note || ""}
+                    onChange={(e) => update({ custom_note: e.target.value })}
+                    placeholder="e.g. add more plants, make it feel cosier, include a fireplace…"
+                    className="w-full text-sm px-4 py-3 rounded-xl text-white/70 placeholder-white/20 focus:outline-none resize-none leading-relaxed"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(27,143,160,0.35)"; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+                  />
+                </div>
+
+                {/* Apply button inside sheet */}
+                <button
+                  onClick={() => { setShowFineTune(false); generate(true); }}
+                  disabled={loading || !credits || credits.credits_remaining < 1}
+                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-bold transition-all disabled:opacity-40"
+                  style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)", color: "white", boxShadow: "0 4px 24px rgba(27,143,160,0.4)" }}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Apply changes — uses 1 credit
+                </button>
+                <div className="h-4" /> {/* safe-area bottom padding */}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Action buttons */}
       <div className="space-y-3">
-        {/* Primary CTA */}
+        {/* Primary CTA row — Save & Shop + Fine-Tune side by side */}
         {generated && !loading && (
-          <button
-            onClick={handleSaveAndShop}
-            disabled={saving}
-            className="w-full flex items-center justify-center gap-2.5 text-white font-semibold py-4 rounded-2xl transition-all disabled:opacity-50"
-            style={{
-              background: "linear-gradient(135deg, #1B8FA0, #C9963A)",
-              boxShadow: "0 8px 32px rgba(27,143,160,0.35)",
-            }}
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookmarkCheck className="w-4 h-4" />}
-            {saving ? "Saving your design…" : "Save & Shop this look"}
-          </button>
+          <div className="flex gap-2.5">
+            <button
+              onClick={handleSaveAndShop}
+              disabled={saving}
+              className="flex-1 flex items-center justify-center gap-2 text-white font-semibold py-4 rounded-2xl transition-all disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)", boxShadow: "0 8px 32px rgba(27,143,160,0.3)" }}
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookmarkCheck className="w-4 h-4" />}
+              {saving ? "Saving…" : "Save & Shop"}
+            </button>
+            {/* Fine-Tune button — opens bottom sheet */}
+            <button
+              onClick={() => setShowFineTune(true)}
+              className="relative flex items-center justify-center gap-2 px-5 py-4 rounded-2xl font-semibold text-sm transition-all hover:opacity-90"
+              style={{
+                background: hasPendingChanges ? "rgba(27,143,160,0.2)" : "rgba(255,255,255,0.06)",
+                border: hasPendingChanges ? "1px solid rgba(27,143,160,0.5)" : "1px solid rgba(255,255,255,0.1)",
+                color: hasPendingChanges ? "#6EC6C6" : "rgba(255,255,255,0.6)",
+              }}
+            >
+              <Sliders className="w-4 h-4" />
+              Fine-Tune
+              {hasPendingChanges && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-[#0A0A0B]" />
+              )}
+            </button>
+          </div>
         )}
 
-        {/* Secondary row */}
+        {/* Secondary row: Back + Generate/Credits + Download + Share */}
         <div className="flex gap-2.5">
           <button
             onClick={onBack}
