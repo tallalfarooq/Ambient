@@ -101,6 +101,30 @@ const buildPrompt = (data) => {
   );
 };
 
+// Targeted fine-tune prompt — only describes what to change, locks everything else
+const buildFineTunePrompt = (data) => {
+  const style = data.style || "modern";
+  const changesList = [];
+  if (data.wall_color)         changesList.push(`wall color to ${data.wall_color}`);
+  if (data.sofa_color)         changesList.push(`sofa and seating color/material to ${data.sofa_color}`);
+  if (data.floor_type)         changesList.push(`flooring to ${data.floor_type}`);
+  if (data.ceiling_design)     changesList.push(`ceiling to ${data.ceiling_design}`);
+  if (data.custom_note?.trim()) changesList.push(data.custom_note.trim());
+  if (changesList.length === 0) return buildPrompt(data);
+
+  return (
+    `Photorealistic interior design photograph. ${style} interior design style.` +
+    ` TARGETED MICRO-EDIT — Apply ONLY these specific changes to the reference image: ${changesList.join("; ")}.` +
+    ` STRICT PRESERVATION RULE — Everything else must remain IDENTICAL to the reference:` +
+    ` every furniture piece stays in its exact position with the same color, fabric, material, and shape.` +
+    ` All lighting fixtures (pendants, floor lamps, ceiling lights) stay unchanged.` +
+    ` All decorative accessories (plants, rugs, cushions, vases, artwork, shelving contents) stay unchanged.` +
+    ` Room layout, camera angle, perspective, and natural lighting stay unchanged.` +
+    ` Do NOT add or remove any furniture. Do NOT change any furniture that was not listed above.` +
+    ` Shot on Canon EOS R5, 24mm lens, natural daylight. Photorealistic, 8K, magazine quality.`
+  );
+};
+
 function FineTuneRow({ label, presets, selected, accentColor, accentBg, accentText, onSelect, placeholder }) {
   const [custom, setCustom] = useState("");
 
@@ -306,7 +330,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     navigate(createPageUrl("Pricing"));
   };
 
-  const generate = async () => {
+  const generate = async (isFineTune = false) => {
     if (!data.room_image_url) {
       setError("Please go back and upload a room photo first.");
       return;
@@ -322,15 +346,23 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     setFeedback(null);
     setFeedbackNote("");
 
-    const refinedPrompt =
-      feedback === "dislike" && feedbackNote
-        ? `${prompt}, avoid: ${feedbackNote}`
-        : prompt;
+    let refinedPrompt;
+    let strength;
 
-    // Furnish mode needs higher minimum strength to actually place furniture
-    const strength = data.room_mode === "furnish"
-      ? Math.max(intensity / 100, 0.75)
-      : intensity / 100;
+    if (isFineTune) {
+      // Targeted edit: use preservation prompt + very low strength so only the requested element changes
+      refinedPrompt = buildFineTunePrompt(data);
+      strength = 0.28; // low enough to preserve furniture, high enough to change wall/floor/sofa color
+    } else {
+      refinedPrompt =
+        feedback === "dislike" && feedbackNote
+          ? `${prompt}, avoid: ${feedbackNote}`
+          : prompt;
+      // Furnish mode needs higher minimum strength to actually place furniture
+      strength = data.room_mode === "furnish"
+        ? Math.max(intensity / 100, 0.75)
+        : intensity / 100;
+    }
 
     try {
       const result = await base44.integrations.Core.GenerateImage({
@@ -672,9 +704,9 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
               />
             </div>
 
-            {/* Apply changes button — lives inside the fine-tune section */}
+            {/* Apply changes button — uses targeted fine-tune mode (low strength, preservation prompt) */}
             <button
-              onClick={generate}
+              onClick={() => generate(true)}
               disabled={loading || !credits || credits.credits_remaining < 2}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-40"
               style={{
