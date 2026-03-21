@@ -367,6 +367,14 @@ export default function Pricing() {
         </div>
 
         {/* Credit Calculator */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4" style={{ background: "rgba(201,150,58,0.1)", border: "1px solid rgba(201,150,58,0.25)" }}>
+            <Calculator className="w-4 h-4" style={{ color: "#C9963A" }} />
+            <span className="text-sm font-semibold" style={{ color: "#C9963A" }}>Not sure which plan fits?</span>
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Custom Credit Calculator</h2>
+          <p className="text-white/40 text-sm">Tell us how much you plan to design — we'll show you exactly what you need.</p>
+        </div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

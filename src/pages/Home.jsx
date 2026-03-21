@@ -311,30 +311,16 @@ function TestimonialCard({ t, i }) {
             </div>
           </div>
         </div>
-        <div
-          className="relative hidden sm:flex items-center justify-center"
-          style={{
-            background: "linear-gradient(135deg, #0F1F1C, #1A2F3A)",
-            minHeight: 200,
-          }}
-        >
+        <div className="relative hidden sm:block overflow-hidden" style={{ minHeight: 280 }}>
+          <img
+            src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=85&auto=format&fit=crop"
+            alt="AI redesigned living room"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
           <div
             className="absolute inset-0"
-            style={{
-              background: "radial-gradient(circle at 60% 40%, rgba(27,143,160,0.12), transparent 70%)",
-            }}
+            style={{ background: "linear-gradient(to right, rgba(26,26,26,0.35), transparent)" }}
           />
-          <Layers className="w-16 h-16 opacity-10" style={{ color: "#1B8FA0" }} />
-          <span
-            className="absolute bottom-4 left-4 text-[11px] font-semibold px-3 py-1.5 rounded-full"
-            style={{
-              background: "rgba(0,0,0,0.5)",
-              backdropFilter: "blur(8px)",
-              color: "rgba(255,255,255,0.6)",
-            }}
-          >
-            Redesigned in 20 min ✦
-          </span>
         </div>
       </motion.div>
     );
