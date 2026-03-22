@@ -109,15 +109,13 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
               <Heart className={`w-3.5 h-3.5 ${isSaved ? "fill-current" : ""}`} />
             </button>
           )}
-          {isSaved && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onShare(design.id); }}
-              className="w-8 h-8 rounded-xl backdrop-blur-sm border flex items-center justify-center transition-all"
-              style={{ background: "rgba(27,143,160,0.3)", borderColor: "rgba(27,143,160,0.5)", color: "#6EC6C6" }}
-            >
-              <Share2 className="w-3.5 h-3.5" />
-            </button>
-          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onShare(design.id); }}
+            className="w-8 h-8 rounded-xl backdrop-blur-sm border flex items-center justify-center transition-all"
+            style={{ background: "rgba(27,143,160,0.3)", borderColor: "rgba(27,143,160,0.5)", color: "#6EC6C6" }}
+          >
+            <Share2 className="w-3.5 h-3.5" />
+          </button>
           {design.generated_render_url && (
             <button
               onClick={(e) => { e.stopPropagation(); handleDownload(); }}
@@ -233,21 +231,39 @@ export default function Projects() {
   };
 
   const handleShare = async (designId) => {
-    const saved = savedDesigns.find((s) => s.design_id === designId);
-    if (!saved) return;
-    
-    let token = saved.share_token;
-    if (!token) {
-      token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      await base44.entities.SavedDesign.update(saved.id, { share_token: token, is_public: true });
-      setSavedDesigns((prev) => prev.map((s) => s.id === saved.id ? { ...s, share_token: token, is_public: true } : s));
-    } else if (!saved.is_public) {
-      await base44.entities.SavedDesign.update(saved.id, { is_public: true });
-      setSavedDesigns((prev) => prev.map((s) => s.id === saved.id ? { ...s, is_public: true } : s));
+    // Check if there's already a saved/favourited record with a share token
+    const existing = savedDesigns.find((s) => s.design_id === designId);
+
+    if (existing) {
+      // Already favourited — reuse or generate token
+      let token = existing.share_token;
+      if (!token) {
+        token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        await base44.entities.SavedDesign.update(existing.id, { share_token: token, is_public: true });
+        setSavedDesigns((prev) => prev.map((s) => s.id === existing.id ? { ...s, share_token: token, is_public: true } : s));
+      } else if (!existing.is_public) {
+        await base44.entities.SavedDesign.update(existing.id, { is_public: true });
+        setSavedDesigns((prev) => prev.map((s) => s.id === existing.id ? { ...s, is_public: true } : s));
+      }
+      setShareLink(`${window.location.origin}/SharedDesign?token=${token}`);
+    } else {
+      // Not favourited — create a SavedDesign record on the fly so we can generate a token
+      const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      try {
+        const created = await base44.entities.SavedDesign.create({
+          design_id: designId,
+          user_email: user.email,
+          share_token: token,
+          is_public: true,
+        });
+        setSavedDesigns((prev) => [...prev, created]);
+        setShareLink(`${window.location.origin}/SharedDesign?token=${token}`);
+      } catch {
+        // Fallback: just share the Design page URL directly
+        setShareLink(`${window.location.origin}/Design?id=${designId}`);
+      }
     }
-    
-    const link = `${window.location.origin}/SharedDesign?token=${token}`;
-    setShareLink(link);
+
     setShowShareModal(true);
   };
 

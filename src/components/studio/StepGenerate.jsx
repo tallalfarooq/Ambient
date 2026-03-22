@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock, Globe, Sliders, X } from "lucide-react";
+import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock, Globe, Sliders, X, Search, ShoppingBag } from "lucide-react";
 
 function ImageWatermark() {
   return (
@@ -124,49 +124,68 @@ const buildFineTunePrompt = (data) => {
   return parts.join(" ");
 };
 
-function FineTuneRow({ label, presets, selected, accentColor, accentBg, accentText, onSelect, placeholder }) {
-  const [custom, setCustom] = useState("");
-
-  const handlePreset = (opt) => {
-    const next = selected === opt ? null : opt;
-    onSelect(next);
-    if (next) setCustom(""); // clear custom text when a preset is picked
-  };
-
-  const handleCustomChange = (e) => {
-    setCustom(e.target.value);
-    onSelect(e.target.value || null); // propagate free text as the selection
-  };
+function FineTuneRow({ label, presets, selected, customValue, accentColor, accentBg, accentText, onSelect, onCustomChange, placeholder }) {
+  // Determine if the current selected value is a preset or a custom typed value
+  const isPreset   = presets.includes(selected);
+  const inputValue = customValue ?? (isPreset ? "" : (selected || ""));
 
   return (
     <div>
-      <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">{label}</p>
+      {/* Label + clear */}
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider">{label}</p>
+        {(selected || inputValue) && (
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => { onSelect(null); onCustomChange && onCustomChange(""); }}
+            className="text-[10px] transition-colors"
+            style={{ color: accentText }}
+          >
+            ✕ clear
+          </button>
+        )}
+      </div>
+
+      {/* Preset pills */}
       <div className="flex flex-wrap gap-1.5 mb-2">
         {presets.map((opt) => (
           <button
             key={opt}
             type="button"
-            onClick={() => handlePreset(opt)}
-            className="text-[11px] px-3 py-1 rounded-full border transition-all"
+            tabIndex={-1}
+            onMouseDown={(e) => e.preventDefault()}   /* prevent focus-scroll */
+            onClick={() => {
+              onSelect(selected === opt ? null : opt);
+              onCustomChange && onCustomChange("");    /* clear custom input when preset chosen */
+            }}
+            className="text-[11px] px-3 py-1.5 rounded-full border transition-all"
             style={{
-              borderColor: selected === opt ? accentColor : "rgba(255,255,255,0.1)",
-              background: selected === opt ? accentBg : "transparent",
-              color: selected === opt ? accentText : "rgba(255,255,255,0.45)",
+              borderColor: selected === opt && isPreset ? accentColor : "rgba(255,255,255,0.1)",
+              background:  selected === opt && isPreset ? accentBg    : "rgba(255,255,255,0.03)",
+              color:       selected === opt && isPreset ? accentText  : "rgba(255,255,255,0.5)",
+              fontWeight:  selected === opt && isPreset ? 600 : 400,
             }}
           >
             {opt}
           </button>
         ))}
       </div>
+
+      {/* Per-row custom text input */}
       <input
         type="text"
-        value={custom}
-        onChange={handleCustomChange}
-        placeholder={placeholder}
-        className="w-full text-xs px-3 py-2 rounded-xl text-white/60 placeholder-white/20 focus:outline-none transition-all"
-        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
-        onFocus={(e) => { e.currentTarget.style.borderColor = `${accentColor}55`; }}
-        onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; }}
+        value={inputValue}
+        onChange={(e) => {
+          const v = e.target.value;
+          onCustomChange && onCustomChange(v);
+          onSelect(v || null);    /* keep data field in sync */
+        }}
+        placeholder={placeholder || `or type your own…`}
+        className="w-full text-xs px-3 py-2 rounded-xl text-white/70 placeholder-white/20 focus:outline-none"
+        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+        onFocus={(e)  => { e.currentTarget.style.borderColor = accentColor + "88"; }}
+        onBlur={(e)   => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
       />
     </div>
   );
@@ -278,7 +297,10 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [credits,      setCredits]      = useState(null);
   const [user,         setUser]         = useState(undefined); // undefined = loading, null = not logged in
   const [checkingOut,  setCheckingOut]  = useState(false);
-  const [showFineTune, setShowFineTune] = useState(false); // fine-tune bottom sheet
+  const [showFineTune, setShowFineTune] = useState(false); // fine-tune modal
+  const [showObjectSearch, setShowObjectSearch] = useState(false); // tap-to-search panel
+  const [showShareModal, setShowShareModal] = useState(false); // share-link modal
+  const [shareLink, setShareLink] = useState("");
 
   // Track pending fine-tune changes so we can highlight "Apply changes"
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
@@ -540,19 +562,18 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     }
   };
 
-  const handleShare = async () => {
-    const shareText = `Check out my AI-designed room in the ${data.style} style — made with Ambient ✦`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "My Ambient Design", text: shareText, url: window.location.href });
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    } catch {
-      // user cancelled share — ignore
-    }
+  const handleShare = () => {
+    const url = designId
+      ? `${window.location.origin}/Design?id=${designId}`
+      : window.location.origin;
+    setShareLink(url);
+    setShowShareModal(true);
+  };
+
+  const copyShareLink = () => {
+    navigator.clipboard.writeText(shareLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const isPaidUser = credits && credits.plan_type !== "free";
@@ -669,6 +690,16 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           <div className="relative w-full">
             <BeforeAfterSlider before={prevGenerated || data.room_image_url} after={generated} />
             {!isPaidUser && <ImageWatermark />}
+            {/* Tap-to-search button — top-left corner of image */}
+            <button
+              onClick={() => setShowObjectSearch(true)}
+              className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-90 backdrop-blur-sm"
+              style={{ background: "rgba(10,10,11,0.7)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)" }}
+              title="Search furniture items"
+            >
+              <Search className="w-3 h-3" />
+              Find items
+            </button>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3 p-10">
@@ -737,78 +768,295 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       <AnimatePresence>
         {showFineTune && (
           <>
-            {/* Backdrop */}
+            {/* Full-screen overlay — catches clicks outside the dialog */}
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40"
+              className="fixed inset-0 z-40 flex items-end sm:items-center justify-center px-4 pb-4 sm:pb-0"
               style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
               onClick={() => setShowFineTune(false)}
-            />
-            {/* Compact centered dialog */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 12 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 rounded-3xl overflow-hidden"
-              style={{ background: "#16181A", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 32px 80px rgba(0,0,0,0.7)", maxWidth: 520, margin: "0 auto", maxHeight: "80vh", overflowY: "auto" }}
             >
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
-                <div>
-                  <p className="text-sm font-bold text-white">Fine-Tune Your Design</p>
-                  <p className="text-[11px] text-white/35 mt-0.5">Room structure stays fixed — only selected elements change</p>
-                </div>
-                <button onClick={() => setShowFineTune(false)} className="w-7 h-7 rounded-lg flex items-center justify-center text-white/35 hover:text-white hover:bg-white/8 transition-all flex-shrink-0">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div className="px-5 py-4 space-y-4">
-                <FineTuneRow label="Wall Color" presets={FINE_TUNE_OPTIONS.wall_color} selected={data.wall_color}
-                  accentColor="#1B8FA0" accentBg="rgba(27,143,160,0.2)" accentText="#6EC6C6"
-                  onSelect={(v) => update({ wall_color: v })} placeholder="e.g. dusty blue, sage green, warm beige…" />
-                <FineTuneRow label="Sofa / Seating" presets={FINE_TUNE_OPTIONS.sofa_color} selected={data.sofa_color}
-                  accentColor="#7c3aed" accentBg="rgba(124,58,237,0.2)" accentText="#a78bfa"
-                  onSelect={(v) => update({ sofa_color: v })} placeholder="e.g. deep teal velvet, cognac leather…" />
-                <FineTuneRow label="Flooring" presets={FINE_TUNE_OPTIONS.floor_type} selected={data.floor_type}
-                  accentColor="#C9963A" accentBg="rgba(201,150,58,0.2)" accentText="#C9963A"
-                  onSelect={(v) => update({ floor_type: v })} placeholder="e.g. herringbone parquet, grey carpet…" />
-                {data.room_mode === "furnish" && (
-                  <FineTuneRow label="Ceiling" presets={FINE_TUNE_OPTIONS.ceiling_design} selected={data.ceiling_design}
-                    accentColor="#D4A0A0" accentBg="rgba(212,160,160,0.2)" accentText="#D4A0A0"
-                    onSelect={(v) => update({ ceiling_design: v })} placeholder="e.g. exposed beams, coffered…" />
-                )}
-                <div>
-                  <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-1.5">Anything else?</p>
-                  <textarea rows={2} value={data.custom_note || ""} onChange={(e) => update({ custom_note: e.target.value })}
-                    placeholder="e.g. add more plants, warmer lighting, include a fireplace…"
-                    className="w-full text-sm px-3 py-2.5 rounded-xl text-white/70 placeholder-white/20 focus:outline-none resize-none"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                    onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(27,143,160,0.35)"; }}
-                    onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
-                  />
+              {/* Dialog — stops clicks propagating to backdrop */}
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 40 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full rounded-3xl flex flex-col"
+                style={{
+                  background: "#16181A",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  boxShadow: "0 32px 80px rgba(0,0,0,0.7)",
+                  maxWidth: 520,
+                  height: "min(88vh, 680px)",
+                  overflow: "hidden",
+                }}
+              >
+                {/* Sticky header */}
+                <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-white/8">
+                  <div>
+                    <p className="text-sm font-bold text-white">Fine-Tune Your Design</p>
+                    <p className="text-[11px] text-white/35 mt-0.5">Room structure stays fixed — only selected elements change</p>
+                  </div>
+                  <button
+                    onClick={() => setShowFineTune(false)}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-white/35 hover:text-white hover:bg-white/8 transition-all flex-shrink-0"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
-                <div className="flex gap-2.5 pt-1">
-                  <button onClick={() => setShowFineTune(false)}
+                {/* Scrollable body */}
+                <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5" style={{ WebkitOverflowScrolling: "touch" }}>
+
+                  {/* Four category rows */}
+                  <div className="space-y-5">
+                    <FineTuneRow
+                      label="Wall Colour" presets={FINE_TUNE_OPTIONS.wall_color} selected={data.wall_color}
+                      accentColor="#1B8FA0" accentBg="rgba(27,143,160,0.18)" accentText="#6EC6C6"
+                      placeholder="e.g. dusty blue, sage green, warm beige…"
+                      onSelect={(v) => update({ wall_color: v })}
+                      onCustomChange={(v) => update({ wall_color: v || null })} />
+                    <FineTuneRow
+                      label="Sofa / Seating" presets={FINE_TUNE_OPTIONS.sofa_color} selected={data.sofa_color}
+                      accentColor="#7c3aed" accentBg="rgba(124,58,237,0.18)" accentText="#a78bfa"
+                      placeholder="e.g. deep teal velvet, cognac leather…"
+                      onSelect={(v) => update({ sofa_color: v })}
+                      onCustomChange={(v) => update({ sofa_color: v || null })} />
+                    <FineTuneRow
+                      label="Flooring" presets={FINE_TUNE_OPTIONS.floor_type} selected={data.floor_type}
+                      accentColor="#C9963A" accentBg="rgba(201,150,58,0.18)" accentText="#C9963A"
+                      placeholder="e.g. cream travertine, brushed concrete…"
+                      onSelect={(v) => update({ floor_type: v })}
+                      onCustomChange={(v) => update({ floor_type: v || null })} />
+                    <FineTuneRow
+                      label="Ceiling" presets={FINE_TUNE_OPTIONS.ceiling_design} selected={data.ceiling_design}
+                      accentColor="#D4A0A0" accentBg="rgba(212,160,160,0.18)" accentText="#D4A0A0"
+                      placeholder="e.g. arch vaulted, plaster molding…"
+                      onSelect={(v) => update({ ceiling_design: v })}
+                      onCustomChange={(v) => update({ ceiling_design: v || null })} />
+                  </div>
+
+                  {/* Active selections summary */}
+                  {(data.wall_color || data.sofa_color || data.floor_type || data.ceiling_design) && (
+                    <div className="flex flex-wrap gap-1.5 px-3 py-2.5 rounded-2xl" style={{ background: "rgba(27,143,160,0.06)", border: "1px solid rgba(27,143,160,0.15)" }}>
+                      <span className="text-[10px] text-white/30 self-center mr-1">Changing:</span>
+                      {data.wall_color     && <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(27,143,160,0.2)",   color: "#6EC6C6" }}>Walls: {data.wall_color}</span>}
+                      {data.sofa_color     && <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(124,58,237,0.2)",  color: "#a78bfa" }}>Sofa: {data.sofa_color}</span>}
+                      {data.floor_type     && <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(201,150,58,0.2)",  color: "#C9963A" }}>Floor: {data.floor_type}</span>}
+                      {data.ceiling_design && <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(212,160,160,0.2)", color: "#D4A0A0" }}>Ceiling: {data.ceiling_design}</span>}
+                    </div>
+                  )}
+
+                  {/* Custom free-text note */}
+                  <div>
+                    <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Anything else?</p>
+                    <textarea
+                      rows={3}
+                      value={data.custom_note || ""}
+                      onChange={(e) => update({ custom_note: e.target.value })}
+                      placeholder="e.g. add more plants, warmer lighting, include a fireplace, darker curtains…"
+                      className="w-full text-sm px-3 py-2.5 rounded-xl text-white/70 placeholder-white/20 focus:outline-none resize-none"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                      onFocus={(e)  => { e.currentTarget.style.borderColor = "rgba(27,143,160,0.4)"; }}
+                      onBlur={(e)   => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+                    />
+                  </div>
+                </div>
+
+                {/* Sticky footer — always visible */}
+                <div className="flex-shrink-0 flex gap-2.5 px-5 pb-5 pt-3 border-t border-white/8">
+                  <button
+                    onClick={() => setShowFineTune(false)}
                     className="px-4 py-3 rounded-xl text-sm font-medium transition-all"
-                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.45)" }}>
+                    style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.45)" }}
+                  >
                     Cancel
                   </button>
                   <button
                     onClick={() => { setShowFineTune(false); generate(true); }}
                     disabled={loading || !credits || credits.credits_remaining < 1}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
+                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40 hover:opacity-90"
                     style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)", color: "white" }}
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     Apply changes — 1 credit
                   </button>
                 </div>
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Object Search Modal ─────────────────────────────────── */}
+      <AnimatePresence>
+        {showObjectSearch && generated && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40"
+              style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
+              onClick={() => setShowObjectSearch(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 rounded-3xl overflow-hidden"
+              style={{ background: "#16181A", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 32px 80px rgba(0,0,0,0.7)", maxWidth: 500, margin: "0 auto", maxHeight: "80vh", overflowY: "auto" }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+                <div>
+                  <p className="text-sm font-bold text-white flex items-center gap-2">
+                    <Search className="w-4 h-4" style={{ color: "#C9963A" }} />
+                    Find Furniture & Decor
+                  </p>
+                  <p className="text-[11px] text-white/35 mt-0.5">Search items from this design on Amazon or Google</p>
+                </div>
+                <button onClick={() => setShowObjectSearch(false)} className="w-7 h-7 rounded-lg flex items-center justify-center text-white/35 hover:text-white hover:bg-white/8 transition-all flex-shrink-0">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="px-5 py-5 space-y-5">
+                {/* Google Lens — search full image */}
+                <div>
+                  <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2.5">Search entire room</p>
+                  <button
+                    onClick={() => window.open(`https://lens.google.com/uploadbyurl?url=${encodeURIComponent(generated)}`, "_blank")}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all hover:opacity-90"
+                    style={{ background: "rgba(66,133,244,0.1)", border: "1px solid rgba(66,133,244,0.25)", color: "#7EB1F8" }}
+                  >
+                    <Globe className="w-4 h-4 flex-shrink-0" />
+                    <div className="text-left">
+                      <div className="font-semibold">Google Lens</div>
+                      <div className="text-[11px] text-white/35 font-normal">Identify any item in the full room image</div>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Amazon chips — per furniture item from the room context */}
+                {ROOM_FURNITURE_CONTEXT[data.room_type] && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                      <ShoppingBag className="w-3 h-3" style={{ color: "#C9963A" }} />
+                      Shop by item — Amazon.de
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {ROOM_FURNITURE_CONTEXT[data.room_type].split(",").map((item) => {
+                        const clean = item.trim().replace(/ or .+$/, "").replace(/ with .+$/, "").replace(/ and .+$/, "").replace(/^\d+[-–] /, "").trim();
+                        if (!clean) return null;
+                        const query = `${clean} ${data.style || ""} ${data.room_type || ""}`.trim();
+                        const url = `https://www.amazon.de/s?k=${encodeURIComponent(query)}&tag=ambient019-21`;
+                        return (
+                          <a
+                            key={clean}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border transition-all hover:opacity-90"
+                            style={{ borderColor: "rgba(201,150,58,0.3)", background: "rgba(201,150,58,0.08)", color: "rgba(201,150,58,0.9)" }}
+                          >
+                            <ShoppingBag className="w-2.5 h-2.5 flex-shrink-0" />
+                            {clean}
+                          </a>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-white/20 mt-3">Tap any item to search Amazon.de. Links may include an affiliate commission — helps keep Ambient free.</p>
+                  </div>
+                )}
+
+                {/* Amazon general search */}
+                <div>
+                  <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">Custom search</p>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const val = e.target.elements.q.value.trim();
+                      if (!val) return;
+                      window.open(`https://www.amazon.de/s?k=${encodeURIComponent(val)}&tag=ambient019-21`, "_blank");
+                    }}
+                    className="flex gap-2"
+                  >
+                    <input
+                      name="q"
+                      type="text"
+                      placeholder={`e.g. ${data.style || "modern"} sofa, oak coffee table…`}
+                      className="flex-1 text-sm px-3 py-2.5 rounded-xl text-white/70 placeholder-white/20 focus:outline-none"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(201,150,58,0.4)"; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+                      style={{ background: "rgba(201,150,58,0.15)", border: "1px solid rgba(201,150,58,0.3)", color: "#C9963A" }}
+                    >
+                      Search
+                    </button>
+                  </form>
+                </div>
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Share Modal ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showShareModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4"
+            style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
+            onClick={() => setShowShareModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg rounded-3xl p-8 shadow-2xl"
+              style={{ background: "#111114", border: "1px solid rgba(255,255,255,0.1)" }}
+            >
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6"
+                style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}>
+                <Share2 className="w-7 h-7 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold mb-2 text-center">Share Your Design</h2>
+              <p className="text-white/40 text-sm text-center mb-6">
+                Anyone with this link can view your room design — no login required.
+              </p>
+              <div className="rounded-2xl p-4 mb-6 border border-white/10" style={{ background: "rgba(255,255,255,0.05)" }}>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={shareLink}
+                    readOnly
+                    className="flex-1 bg-transparent text-white/70 text-sm outline-none min-w-0 truncate"
+                  />
+                  <button
+                    onClick={copyShareLink}
+                    className="flex-shrink-0 flex items-center gap-1.5 text-white px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-90"
+                    style={{ background: "#1B8FA0" }}
+                  >
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="w-full border text-white/70 px-6 py-3 rounded-2xl font-medium transition-all hover:bg-white/10"
+                style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}
+              >
+                Close
+              </button>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -883,38 +1131,15 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                   <Lock className="w-3.5 h-3.5" /> Download
                 </button>
               )}
-              <button onClick={handleShare} title={copied ? "Copied!" : "Share link"}
+              <button onClick={handleShare} title="Share link"
                 className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium transition-all hover:bg-white/8"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: copied ? "#1B8FA0" : "rgba(255,255,255,0.45)" }}>
-                <Share2 className="w-3.5 h-3.5" /> {copied ? "Copied!" : "Share"}
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.45)" }}>
+                <Share2 className="w-3.5 h-3.5" /> Share
               </button>
             </>
           )}
         </div>
 
-        {/* Google Lens global search — paid users, shown after generation */}
-        {generated && !loading && (
-          isPaidUser ? (
-            <button
-              onClick={() => window.open(`https://lens.google.com/uploadbyurl?url=${encodeURIComponent(generated)}`, "_blank")}
-              className="w-full mt-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-medium transition-all hover:opacity-80"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.45)" }}
-            >
-              <Globe className="w-4 h-4" />
-              Search this design globally with Google Lens
-            </button>
-          ) : (
-            <button
-              onClick={() => navigate(createPageUrl("Pricing"))}
-              className="w-full mt-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-medium transition-all hover:opacity-70"
-              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.2)" }}
-            >
-              <Lock className="w-3.5 h-3.5" />
-              Search globally with Google Lens
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(201,150,58,0.15)", color: "#C9963A", border: "1px solid rgba(201,150,58,0.3)" }}>PRO</span>
-            </button>
-          )
-        )}
       </div>
     </div>
   );
