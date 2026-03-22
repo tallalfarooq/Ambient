@@ -103,6 +103,7 @@ export default function Design() {
   const [copied,          setCopied]          = useState(false);
   const [showComparison,  setShowComparison]  = useState(false);
   const [isPaidUser,      setIsPaidUser]      = useState(false);
+  const [budgetMax,       setBudgetMax]       = useState(2000); // € budget filter — applied when shopping
 
   useEffect(() => {
     base44.auth.me().then(async (u) => {
@@ -199,18 +200,16 @@ export default function Design() {
 
     setDetecting(true);
 
-    const tier = design.budget_tier || "mid";
-    const tierKeywords = {
-      budget:  { hint: "günstig preiswert unter 50 Euro" },
-      mid:     { hint: "gutes Preis-Leistungs-Verhältnis Qualität" },
-      premium: { hint: "Premium Design hochwertig" },
-      luxury:  { hint: "Luxus exklusiv Designer High-End" },
-    };
-    const { hint: budgetHint } = tierKeywords[tier];
+    // Derive a quality hint from the user's live budget slider
+    const budgetHint =
+      budgetMax <= 500  ? "günstig preiswert" :
+      budgetMax <= 1500 ? "gutes Preis-Leistungs-Verhältnis Qualität" :
+      budgetMax <= 4000 ? "Premium Design hochwertig" :
+                          "Luxus exklusiv Designer High-End";
 
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are an Amazon.de product search expert analyzing an AI-generated interior design render in the ${design.style} style.
-Budget: €${design.budget_min ?? 0}–€${design.budget_max ?? 5000} (tier: ${tier}).
+Budget: up to €${budgetMax} per item.
 
 TASK: Identify 8-12 distinct furniture or decor items clearly visible in this room render.
 
@@ -226,12 +225,7 @@ For each item provide:
 - search_query: precise GERMAN Amazon.de search query (5-7 words): COLOR + MATERIAL + STYLE + PRODUCT TYPE in German.
   Examples: "beige Leinen Sofa niedrig Japandi", "Walnuss Couchtisch Mid-Century konische Beine", "Rattan Pendelleuchte Boho natur"
 
-CRITICAL: Budget tier is "${tier}" — queries MUST include: "${budgetHint}".
-Examples: ${
-  tier === "budget"  ? '"Teppich Baumwolle günstig", "Stehlampe preiswert modern"' :
-  tier === "mid"     ? '"Sofa Stoff grau Qualität", "Couchtisch Eiche rund Bestseller"' :
-  tier === "premium" ? '"Designer Sofa Leder Premium", "Stehlampe Messing hochwertig"' :
-                       '"Luxus Sofa Leder exklusiv", "Stehlampe vergoldet High-End"'}.
+Budget guidance — queries MUST reflect: "${budgetHint}".
 ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand options where possible." : ""}`,
       file_urls: [design.generated_render_url].filter(Boolean),
       response_json_schema: {
@@ -268,10 +262,9 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
         let matches = [];
         try {
           const res = await base44.functions.invoke("getAmazonProducts", {
-            query:       item.search_query || item.label,
-            limit:       3,
-            budget_tier: tier,
-            budget_max:  design.budget_max,
+            query:      item.search_query || item.label,
+            limit:      3,
+            budget_max: budgetMax,
           });
           matches = res.data?.matches || [];
         } catch (_) {}
@@ -279,7 +272,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
         if (matches.length === 0) {
           const query = encodeURIComponent(item.search_query || item.label);
           matches = [
-            { title: item.label, price: null, image_url: null, source: "Amazon", url: `https://www.amazon.de/s?k=${query}&tag=ambient019-21&linkCode=ur2`, is_preloved: false, similarity_score: 0.5 },
+            { title: item.label, price: null, image_url: null, source: "Amazon", url: `https://www.amazon.de/s?k=${query}&tag=ambient019-21&linkCode=ur2&low-price=1&high-price=${budgetMax}`, is_preloved: false, similarity_score: 0.5 },
             { title: item.label, price: null, image_url: null, source: "IKEA",   url: `https://www.ikea.com/de/de/search/?q=${query}`, is_preloved: false, similarity_score: 0.4 },
           ];
         }
@@ -322,9 +315,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
           </Link>
           <div>
             <h1 className="font-semibold text-sm">{design.name}</h1>
-            <p className="text-white/35 text-xs">
-              {design.style} · €{design.budget_min?.toLocaleString()}–€{design.budget_max?.toLocaleString()}
-            </p>
+            <p className="text-white/35 text-xs">{design.style}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -430,10 +421,36 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
 
           {design.generated_render_url && items.length === 0 && design.status !== "generating" && (
             <>
+              {/* ── Budget slider ───────────────────────────────── */}
+              <div className="mt-4 rounded-2xl p-4 border border-white/8" style={{ background: "rgba(255,255,255,0.03)" }}>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-semibold text-white/50">Shopping budget per item</p>
+                  <span className="text-sm font-bold" style={{ color: "#1B8FA0" }}>
+                    up to €{budgetMax.toLocaleString()}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={100}
+                  max={10000}
+                  step={100}
+                  value={budgetMax}
+                  onChange={(e) => setBudgetMax(Number(e.target.value))}
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                  style={{ accentColor: "#1B8FA0" }}
+                />
+                <div className="flex justify-between mt-1.5 text-[10px] text-white/25">
+                  <span>€100</span>
+                  <span>€2,500</span>
+                  <span>€5,000</span>
+                  <span>€10,000</span>
+                </div>
+              </div>
+
               <button
                 onClick={() => { if (!user) { setShowLoginPrompt(true); } else { detectItems(); } }}
                 disabled={detecting}
-                className="mt-4 w-full flex items-center justify-center gap-2 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="mt-3 w-full flex items-center justify-center gap-2 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
                 style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
               >
                 {detecting ? (

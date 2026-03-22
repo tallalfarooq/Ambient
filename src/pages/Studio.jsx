@@ -1,26 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Palette, Wallet, Sparkles, Check, ScanSearch } from "lucide-react";
+import { Camera, Palette, Sparkles, Check, ScanSearch } from "lucide-react";
 import { toast } from "sonner";
 import StepUpload     from "@/components/studio/StepUpload";
 import StepStyle      from "@/components/studio/StepStyle";
-import StepBudget     from "@/components/studio/StepBudget";
 import StepGenerate   from "@/components/studio/StepGenerate";
 import StepFindSimilar from "@/components/studio/StepFindSimilar";
 
 const STEPS = [
   { label: "Upload Room",  sublabel: "Your space",    Icon: Camera   },
   { label: "Choose Style", sublabel: "Design DNA",    Icon: Palette  },
-  { label: "Set Budget",   sublabel: "Your range",    Icon: Wallet   },
   { label: "Generate",     sublabel: "Watch AI work", Icon: Sparkles },
 ];
 
 const STEP_HEADLINES = [
-  { title: "Upload your room",        sub: "A photo is all it takes. AI handles the rest."                   },
-  { title: "Choose your style",       sub: "Pick the aesthetic that speaks to you."                          },
-  { title: "Set your budget",         sub: "We'll find real furniture within your range."                    },
-  { title: "Fine-tune your design",   sub: "Adjust details or apply changes to generate a new version."      },
+  { title: "Upload your room",        sub: "A photo is all it takes. AI handles the rest."              },
+  { title: "Choose your style",       sub: "Pick the aesthetic that speaks to you."                     },
+  { title: "Fine-tune your design",   sub: "Adjust details or apply changes to generate a new version." },
 ];
 
 export default function Studio() {
@@ -37,9 +34,6 @@ export default function Studio() {
     style:               null,
     color_palette:       "",
     vibes:               [],
-    budget_min:          500,
-    budget_max:          3000,
-    budget_tier:         "mid",
     sustainability_mode: false,
     intensity:           65,
     room_dimensions:     { width: 4, length: 5, height: 2.8 },
@@ -129,14 +123,11 @@ export default function Studio() {
             style:               d.style || prev.style,
             color_palette:       d.color_palette || prev.color_palette,
             vibes:               d.vibes || prev.vibes,
-            budget_min:          d.budget_min ?? prev.budget_min,
-            budget_max:          d.budget_max ?? prev.budget_max,
-            budget_tier:         d.budget_tier || prev.budget_tier,
             sustainability_mode: d.sustainability_mode ?? prev.sustainability_mode,
             intensity:           50, // subtle by default when refining an existing design
             generated_render_url: d.generated_render_url || null,
           }));
-          setStep(3); // Land directly on the Generate / fine-tune step
+          setStep(2); // Land directly on the Generate / fine-tune step
         })
         .catch(() => {});
     }
@@ -179,8 +170,7 @@ export default function Studio() {
                 setData({
                   name: "My Room Design", room_type: null, room_mode: "redesign",
                   room_image_url: null, room_file_url: null, style: null,
-                  color_palette: "", vibes: [], budget_min: 500, budget_max: 3000,
-                  budget_tier: "mid", sustainability_mode: false, intensity: 65,
+                  color_palette: "", vibes: [], sustainability_mode: false, intensity: 65,
                   room_dimensions: { width: 4, length: 5, height: 2.8 },
                   wall_color: null, sofa_color: null, floor_type: null,
                   ceiling_design: null, custom_note: "", design_id: null,
@@ -336,8 +326,7 @@ export default function Studio() {
                 >
                   {step === 0 && <StepUpload   {...stepProps} />}
                   {step === 1 && <StepStyle    {...stepProps} />}
-                  {step === 2 && <StepBudget   {...stepProps} />}
-                  {step === 3 && <StepGenerate {...stepProps} onComplete={() => {}} />}
+                  {step === 2 && <StepGenerate {...stepProps} onComplete={() => {}} />}
                 </motion.div>
               </AnimatePresence>
             </div>
