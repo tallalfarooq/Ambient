@@ -64,7 +64,7 @@ export default function Studio() {
       if (loginDraft) {
         const { _step, ...savedData } = JSON.parse(loginDraft);
         setData((d) => ({ ...d, ...savedData }));
-        if (_step != null) setStep(_step);
+        if (_step != null) setStep(Math.min(_step, STEPS.length - 1));
         localStorage.removeItem("ambient_studio_draft");
         return;
       }
@@ -75,7 +75,9 @@ export default function Studio() {
         // Only restore if there is meaningful state (an uploaded image)
         if (savedData.room_image_url) {
           setData((d) => ({ ...d, ...savedData }));
-          if (_step != null) setStep(_step);
+          // Cap step to valid range — old sessions may have higher step numbers
+          // from before wizard was shortened (e.g. _step:3 when max is now 2)
+          if (_step != null) setStep(Math.min(_step, STEPS.length - 1));
         }
       }
     } catch {}
@@ -253,11 +255,11 @@ export default function Studio() {
                   className="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1.5 rounded-full mb-4"
                   style={{ background: "rgba(27,143,160,0.12)", border: "1px solid rgba(27,143,160,0.25)", color: "#1B8FA0" }}
                 >
-                  {(() => { const Icon = STEPS[step].Icon; return <Icon className="w-3 h-3" />; })()}
-                  Step {step + 1} of {STEPS.length}
+                  {(() => { const s = STEPS[step] || STEPS[STEPS.length - 1]; const Icon = s.Icon; return <Icon className="w-3 h-3" />; })()}
+                  Step {Math.min(step, STEPS.length - 1) + 1} of {STEPS.length}
                 </span>
-                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">{STEP_HEADLINES[step].title}</h1>
-                <p className="text-white/40 text-sm">{STEP_HEADLINES[step].sub}</p>
+                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">{(STEP_HEADLINES[step] || STEP_HEADLINES[STEP_HEADLINES.length - 1]).title}</h1>
+                <p className="text-white/40 text-sm">{(STEP_HEADLINES[step] || STEP_HEADLINES[STEP_HEADLINES.length - 1]).sub}</p>
               </motion.div>
             </AnimatePresence>
 
