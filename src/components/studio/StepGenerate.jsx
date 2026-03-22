@@ -137,7 +137,6 @@ function FineTuneRow({ label, presets, selected, customValue, accentColor, accen
         {(selected || inputValue) && (
           <button
             type="button"
-            tabIndex={-1}
             onClick={() => { onSelect(null); onCustomChange && onCustomChange(""); }}
             className="text-[10px] transition-colors"
             style={{ color: accentText }}
@@ -153,11 +152,9 @@ function FineTuneRow({ label, presets, selected, customValue, accentColor, accen
           <button
             key={opt}
             type="button"
-            tabIndex={-1}
-            onMouseDown={(e) => e.preventDefault()}   /* prevent focus-scroll */
             onClick={() => {
               onSelect(selected === opt ? null : opt);
-              onCustomChange && onCustomChange("");    /* clear custom input when preset chosen */
+              onCustomChange && onCustomChange("");
             }}
             className="text-[11px] px-3 py-1.5 rounded-full border transition-all"
             style={{
