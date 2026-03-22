@@ -124,20 +124,20 @@ const buildFineTunePrompt = (data) => {
   return parts.join(" ");
 };
 
-function FineTuneRow({ label, presets, selected, customValue, accentColor, accentBg, accentText, onSelect, onCustomChange, placeholder }) {
-  // Determine if the current selected value is a preset or a custom typed value
+function FineTuneRow({ label, presets, selected, accentColor, accentBg, accentText, onSelect, placeholder }) {
+  // If selected value is one of the presets, highlight it; otherwise show it in the text input
   const isPreset   = presets.includes(selected);
-  const inputValue = customValue ?? (isPreset ? "" : (selected || ""));
+  const inputValue = isPreset ? "" : (selected || "");
 
   return (
     <div>
       {/* Label + clear */}
       <div className="flex items-center justify-between mb-2">
         <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider">{label}</p>
-        {(selected || inputValue) && (
+        {selected && (
           <button
             type="button"
-            onClick={() => { onSelect(null); onCustomChange && onCustomChange(""); }}
+            onClick={() => onSelect(null)}
             className="text-[10px] transition-colors"
             style={{ color: accentText }}
           >
@@ -146,22 +146,19 @@ function FineTuneRow({ label, presets, selected, customValue, accentColor, accen
         )}
       </div>
 
-      {/* Preset pills */}
+      {/* Preset pills — clicking sets the value; clicking the active one clears it */}
       <div className="flex flex-wrap gap-1.5 mb-2">
         {presets.map((opt) => (
           <button
             key={opt}
             type="button"
-            onClick={() => {
-              onSelect(selected === opt ? null : opt);
-              onCustomChange && onCustomChange("");
-            }}
+            onClick={() => onSelect(selected === opt ? null : opt)}
             className="text-[11px] px-3 py-1.5 rounded-full border transition-all"
             style={{
-              borderColor: selected === opt && isPreset ? accentColor : "rgba(255,255,255,0.1)",
-              background:  selected === opt && isPreset ? accentBg    : "rgba(255,255,255,0.03)",
-              color:       selected === opt && isPreset ? accentText  : "rgba(255,255,255,0.5)",
-              fontWeight:  selected === opt && isPreset ? 600 : 400,
+              borderColor: selected === opt ? accentColor : "rgba(255,255,255,0.1)",
+              background:  selected === opt ? accentBg    : "rgba(255,255,255,0.03)",
+              color:       selected === opt ? accentText  : "rgba(255,255,255,0.5)",
+              fontWeight:  selected === opt ? 600 : 400,
             }}
           >
             {opt}
@@ -169,20 +166,16 @@ function FineTuneRow({ label, presets, selected, customValue, accentColor, accen
         ))}
       </div>
 
-      {/* Per-row custom text input */}
+      {/* Custom free-text — stored in the same field; typing clears any preset */}
       <input
         type="text"
         value={inputValue}
-        onChange={(e) => {
-          const v = e.target.value;
-          onCustomChange && onCustomChange(v);
-          onSelect(v || null);    /* keep data field in sync */
-        }}
-        placeholder={placeholder || `or type your own…`}
+        onChange={(e) => onSelect(e.target.value || null)}
+        placeholder={placeholder || "or type your own…"}
         className="w-full text-xs px-3 py-2 rounded-xl text-white/70 placeholder-white/20 focus:outline-none"
         style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-        onFocus={(e)  => { e.currentTarget.style.borderColor = accentColor + "88"; }}
-        onBlur={(e)   => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = accentColor + "88"; }}
+        onBlur={(e)  => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
       />
     </div>
   );
@@ -812,26 +805,22 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                       label="Wall Colour" presets={FINE_TUNE_OPTIONS.wall_color} selected={data.wall_color}
                       accentColor="#1B8FA0" accentBg="rgba(27,143,160,0.18)" accentText="#6EC6C6"
                       placeholder="e.g. dusty blue, sage green, warm beige…"
-                      onSelect={(v) => update({ wall_color: v })}
-                      onCustomChange={(v) => update({ wall_color: v || null })} />
+                      onSelect={(v) => update({ wall_color: v })} />
                     <FineTuneRow
                       label="Sofa / Seating" presets={FINE_TUNE_OPTIONS.sofa_color} selected={data.sofa_color}
                       accentColor="#7c3aed" accentBg="rgba(124,58,237,0.18)" accentText="#a78bfa"
                       placeholder="e.g. deep teal velvet, cognac leather…"
-                      onSelect={(v) => update({ sofa_color: v })}
-                      onCustomChange={(v) => update({ sofa_color: v || null })} />
+                      onSelect={(v) => update({ sofa_color: v })} />
                     <FineTuneRow
                       label="Flooring" presets={FINE_TUNE_OPTIONS.floor_type} selected={data.floor_type}
                       accentColor="#C9963A" accentBg="rgba(201,150,58,0.18)" accentText="#C9963A"
                       placeholder="e.g. cream travertine, brushed concrete…"
-                      onSelect={(v) => update({ floor_type: v })}
-                      onCustomChange={(v) => update({ floor_type: v || null })} />
+                      onSelect={(v) => update({ floor_type: v })} />
                     <FineTuneRow
                       label="Ceiling" presets={FINE_TUNE_OPTIONS.ceiling_design} selected={data.ceiling_design}
                       accentColor="#D4A0A0" accentBg="rgba(212,160,160,0.18)" accentText="#D4A0A0"
                       placeholder="e.g. arch vaulted, plaster molding…"
-                      onSelect={(v) => update({ ceiling_design: v })}
-                      onCustomChange={(v) => update({ ceiling_design: v || null })} />
+                      onSelect={(v) => update({ ceiling_design: v })} />
                   </div>
 
                   {/* Active selections summary */}
