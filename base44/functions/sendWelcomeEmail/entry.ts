@@ -1,38 +1,35 @@
-import { createClientFromRequest } from "https://esm.sh/@base44/deno-sdk@latest";
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const FROM           = "Ambient Space <hello@ambientspace.ai>";
 const APP_URL        = "https://ambientspace.ai";
 
-export default async function handler(req: Request): Promise<Response> {
+Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
 
   console.log("[sendWelcomeEmail] Function called");
 
-  const client = createClientFromRequest(req);
+  const base44 = createClientFromRequest(req);
 
-  // Auth guard
-  let user: any;
+  let user;
   try {
-    user = await client.auth.me();
+    user = await base44.auth.me();
     console.log("[sendWelcomeEmail] User:", user?.email);
   } catch (e) {
     console.error("[sendWelcomeEmail] Auth failed:", e);
-    return new Response("Unauthorized", { status: 401 });
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!user?.email) return new Response("Unauthorized", { status: 401 });
+  if (!user?.email) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   // Idempotency — skip if UserCredits already exists
-  const existing = await client.asServiceRole.entities.UserCredits.filter({ user_email: user.email });
+  const existing = await base44.asServiceRole.entities.UserCredits.filter({ user_email: user.email });
   console.log("[sendWelcomeEmail] Existing credits records:", existing.length);
   if (existing.length > 0) {
-    return new Response(JSON.stringify({ skipped: true, reason: "already_welcomed" }), {
-      status: 200, headers: { "Content-Type": "application/json" },
-    });
+    return Response.json({ skipped: true, reason: "already_welcomed" });
   }
 
   // Create initial 2-credit free account
-  await client.asServiceRole.entities.UserCredits.create({
+  await base44.asServiceRole.entities.UserCredits.create({
     user_email:        user.email,
     credits_remaining: 2,
     plan_type:         "free",
@@ -40,12 +37,9 @@ export default async function handler(req: Request): Promise<Response> {
   });
   console.log("[sendWelcomeEmail] Credits created for", user.email);
 
-  // Check API key exists
   if (!RESEND_API_KEY) {
     console.error("[sendWelcomeEmail] RESEND_API_KEY is not set!");
-    return new Response(JSON.stringify({ error: "RESEND_API_KEY missing" }), {
-      status: 500, headers: { "Content-Type": "application/json" },
-    });
+    return Response.json({ error: "RESEND_API_KEY missing" }, { status: 500 });
   }
 
   const name = user.full_name?.split(" ")[0] || user.email.split("@")[0];
@@ -64,20 +58,14 @@ export default async function handler(req: Request): Promise<Response> {
   const resendBody = await emailRes.text();
   if (!emailRes.ok) {
     console.error("[sendWelcomeEmail] Resend error:", emailRes.status, resendBody);
-    return new Response(JSON.stringify({ credits_created: true, email_error: resendBody }), {
-      status: 200, headers: { "Content-Type": "application/json" },
-    });
+    return Response.json({ credits_created: true, email_error: resendBody });
   }
 
   console.log("[sendWelcomeEmail] Email sent successfully:", resendBody);
-  return new Response(JSON.stringify({ sent: true }), {
-    status: 200, headers: { "Content-Type": "application/json" },
-  });
-}
+  return Response.json({ sent: true });
+});
 
-// ─── Email template ───────────────────────────────────────────────────────────
-
-function buildEmail(name: string): string {
+function buildEmail(name) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -148,22 +136,42 @@ function buildEmail(name: string): string {
               <tr>
                 <td>
                   <p style="margin:0 0 20px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.25);">How it works</p>
-
-                  ${[
-                    ["📸", "Upload a photo",  "Any room — phone camera is fine"],
-                    ["🎨", "Choose a style",  "Modern, Scandi, Industrial, Art Deco and more"],
-                    ["✨", "AI generates",    "Your redesigned room in 20–35 seconds"],
-                    ["🛍️", "Shop the look",  "Find and buy the exact furniture shown"],
-                  ].map(([icon, title, desc]) => `
                   <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
                     <tr>
-                      <td width="40" valign="top" style="font-size:20px;padding-top:2px;">${icon}</td>
+                      <td width="40" valign="top" style="font-size:20px;padding-top:2px;">📸</td>
                       <td>
-                        <p style="margin:0;font-size:14px;font-weight:700;color:#ffffff;">${title}</p>
-                        <p style="margin:2px 0 0;font-size:13px;color:rgba(255,255,255,0.35);line-height:1.5;">${desc}</p>
+                        <p style="margin:0;font-size:14px;font-weight:700;color:#ffffff;">Upload a photo</p>
+                        <p style="margin:2px 0 0;font-size:13px;color:rgba(255,255,255,0.35);line-height:1.5;">Any room — phone camera is fine</p>
                       </td>
                     </tr>
-                  </table>`).join("")}
+                  </table>
+                  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+                    <tr>
+                      <td width="40" valign="top" style="font-size:20px;padding-top:2px;">🎨</td>
+                      <td>
+                        <p style="margin:0;font-size:14px;font-weight:700;color:#ffffff;">Choose a style</p>
+                        <p style="margin:2px 0 0;font-size:13px;color:rgba(255,255,255,0.35);line-height:1.5;">Modern, Scandi, Industrial, Art Deco and more</p>
+                      </td>
+                    </tr>
+                  </table>
+                  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+                    <tr>
+                      <td width="40" valign="top" style="font-size:20px;padding-top:2px;">✨</td>
+                      <td>
+                        <p style="margin:0;font-size:14px;font-weight:700;color:#ffffff;">AI generates</p>
+                        <p style="margin:2px 0 0;font-size:13px;color:rgba(255,255,255,0.35);line-height:1.5;">Your redesigned room in 20-35 seconds</p>
+                      </td>
+                    </tr>
+                  </table>
+                  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+                    <tr>
+                      <td width="40" valign="top" style="font-size:20px;padding-top:2px;">🛍️</td>
+                      <td>
+                        <p style="margin:0;font-size:14px;font-weight:700;color:#ffffff;">Shop the look</p>
+                        <p style="margin:2px 0 0;font-size:13px;color:rgba(255,255,255,0.35);line-height:1.5;">Find and buy the exact furniture shown</p>
+                      </td>
+                    </tr>
+                  </table>
                 </td>
               </tr>
             </table>
