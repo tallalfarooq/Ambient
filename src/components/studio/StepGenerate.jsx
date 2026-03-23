@@ -61,6 +61,15 @@ const FINE_TUNE_OPTIONS = {
   ceiling_design: ["Plain White", "Exposed Wooden Beams", "Coffered", "Tray Ceiling", "Painted in accent color"],
 };
 
+// Negative prompt — shared by all generation modes.
+// Tells SD what NOT to render; structural items listed here can never appear unless reference has them.
+const STRUCTURE_NEGATIVE_PROMPT =
+  "new door, added door, extra door, removed door, new window, added window, extra window, removed window, " +
+  "new wall, removed wall, different room shape, different floor plan, different ceiling height, " +
+  "structural change, remodeled walls, new opening, blocked window, different room layout, " +
+  "different architecture, extra room, different perspective, different camera angle, " +
+  "fisheye, distorted perspective, warped walls, CGI, render, illustration, painting";
+
 const buildPrompt = (data) => {
   const style = data.style || "modern";
   const styleDetail = STYLE_MAP[style] || style;
@@ -70,33 +79,40 @@ const buildPrompt = (data) => {
   const palette = data.color_palette ? ` Color palette: ${data.color_palette}.` : "";
 
   const customParts = [];
-  if (data.wall_color)      customParts.push(`Wall color: ${data.wall_color}`);
-  if (data.sofa_color)      customParts.push(`Sofa/seating upholstery: ${data.sofa_color}`);
-  if (data.floor_type)      customParts.push(`Flooring: ${data.floor_type}`);
-  if (data.ceiling_design)  customParts.push(`Ceiling: ${data.ceiling_design}`);
+  if (data.wall_color)          customParts.push(`Wall color: ${data.wall_color}`);
+  if (data.sofa_color)          customParts.push(`Sofa/seating upholstery: ${data.sofa_color}`);
+  if (data.floor_type)          customParts.push(`Flooring: ${data.floor_type}`);
+  if (data.ceiling_design)      customParts.push(`Ceiling: ${data.ceiling_design}`);
   if (data.custom_note?.trim()) customParts.push(data.custom_note.trim());
   const customStr = customParts.length ? ` ${customParts.join(". ")}.` : "";
-  const furnitureStr = roomFurniture ? ` This is a ${roomType} — include: ${roomFurniture}.` : "";
+  const furnitureStr = roomFurniture ? ` Include: ${roomFurniture}.` : "";
 
   if (data.room_mode === "furnish") {
+    // Furnish: start from empty room — architecture anchor first, then furniture instruction
     return (
-      `Photorealistic interior design photograph of a fully furnished ${roomType}.` +
-      ` CRITICAL: Preserve the EXACT same camera angle, perspective, window positions, room proportions, wall surfaces, and natural lighting from the reference empty room photo. Do NOT alter the architecture.` +
-      ` Fill the room with realistic furniture and decor in ${style} interior design style: ${styleDetail}.${furnitureStr}` +
-      ` Every furniture piece must look like a real purchasable product — crisp edges, realistic fabric/wood/metal textures, accurate proportions, proper contact shadows on the floor.` +
+      `Photorealistic interior design photograph. ` +
+      `ARCHITECTURE LOCKED — identical camera angle, identical perspective, identical window positions and sizes, ` +
+      `identical room dimensions and proportions, identical ceiling height, identical wall layout, identical floor plan from reference photo. ` +
+      `Same number of windows. Same number of doors. No new openings. No removed walls. ` +
+      `Task: add realistic ${style}-style furniture and decor only. ${styleDetail}.${furnitureStr}` +
+      ` Real purchasable furniture — crisp edges, accurate fabric/wood/metal textures, proper floor contact shadows.` +
       `${palette}${customStr}${vibeStr}` +
-      ` Shot on Canon EOS R5, 24mm wide-angle lens, soft natural daylight through windows, HDR.` +
-      ` 8K resolution, photorealistic, hyperdetailed. NO floating objects. NO blurry textures. NO unrealistic proportions. NO CGI glow. NO AI artifacts.`
+      ` Canon EOS R5, 24mm wide-angle lens, soft natural daylight. Photorealistic, 8K, hyperdetailed.`
     );
   }
 
-  // Default: redesign mode
+  // Redesign mode: change style/decor/furniture ONLY — architecture is frozen
   return (
-    `Photorealistic interior design photograph, identical camera angle, identical perspective, identical window positions and sizes, identical room dimensions, identical ceiling height, identical wall layout from reference photo.` +
-    ` ${style} interior design style applied to a ${roomType}: ${styleDetail}.${furnitureStr}` +
-    ` Replace only furniture, upholstery, colors, materials, and decor. Architecture unchanged.` +
+    `Photorealistic interior design photograph. ` +
+    `ARCHITECTURE LOCKED — identical camera angle, identical perspective, identical window positions and sizes, ` +
+    `identical room dimensions, identical ceiling height, identical wall positions, identical door positions, ` +
+    `identical floor plan from reference photo. Same number of windows. Same number of doors. ` +
+    `No new architectural elements. No removed architectural elements. ` +
+    `Apply ${style} interior design style to this ${roomType}: ${styleDetail}.${furnitureStr}` +
+    ` Change ONLY: furniture pieces, upholstery fabrics, soft furnishings, decorative objects, paint finish, surface materials.` +
+    ` Do NOT change: wall structure, window count/position, door count/position, ceiling shape, floor area, room footprint.` +
     `${palette}${customStr}${vibeStr}` +
-    ` Canon EOS R5, 24mm lens, natural daylight. Hyperrealistic, 8K, magazine quality. No structural changes.`
+    ` Canon EOS R5, 24mm lens, natural daylight. Hyperrealistic, 8K, magazine quality.`
   );
 };
 
@@ -108,18 +124,19 @@ const buildFineTunePrompt = (data) => {
     return buildPrompt(data);
   }
 
-  // Architecture anchor first — described as fixed attributes of the scene.
-  // SD treats descriptive adjectives as things to preserve when strength is low.
   const parts = [
-    `Photorealistic interior design photograph, identical camera angle, identical perspective, identical room proportions, identical window positions and sizes, identical ceiling height, identical architectural structure.`,
+    `Photorealistic interior design photograph. ` +
+    `ARCHITECTURE LOCKED — identical camera angle, identical perspective, identical room proportions, ` +
+    `identical window positions and sizes, identical ceiling height, identical wall positions, identical door positions, ` +
+    `identical floor plan from reference image. Same number of windows. Same number of doors. No new openings. No removed walls.`,
     `${style} style ${roomType}.`,
   ];
-  if (data.wall_color)      parts.push(`${data.wall_color} painted walls.`);
-  if (data.sofa_color)      parts.push(`${data.sofa_color} sofa and seating upholstery.`);
-  if (data.floor_type)      parts.push(`${data.floor_type} floor finish.`);
-  if (data.ceiling_design)  parts.push(`${data.ceiling_design} ceiling.`);
+  if (data.wall_color)          parts.push(`${data.wall_color} painted walls.`);
+  if (data.sofa_color)          parts.push(`${data.sofa_color} sofa and seating upholstery.`);
+  if (data.floor_type)          parts.push(`${data.floor_type} floor finish.`);
+  if (data.ceiling_design)      parts.push(`${data.ceiling_design} ceiling.`);
   if (data.custom_note?.trim()) parts.push(data.custom_note.trim() + ".");
-  parts.push("Same furniture positions and layout. Same natural light direction from windows. Canon EOS R5, 24mm wide lens, photorealistic, 8K.");
+  parts.push("Same furniture positions. Same natural light direction. Canon EOS R5, 24mm wide lens, photorealistic, 8K.");
 
   return parts.join(" ");
 };
@@ -405,25 +422,33 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     if (isFineTune && generated) setPrevGenerated(generated);
 
     if (isFineTune) {
-      // Targeted edit: use preservation prompt + very low strength so only the requested element changes
       refinedPrompt = buildFineTunePrompt(data);
-      strength = 0.22; // very low — preserves room structure, camera, windows; only changes colors/materials
+      strength = 0.22; // very low — only colors/materials change; structure frozen
     } else {
       refinedPrompt =
         feedback === "dislike" && feedbackNote
           ? `${prompt}, avoid: ${feedbackNote}`
           : prompt;
-      // Furnish mode needs higher minimum strength to actually place furniture
-      strength = data.room_mode === "furnish"
-        ? Math.max(intensity / 100, 0.75)
-        : intensity / 100;
+      if (data.room_mode === "furnish") {
+        // Furnish needs higher strength to place furniture into empty room
+        strength = Math.max(intensity / 100, 0.75);
+      } else {
+        // Redesign: cap at 0.65 — above this SD starts ignoring reference image structure.
+        // At 0.65 the style/furniture fully transforms while walls/windows/doors are preserved.
+        strength = Math.min(intensity / 100, 0.65);
+      }
     }
 
     try {
       const result = await base44.integrations.Core.GenerateImage({
         prompt: refinedPrompt,
-        existing_image_urls: [baseImageUrl],  // fine-tune starts from latest render, not original upload
-        options: { strength, guidance_scale: 7.5, num_inference_steps: 25 },
+        existing_image_urls: [baseImageUrl],
+        options: {
+          strength,
+          guidance_scale: 10,        // raised from 7.5 → more prompt adherence = better structure lock
+          num_inference_steps: 25,
+          negative_prompt: STRUCTURE_NEGATIVE_PROMPT,
+        },
       });
 
       const url = result?.url || result;
