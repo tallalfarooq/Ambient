@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Palette, Sparkles, Check, ScanSearch } from "lucide-react";
+import { Camera, Palette, Sparkles, Check, ScanSearch, Plus } from "lucide-react";
 import { toast } from "sonner";
 import StepUpload     from "@/components/studio/StepUpload";
 import StepStyle      from "@/components/studio/StepStyle";
@@ -163,7 +163,7 @@ export default function Studio() {
 
         {/* ── Mode Switcher ─────────────────────────────────────── */}
         <div className="flex items-center justify-center mb-10" style={{ position: "relative" }}>
-          {/* "Start new design" shortcut — only shown if a session exists */}
+          {/* "Start new design" — shown when a session is in progress */}
           {step > 0 && (
             <button
               onClick={() => {
@@ -178,9 +178,10 @@ export default function Studio() {
                   ceiling_design: null, custom_note: "", design_id: null,
                 });
               }}
-              className="absolute right-0 text-xs text-white/30 hover:text-white/60 transition-colors flex items-center gap-1"
+              className="absolute right-0 flex items-center gap-2 text-white font-semibold px-4 py-2.5 rounded-2xl transition-opacity hover:opacity-90 text-sm"
+              style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
             >
-              + New design
+              <Plus className="w-4 h-4" /> New design
             </button>
           )}
           <div

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Heart, Sparkles, Loader2, Trash2, Share2 } from "lucide-react";
+import { Heart, Sparkles, Loader2, Trash2, Share2, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Favorites() {
@@ -105,8 +105,8 @@ export default function Favorites() {
     <div className="min-h-screen bg-[#0A0A0B] text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
         {/* Header */}
-        <div className="mb-10">
-          <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-500 to-violet-500 flex items-center justify-center">
               <Heart className="w-6 h-6 text-white fill-current" />
             </div>
@@ -117,6 +117,13 @@ export default function Favorites() {
               </p>
             </div>
           </div>
+          <Link
+            to={createPageUrl("Studio")}
+            className="flex items-center gap-2 text-white font-semibold px-5 py-3 rounded-2xl transition-opacity hover:opacity-90 text-sm"
+            style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
+          >
+            <Plus className="w-4 h-4" /> New design
+          </Link>
         </div>
 
         {/* Empty state */}
