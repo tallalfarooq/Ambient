@@ -637,7 +637,40 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         }{" "}Full generation uses 2 credits. Fine-tuning uses 1 credit.
       </p>
 
-      {/* Prompt is built internally — not shown to users */}
+      {/* ── Custom specifications ─────────────────────────────── */}
+      <div className="mb-6 rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(27,143,160,0.2)" }}>
+            <Sliders className="w-3.5 h-3.5" style={{ color: "#6EC6C6" }} />
+          </div>
+          <p className="text-sm font-semibold text-white">Custom specifications</p>
+          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium ml-auto" style={{ background: "rgba(27,143,160,0.12)", color: "#6EC6C6", border: "1px solid rgba(27,143,160,0.2)" }}>Optional</span>
+        </div>
+        <textarea
+          rows={3}
+          value={data.custom_note || ""}
+          onChange={(e) => update({ custom_note: e.target.value })}
+          disabled={loading}
+          placeholder="Describe anything specific you want in your design…&#10;e.g. add a single bed, include a fireplace, add a large plant by the window, keep the existing sofa"
+          className="w-full text-sm px-4 py-3 rounded-xl text-white/80 placeholder-white/20 focus:outline-none resize-none disabled:opacity-40"
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", lineHeight: "1.5" }}
+          onFocus={(e)  => { e.currentTarget.style.borderColor = "rgba(27,143,160,0.4)"; }}
+          onBlur={(e)   => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+        />
+        {data.custom_note?.trim() && (
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-[11px] text-white/30">This will be included in your generation</p>
+            <button
+              type="button"
+              onClick={() => update({ custom_note: "" })}
+              className="text-[11px] transition-colors"
+              style={{ color: "#6EC6C6" }}
+            >
+              ✕ clear
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Intensity slider */}
       <div className="mb-6">
