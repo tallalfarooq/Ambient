@@ -7,30 +7,47 @@ const APP_URL        = "https://ambientspace.ai";
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
 
+  console.log("[sendWelcomeEmail] Function called");
+
   const client = createClientFromRequest(req);
 
-  // Auth guard — must be a signed-in user
+  // Auth guard
   let user: any;
-  try { user = await client.auth.me(); } catch { return new Response("Unauthorized", { status: 401 }); }
+  try {
+    user = await client.auth.me();
+    console.log("[sendWelcomeEmail] User:", user?.email);
+  } catch (e) {
+    console.error("[sendWelcomeEmail] Auth failed:", e);
+    return new Response("Unauthorized", { status: 401 });
+  }
   if (!user?.email) return new Response("Unauthorized", { status: 401 });
 
-  // Idempotency guard — if UserCredits already exists, welcome email was already sent
+  // Idempotency — skip if UserCredits already exists
   const existing = await client.asServiceRole.entities.UserCredits.filter({ user_email: user.email });
+  console.log("[sendWelcomeEmail] Existing credits records:", existing.length);
   if (existing.length > 0) {
     return new Response(JSON.stringify({ skipped: true, reason: "already_welcomed" }), {
       status: 200, headers: { "Content-Type": "application/json" },
     });
   }
 
-  // Create initial credits record (2 credits = 1 free full generation)
+  // Create initial 2-credit free account
   await client.asServiceRole.entities.UserCredits.create({
-    user_email:       user.email,
+    user_email:        user.email,
     credits_remaining: 2,
-    plan_type:        "free",
-    total_purchased:  0,
+    plan_type:         "free",
+    total_purchased:   0,
   });
+  console.log("[sendWelcomeEmail] Credits created for", user.email);
 
-  // Send welcome email via Resend
+  // Check API key exists
+  if (!RESEND_API_KEY) {
+    console.error("[sendWelcomeEmail] RESEND_API_KEY is not set!");
+    return new Response(JSON.stringify({ error: "RESEND_API_KEY missing" }), {
+      status: 500, headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const name = user.full_name?.split(" ")[0] || user.email.split("@")[0];
 
   const emailRes = await fetch("https://api.resend.com/emails", {
@@ -44,11 +61,15 @@ export default async function handler(req: Request): Promise<Response> {
     }),
   });
 
+  const resendBody = await emailRes.text();
   if (!emailRes.ok) {
-    console.error("Resend error:", await emailRes.text());
-    // Don't fail the request — credits were created, email failure is non-critical
+    console.error("[sendWelcomeEmail] Resend error:", emailRes.status, resendBody);
+    return new Response(JSON.stringify({ credits_created: true, email_error: resendBody }), {
+      status: 200, headers: { "Content-Type": "application/json" },
+    });
   }
 
+  console.log("[sendWelcomeEmail] Email sent successfully:", resendBody);
   return new Response(JSON.stringify({ sent: true }), {
     status: 200, headers: { "Content-Type": "application/json" },
   });

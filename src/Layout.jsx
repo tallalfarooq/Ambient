@@ -33,8 +33,12 @@ export default function Layout({ children, currentPageName }) {
       if (u?.email) {
         const key = `ambient_welcomed_${u.email}`;
         if (!localStorage.getItem(key)) {
-          localStorage.setItem(key, "1"); // optimistic flag — prevents double-call
-          base44.functions.invoke("sendWelcomeEmail", {}).catch(() => {}); // silent fail
+          localStorage.setItem(key, "1");
+          base44.functions.invoke("sendWelcomeEmail", {})
+            .then((res) => console.log("[Welcome email]", res))
+            .catch((err) => console.error("[Welcome email] Error:", err));
+        } else {
+          console.log("[Welcome email] Already sent for", u.email);
         }
       }
     }).catch(() => setUser(null));
