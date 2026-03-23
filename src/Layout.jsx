@@ -33,9 +33,14 @@ export default function Layout({ children, currentPageName }) {
       if (u?.email) {
         const key = `ambient_welcomed_${u.email}`;
         if (!localStorage.getItem(key)) {
-          localStorage.setItem(key, "1");
           base44.functions.invoke("sendWelcomeEmail", {})
-            .then((res) => console.log("[Welcome email]", res))
+            .then((res) => {
+              console.log("[Welcome email]", res);
+              // Only mark as sent after successful response
+              if (!res?.data?.skipped === false || res?.data?.sent || res?.data?.skipped) {
+                localStorage.setItem(key, "1");
+              }
+            })
             .catch((err) => console.error("[Welcome email] Error:", err));
         } else {
           console.log("[Welcome email] Already sent for", u.email);
