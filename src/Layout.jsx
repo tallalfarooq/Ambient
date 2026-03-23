@@ -27,7 +27,17 @@ export default function Layout({ children, currentPageName }) {
   }, []);
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => setUser(null));
+    base44.auth.me().then((u) => {
+      setUser(u);
+      // Fire welcome email once per user — guarded by localStorage so it never runs twice
+      if (u?.email) {
+        const key = `ambient_welcomed_${u.email}`;
+        if (!localStorage.getItem(key)) {
+          localStorage.setItem(key, "1"); // optimistic flag — prevents double-call
+          base44.functions.invoke("sendWelcomeEmail", {}).catch(() => {}); // silent fail
+        }
+      }
+    }).catch(() => setUser(null));
   }, []);
 
   const handleConsent = (prefs) => {
