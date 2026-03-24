@@ -7,9 +7,18 @@ import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Down
 
 // Burns watermark into the image using Canvas and returns a data URL
 async function applyWatermarkToImage(imageUrl) {
+  // Fetch image via proxy to avoid CORS tainting the canvas
+  let blobUrl = imageUrl;
+  try {
+    const resp = await fetch(`/api/functions/proxyImage?url=${encodeURIComponent(imageUrl)}`);
+    if (resp.ok) {
+      const blob = await resp.blob();
+      blobUrl = URL.createObjectURL(blob);
+    }
+  } catch {}
+
   return new Promise((resolve) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
     img.onload = () => {
       const canvas = document.createElement("canvas");
       canvas.width = img.width;
@@ -45,10 +54,15 @@ async function applyWatermarkToImage(imageUrl) {
       ctx.textBaseline = "middle";
       ctx.fillText(text, x + padX, y + boxH / 2);
 
-      resolve(canvas.toDataURL("image/jpeg", 0.92));
+      try {
+        resolve(canvas.toDataURL("image/jpeg", 0.92));
+      } catch {
+        resolve(imageUrl);
+      }
+      if (blobUrl !== imageUrl) URL.revokeObjectURL(blobUrl);
     };
     img.onerror = () => resolve(imageUrl);
-    img.src = imageUrl;
+    img.src = blobUrl;
   });
 }
 
