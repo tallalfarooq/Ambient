@@ -819,13 +819,39 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           <div className="relative w-full" onContextMenu={!isPaidUser ? (e) => e.preventDefault() : undefined}>
             <BeforeAfterSlider
               before={prevGenerated || data.room_image_url}
-              after={(!isPaidUser && watermarkedUrl) ? watermarkedUrl : generated}
+              after={generated}
             />
+
+            {/* ── Watermark overlay — free tier only ────────────────
+                CSS-based so it always shows regardless of CORS.
+                Pointer-events none so slider still works.          */}
+            {!isPaidUser && (
+              <div
+                className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                style={{ zIndex: 10 }}
+              >
+                <div
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-full select-none"
+                  style={{
+                    background: "rgba(10,10,11,0.70)",
+                    border: "1px solid rgba(27,143,160,0.50)",
+                    backdropFilter: "blur(6px)",
+                    boxShadow: "0 4px 24px rgba(0,0,0,0.45)",
+                  }}
+                >
+                  <span style={{ color: "#1B8FA0", fontSize: 15, lineHeight: 1 }}>✦</span>
+                  <span style={{ color: "rgba(255,255,255,0.92)", fontSize: 13, fontWeight: 700, letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
+                    Designed by Ambient Space
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Tap-to-search button — top-left corner of image */}
             <button
               onClick={() => setShowObjectSearch(true)}
               className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-90 backdrop-blur-sm"
-              style={{ background: "rgba(10,10,11,0.7)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)" }}
+              style={{ background: "rgba(10,10,11,0.7)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)", zIndex: 11 }}
               title="Search furniture items"
             >
               <Search className="w-3 h-3" />
