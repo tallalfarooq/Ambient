@@ -735,7 +735,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                 style={{ width: `${progress}%`, background: "linear-gradient(90deg, #1B8FA0, #C9963A)" }}
               />
             </div>
-            <p className="text-white/30 text-xs tabular-nums">{elapsed}s — {isPaidUser ? "usually 25–40s · HD quality" : "usually 10–20s · standard quality"}</p>
+            <p className="text-white/30 text-xs tabular-nums">{elapsed}s — usually 25–40s</p>
           </div>
         ) : generated ? (
           <div className="relative w-full">
