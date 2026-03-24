@@ -17,23 +17,21 @@ async function applyWatermarkToImage(imageUrl) {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0);
 
-      const fontSize = Math.max(13, Math.round(img.width * 0.020));
-      const logoSize = fontSize * 1.8;
-      const text = "Ambient Space";
-      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+      const fontSize = Math.max(15, Math.round(img.width * 0.022));
+      const text = "✦ AmbientSpace.ai";
+      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
       const textWidth = ctx.measureText(text).width;
-      const gap = fontSize * 0.5;
-      const totalW = logoSize + gap + textWidth;
       const padX = fontSize * 0.9;
       const padY = fontSize * 0.6;
-      const boxW = totalW + padX * 2;
-      const boxH = logoSize + padY * 2;
+      const boxW = textWidth + padX * 2;
+      const boxH = fontSize + padY * 2;
       const margin = img.height * 0.025;
+      // Bottom center
       const x = (img.width - boxW) / 2;
       const y = img.height - boxH - margin;
 
-      // Background pill
-      ctx.fillStyle = "rgba(10,10,11,0.60)";
+      // Semi-transparent background pill
+      ctx.fillStyle = "rgba(10,10,11,0.65)";
       ctx.beginPath();
       if (ctx.roundRect) {
         ctx.roundRect(x, y, boxW, boxH, 10);
@@ -42,28 +40,12 @@ async function applyWatermarkToImage(imageUrl) {
       }
       ctx.fill();
 
-      // Draw logo image then text
-      const logoImg = new Image();
-      logoImg.crossOrigin = "anonymous";
-      logoImg.onload = () => {
-        const lx = x + padX;
-        const ly = y + padY;
-        ctx.drawImage(logoImg, lx, ly, logoSize, logoSize);
+      // Text
+      ctx.fillStyle = "rgba(255,255,255,0.90)";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, x + padX, y + boxH / 2);
 
-        ctx.fillStyle = "rgba(255,255,255,0.88)";
-        ctx.textBaseline = "middle";
-        ctx.fillText(text, lx + logoSize + gap, y + boxH / 2);
-
-        resolve(canvas.toDataURL("image/jpeg", 0.92));
-      };
-      logoImg.onerror = () => {
-        // fallback: text only
-        ctx.fillStyle = "rgba(255,255,255,0.88)";
-        ctx.textBaseline = "middle";
-        ctx.fillText(text, x + padX, y + boxH / 2);
-        resolve(canvas.toDataURL("image/jpeg", 0.92));
-      };
-      logoImg.src = "https://media.base44.com/images/public/69a33ae1bd1ae899284f21e8/02423bbfb_251dc708f_logo.png";
+      resolve(canvas.toDataURL("image/jpeg", 0.92));
     };
     img.onerror = () => resolve(imageUrl);
     img.src = imageUrl;
