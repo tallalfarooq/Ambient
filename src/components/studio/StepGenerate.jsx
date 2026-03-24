@@ -18,7 +18,7 @@ async function applyWatermarkToImage(imageUrl) {
       ctx.drawImage(img, 0, 0);
 
       const fontSize = Math.max(15, Math.round(img.width * 0.022));
-      const text = "✦ AmbientSpace.ai";
+      const text = "✦ Designed by Ambient Space";
       ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
       const textWidth = ctx.measureText(text).width;
       const padX = fontSize * 0.9;
@@ -26,9 +26,9 @@ async function applyWatermarkToImage(imageUrl) {
       const boxW = textWidth + padX * 2;
       const boxH = fontSize + padY * 2;
       const margin = img.height * 0.025;
-      // Bottom center
+      // Bottom center, slightly above center
       const x = (img.width - boxW) / 2;
-      const y = img.height - boxH - margin;
+      const y = img.height - boxH - margin * 2.5;
 
       // Semi-transparent background pill
       ctx.fillStyle = "rgba(10,10,11,0.65)";
