@@ -452,6 +452,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           negative_prompt: STRUCTURE_NEGATIVE_PROMPT,
           ...(isPaid ? { width: 1024, height: 1024 } : { width: 768, height: 768 }),
         },
+      });
 
       const url = result?.url || result;
       if (!url) throw new Error("No image returned. Please try again.");
