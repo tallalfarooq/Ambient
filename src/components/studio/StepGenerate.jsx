@@ -439,17 +439,19 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       }
     }
 
+    const isPaid = credits && credits.plan_type !== "free";
+
     try {
       const result = await base44.integrations.Core.GenerateImage({
         prompt: refinedPrompt,
         existing_image_urls: [baseImageUrl],
         options: {
           strength,
-          guidance_scale: 10,        // raised from 7.5 → more prompt adherence = better structure lock
-          num_inference_steps: 25,
+          guidance_scale: isPaid ? 12 : 8,
+          num_inference_steps: isPaid ? 40 : 18,
           negative_prompt: STRUCTURE_NEGATIVE_PROMPT,
+          ...(isPaid ? { width: 1024, height: 1024 } : { width: 768, height: 768 }),
         },
-      });
 
       const url = result?.url || result;
       if (!url) throw new Error("No image returned. Please try again.");
@@ -732,7 +734,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                 style={{ width: `${progress}%`, background: "linear-gradient(90deg, #1B8FA0, #C9963A)" }}
               />
             </div>
-            <p className="text-white/30 text-xs tabular-nums">{elapsed}s — usually 20–35 seconds</p>
+            <p className="text-white/30 text-xs tabular-nums">{elapsed}s — {isPaidUser ? "usually 25–40s · HD quality" : "usually 10–20s · standard quality"}</p>
           </div>
         ) : generated ? (
           <div className="relative w-full">
