@@ -8,24 +8,21 @@ import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Down
 function ImageWatermark() {
   return (
     <div
-      className="absolute inset-y-0 right-0 flex items-center justify-center pointer-events-none select-none"
-      style={{ width: 28 }}
+      className="absolute bottom-3 right-3 pointer-events-none select-none flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl"
+      style={{
+        background: "rgba(10,10,11,0.65)",
+        backdropFilter: "blur(6px)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        userSelect: "none",
+      }}
     >
-      <span
-        style={{
-          writingMode: "vertical-rl",
-          textOrientation: "mixed",
-          transform: "rotate(180deg)",
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: "0.08em",
-          color: "rgba(255,255,255,0.45)",
-          textShadow: "0 1px 4px rgba(0,0,0,0.6)",
-          userSelect: "none",
-          whiteSpace: "nowrap",
-        }}
-      >
-        ✦ ambientspace.ai
+      <img
+        src="https://media.base44.com/images/public/69a33ae1bd1ae899284f21e8/c8bd4ea0c_251dc708f_logo.png"
+        alt=""
+        style={{ width: 14, height: 14, borderRadius: 3, opacity: 0.85 }}
+      />
+      <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.7)", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
+        ambientspace.ai
       </span>
     </div>
   );
@@ -738,7 +735,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
             <p className="text-white/30 text-xs tabular-nums">{elapsed}s — usually 25–40s</p>
           </div>
         ) : generated ? (
-          <div className="relative w-full">
+          <div className="relative w-full" onContextMenu={!isPaidUser ? (e) => e.preventDefault() : undefined}>
             <BeforeAfterSlider before={prevGenerated || data.room_image_url} after={generated} />
             {!isPaidUser && <ImageWatermark />}
             {/* Tap-to-search button — top-left corner of image */}
