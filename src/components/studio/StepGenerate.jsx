@@ -21,38 +21,73 @@ async function applyWatermarkToImage(imageUrl) {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      canvas.width = img.width;
+      canvas.width  = img.width;
       canvas.height = img.height;
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0);
 
-      const fontSize = Math.max(15, Math.round(img.width * 0.022));
-      const text = "✦ Designed by Ambient Space";
-      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-      const textWidth = ctx.measureText(text).width;
-      const padX = fontSize * 0.9;
-      const padY = fontSize * 0.6;
-      const boxW = textWidth + padX * 2;
-      const boxH = fontSize + padY * 2;
-      const margin = img.height * 0.025;
-      // Bottom center, slightly above center
-      const x = (img.width - boxW) / 2;
-      const y = img.height - boxH - margin * 2.5;
+      // ── Pill dimensions ──────────────────────────────────────────
+      const fontSize = Math.max(16, Math.round(img.width * 0.026));
+      const font     = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+      ctx.font = font;
 
-      // Semi-transparent background pill
-      ctx.fillStyle = "rgba(10,10,11,0.65)";
+      const label    = "Designed by Ambient Space";
+      const labelW   = ctx.measureText(label).width;
+
+      // Icon "✦" drawn in brand teal, measure separately
+      const iconText = "✦  ";
+      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+      const iconW  = ctx.measureText(iconText).width;
+      const totalTextW = iconW + labelW;
+
+      const padX  = fontSize * 1.1;
+      const padY  = fontSize * 0.65;
+      const boxW  = totalTextW + padX * 2;
+      const boxH  = fontSize   + padY * 2;
+      const r     = boxH / 2; // fully-rounded pill
+
+      // ── True centre of the image ─────────────────────────────────
+      const x = (img.width  - boxW) / 2;
+      const y = (img.height - boxH) / 2;
+
+      // ── Dark frosted-glass pill ──────────────────────────────────
+      ctx.save();
+      ctx.fillStyle = "rgba(10,10,11,0.72)";
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(x, y, boxW, boxH, 10);
+        ctx.roundRect(x, y, boxW, boxH, r);
       } else {
-        ctx.rect(x, y, boxW, boxH);
+        // Fallback for older browsers
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + boxW - r, y);
+        ctx.arcTo(x + boxW, y, x + boxW, y + r, r);
+        ctx.lineTo(x + boxW, y + boxH - r);
+        ctx.arcTo(x + boxW, y + boxH, x + boxW - r, y + boxH, r);
+        ctx.lineTo(x + r, y + boxH);
+        ctx.arcTo(x, y + boxH, x, y + boxH - r, r);
+        ctx.lineTo(x, y + r);
+        ctx.arcTo(x, y, x + r, y, r);
+        ctx.closePath();
       }
       ctx.fill();
 
-      // Text
-      ctx.fillStyle = "rgba(255,255,255,0.90)";
+      // Subtle teal border
+      ctx.strokeStyle = "rgba(27,143,160,0.55)";
+      ctx.lineWidth   = Math.max(1, img.width * 0.0015);
+      ctx.stroke();
+      ctx.restore();
+
+      // ── "✦" icon in brand teal ───────────────────────────────────
+      const textX = x + padX;
+      const textY = y + boxH / 2;
       ctx.textBaseline = "middle";
-      ctx.fillText(text, x + padX, y + boxH / 2);
+      ctx.font = font;
+      ctx.fillStyle = "#1B8FA0";
+      ctx.fillText(iconText, textX, textY);
+
+      // ── "Designed by Ambient Space" in white ────────────────────
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.fillText(label, textX + iconW, textY);
 
       try {
         resolve(canvas.toDataURL("image/jpeg", 0.92));
