@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock, Globe, Sliders, X, Search, ShoppingBag } from "lucide-react";
 
-// Burns watermark text into the image using Canvas and returns a data URL
+// Burns watermark into the image using Canvas and returns a data URL
 async function applyWatermarkToImage(imageUrl) {
   return new Promise((resolve) => {
     const img = new Image();
@@ -17,34 +17,53 @@ async function applyWatermarkToImage(imageUrl) {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0);
 
-      const text = "✦ ambientspace.ai";
-      const fontSize = Math.max(14, Math.round(img.width * 0.022));
+      const fontSize = Math.max(13, Math.round(img.width * 0.020));
+      const logoSize = fontSize * 1.8;
+      const text = "Ambient Space";
       ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
       const textWidth = ctx.measureText(text).width;
-      const padX = fontSize * 0.75;
-      const padY = fontSize * 0.55;
-      const boxW = textWidth + padX * 2;
-      const boxH = fontSize + padY * 2;
-      const margin = img.width * 0.018;
-      const x = img.width - boxW - margin;
+      const gap = fontSize * 0.5;
+      const totalW = logoSize + gap + textWidth;
+      const padX = fontSize * 0.9;
+      const padY = fontSize * 0.6;
+      const boxW = totalW + padX * 2;
+      const boxH = logoSize + padY * 2;
+      const margin = img.height * 0.025;
+      const x = (img.width - boxW) / 2;
       const y = img.height - boxH - margin;
 
-      // Semi-transparent pill background
-      ctx.fillStyle = "rgba(10,10,11,0.62)";
+      // Background pill
+      ctx.fillStyle = "rgba(10,10,11,0.60)";
       ctx.beginPath();
       if (ctx.roundRect) {
-        ctx.roundRect(x, y, boxW, boxH, 7);
+        ctx.roundRect(x, y, boxW, boxH, 10);
       } else {
         ctx.rect(x, y, boxW, boxH);
       }
       ctx.fill();
 
-      // Watermark text
-      ctx.fillStyle = "rgba(255,255,255,0.82)";
-      ctx.textBaseline = "middle";
-      ctx.fillText(text, x + padX, y + boxH / 2);
+      // Draw logo image then text
+      const logoImg = new Image();
+      logoImg.crossOrigin = "anonymous";
+      logoImg.onload = () => {
+        const lx = x + padX;
+        const ly = y + padY;
+        ctx.drawImage(logoImg, lx, ly, logoSize, logoSize);
 
-      resolve(canvas.toDataURL("image/jpeg", 0.92));
+        ctx.fillStyle = "rgba(255,255,255,0.88)";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, lx + logoSize + gap, y + boxH / 2);
+
+        resolve(canvas.toDataURL("image/jpeg", 0.92));
+      };
+      logoImg.onerror = () => {
+        // fallback: text only
+        ctx.fillStyle = "rgba(255,255,255,0.88)";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, x + padX, y + boxH / 2);
+        resolve(canvas.toDataURL("image/jpeg", 0.92));
+      };
+      logoImg.src = "https://media.base44.com/images/public/69a33ae1bd1ae899284f21e8/02423bbfb_251dc708f_logo.png";
     };
     img.onerror = () => resolve(imageUrl);
     img.src = imageUrl;
