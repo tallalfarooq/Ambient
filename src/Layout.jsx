@@ -20,6 +20,7 @@ const CONSENT_KEY = "ambient_consent";
 export default function Layout({ children, currentPageName }) {
   const [consent, setConsent] = useState(null);
   const [user, setUser] = useState(null);
+  const [planType, setPlanType] = useState(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(CONSENT_KEY);
@@ -31,6 +32,10 @@ export default function Layout({ children, currentPageName }) {
       setUser(u);
       // Fire welcome email once per user — guarded by localStorage so it never runs twice
       if (u?.email) {
+        // Fetch plan
+        base44.entities.UserCredits.filter({ user_email: u.email })
+          .then((uc) => { if (uc.length > 0) setPlanType(uc[0].plan_type); })
+          .catch(() => {});
         const key = `ambient_welcomed_${u.email}`;
         if (!localStorage.getItem(key)) {
           base44.functions.invoke("sendWelcomeEmail", {})
@@ -97,6 +102,19 @@ export default function Layout({ children, currentPageName }) {
                   <div className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-white/50">
                     <User className="w-3.5 h-3.5" />
                     <span className="hidden sm:block max-w-[80px] truncate">{user.full_name || user.email}</span>
+                    {planType && (
+                      <span
+                        className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide"
+                        style={planType === 'pro'
+                          ? { background: 'rgba(201,150,58,0.18)', color: '#C9963A', border: '1px solid rgba(201,150,58,0.35)' }
+                          : planType === 'basic'
+                          ? { background: 'rgba(27,143,160,0.18)', color: '#6EC6C6', border: '1px solid rgba(27,143,160,0.35)' }
+                          : { background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.12)' }
+                        }
+                      >
+                        {planType}
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={() => base44.auth.logout()}
