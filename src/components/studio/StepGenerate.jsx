@@ -5,27 +5,50 @@ import { base44 } from "@/api/base44Client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock, Globe, Sliders, X, Search, ShoppingBag } from "lucide-react";
 
-function ImageWatermark() {
-  return (
-    <div
-      className="absolute bottom-3 right-3 pointer-events-none select-none flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl"
-      style={{
-        background: "rgba(10,10,11,0.65)",
-        backdropFilter: "blur(6px)",
-        border: "1px solid rgba(255,255,255,0.12)",
-        userSelect: "none",
-      }}
-    >
-      <img
-        src="https://media.base44.com/images/public/69a33ae1bd1ae899284f21e8/c8bd4ea0c_251dc708f_logo.png"
-        alt=""
-        style={{ width: 14, height: 14, borderRadius: 3, opacity: 0.85 }}
-      />
-      <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.7)", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>
-        ambientspace.ai
-      </span>
-    </div>
-  );
+// Burns watermark text into the image using Canvas and returns a data URL
+async function applyWatermarkToImage(imageUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+
+      const text = "✦ ambientspace.ai";
+      const fontSize = Math.max(14, Math.round(img.width * 0.022));
+      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+      const textWidth = ctx.measureText(text).width;
+      const padX = fontSize * 0.75;
+      const padY = fontSize * 0.55;
+      const boxW = textWidth + padX * 2;
+      const boxH = fontSize + padY * 2;
+      const margin = img.width * 0.018;
+      const x = img.width - boxW - margin;
+      const y = img.height - boxH - margin;
+
+      // Semi-transparent pill background
+      ctx.fillStyle = "rgba(10,10,11,0.62)";
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(x, y, boxW, boxH, 7);
+      } else {
+        ctx.rect(x, y, boxW, boxH);
+      }
+      ctx.fill();
+
+      // Watermark text
+      ctx.fillStyle = "rgba(255,255,255,0.82)";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, x + padX, y + boxH / 2);
+
+      resolve(canvas.toDataURL("image/jpeg", 0.92));
+    };
+    img.onerror = () => resolve(imageUrl);
+    img.src = imageUrl;
+  });
 }
 
 const ROOM_FURNITURE_CONTEXT = {
@@ -297,7 +320,8 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [progress,     setProgress]     = useState(0);
   const [elapsed,      setElapsed]      = useState(0);
   const timerRef = useRef(null);
-  const [copied,       setCopied]       = useState(false);
+  const [copied,       setCopied]      = useState(false);
+  const [watermarkedUrl, setWatermarkedUrl] = useState(null);
   const [credits,      setCredits]      = useState(null);
   const [user,         setUser]         = useState(undefined); // undefined = loading, null = not logged in
   const [checkingOut,  setCheckingOut]  = useState(false);
@@ -462,6 +486,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       clearInterval(timerRef.current);
       setProgress(100);
       setGenerated(url);
+      setWatermarkedUrl(null); // reset; will be re-applied by effect below
       setHasPendingChanges(false);
       prevFineTuneRef.current = [data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design, data.custom_note].join("|");
       update({ generated_render_url: url, generation_prompt: refinedPrompt, intensity });
@@ -590,6 +615,12 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  // Burn watermark into image for free users
+  useEffect(() => {
+    if (!generated || isPaidUser) { setWatermarkedUrl(null); return; }
+    applyWatermarkToImage(generated).then(setWatermarkedUrl);
+  }, [generated, isPaidUser]);
 
   const isPaidUser = credits && credits.plan_type !== "free";
 
@@ -736,8 +767,10 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           </div>
         ) : generated ? (
           <div className="relative w-full" onContextMenu={!isPaidUser ? (e) => e.preventDefault() : undefined}>
-            <BeforeAfterSlider before={prevGenerated || data.room_image_url} after={generated} />
-            {!isPaidUser && <ImageWatermark />}
+            <BeforeAfterSlider
+              before={prevGenerated || data.room_image_url}
+              after={(!isPaidUser && watermarkedUrl) ? watermarkedUrl : generated}
+            />
             {/* Tap-to-search button — top-left corner of image */}
             <button
               onClick={() => setShowObjectSearch(true)}
