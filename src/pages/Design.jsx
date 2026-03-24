@@ -376,13 +376,35 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                 <p className="text-xs text-white/25">This usually takes 30–60 seconds</p>
               </div>
             ) : design.generated_render_url ? (
-              <div className="relative w-full">
+              <div
+                className="relative w-full"
+                onContextMenu={!isPaidUser ? (e) => e.preventDefault() : undefined}
+              >
                 {/* Show generated image by default; comparison is opt-in */}
                 {showComparison && design.room_image_url ? (
                   <BeforeAfterSlider before={design.room_image_url} after={design.generated_render_url} />
                 ) : (
-                  <img src={design.generated_render_url} alt="Generated room" className="w-full h-auto block" />
+                  <img
+                    src={design.generated_render_url}
+                    alt="Generated room"
+                    className="w-full h-auto block"
+                    draggable={false}
+                    onContextMenu={!isPaidUser ? (e) => e.preventDefault() : undefined}
+                    style={!isPaidUser ? { pointerEvents: "none", userSelect: "none" } : {}}
+                  />
                 )}
+
+                {/* Transparent full-coverage shield — catches any right-click that
+                    slips through on free tier (e.g. on the slider or pin buttons) */}
+                {!isPaidUser && (
+                  <div
+                    className="absolute inset-0"
+                    style={{ zIndex: 9, background: "transparent" }}
+                    onContextMenu={(e) => e.preventDefault()}
+                    draggable={false}
+                  />
+                )}
+
                 {!isPaidUser && <ImageWatermark />}
 
                 {/* Compare toggle button */}

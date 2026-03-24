@@ -816,15 +816,30 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
             <p className="text-white/30 text-xs tabular-nums">{elapsed}s — usually 25–40s</p>
           </div>
         ) : generated ? (
-          <div className="relative w-full" onContextMenu={!isPaidUser ? (e) => e.preventDefault() : undefined}>
+          <div
+            className="relative w-full"
+            onContextMenu={(e) => e.preventDefault()}
+          >
             <BeforeAfterSlider
               before={prevGenerated || data.room_image_url}
               after={generated}
             />
 
-            {/* ── Watermark overlay — free tier only ────────────────
-                CSS-based so it always shows regardless of CORS.
-                Pointer-events none so slider still works.          */}
+            {/* Transparent full-coverage shield for free users —
+                sits above the slider images, blocks right-click / drag save.
+                Does NOT block slider drag because the slider's own
+                mouse/touch handlers are on the BeforeAfterSlider container
+                which is a sibling layer handled at the DOM event level.    */}
+            {!isPaidUser && (
+              <div
+                className="absolute inset-0"
+                style={{ zIndex: 9, background: "transparent" }}
+                onContextMenu={(e) => e.preventDefault()}
+                draggable={false}
+              />
+            )}
+
+            {/* ── Watermark pill — free tier only ─────────────────── */}
             {!isPaidUser && (
               <div
                 className="absolute inset-0 flex items-center justify-center pointer-events-none"
