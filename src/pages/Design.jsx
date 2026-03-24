@@ -10,25 +10,28 @@ import CartDrawer from "@/components/design/CartDrawer";
 function ImageWatermark() {
   return (
     <div
-      className="absolute inset-y-0 right-0 flex items-center justify-center pointer-events-none select-none"
-      style={{ width: 28 }}
+      className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"
+      style={{ zIndex: 10 }}
     >
-      <span
+      <div
         style={{
-          writingMode: "vertical-rl",
-          textOrientation: "mixed",
-          transform: "rotate(180deg)",
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: "0.08em",
-          color: "rgba(255,255,255,0.45)",
-          textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "10px 18px",
+          borderRadius: 9999,
+          background: "rgba(10,10,11,0.70)",
+          border: "1px solid rgba(27,143,160,0.50)",
+          backdropFilter: "blur(6px)",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.45)",
           userSelect: "none",
-          whiteSpace: "nowrap",
         }}
       >
-        ✦ ambientspace.ai
-      </span>
+        <span style={{ color: "#1B8FA0", fontSize: 15, lineHeight: 1 }}>✦</span>
+        <span style={{ color: "rgba(255,255,255,0.92)", fontSize: 13, fontWeight: 700, letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
+          Designed by Ambient Space
+        </span>
+      </div>
     </div>
   );
 }
