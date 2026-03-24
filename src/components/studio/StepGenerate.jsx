@@ -635,13 +635,13 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const isPaidUser = credits && credits.plan_type !== "free";
+
   // Burn watermark into image for free users
   useEffect(() => {
     if (!generated || isPaidUser) { setWatermarkedUrl(null); return; }
     applyWatermarkToImage(generated).then(setWatermarkedUrl);
   }, [generated, isPaidUser]);
-
-  const isPaidUser = credits && credits.plan_type !== "free";
 
   const intensityLabel =
     intensity < 35 ? "Subtle refresh"
