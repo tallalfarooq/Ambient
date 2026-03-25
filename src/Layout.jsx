@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext } from "react";
+import { useLanguage } from "@/lib/LanguageContext";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
@@ -8,11 +9,11 @@ import CookieBanner from "@/components/consent/CookieBanner";
 export const ConsentContext = createContext(null);
 
 const NAV = [
-  { label: "Home", page: "Home", icon: Home },
-  { label: "Studio", page: "Studio", icon: Sparkles },
-  { label: "My Designs", page: "Projects", icon: BookImage },
-  { label: "Favorites", page: "Favorites", icon: Heart },
-  { label: "Pricing", page: "Pricing", icon: Layers },
+  { labelKey: "nav_home",      page: "Home",      icon: Home      },
+  { labelKey: "nav_studio",    page: "Studio",    icon: Sparkles  },
+  { labelKey: "nav_projects",  page: "Projects",  icon: BookImage },
+  { labelKey: "nav_favorites", page: "Favorites", icon: Heart     },
+  { labelKey: "nav_pricing",   page: "Pricing",   icon: Layers    },
 ];
 
 const CONSENT_KEY = "ambient_consent";
@@ -21,6 +22,7 @@ export default function Layout({ children, currentPageName }) {
   const [consent, setConsent] = useState(null);
   const [user, setUser] = useState(null);
   const [planType, setPlanType] = useState(null);
+  const { lang, setLanguage, t } = useLanguage();
 
   useEffect(() => {
     const stored = localStorage.getItem(CONSENT_KEY);
@@ -82,7 +84,23 @@ export default function Layout({ children, currentPageName }) {
             </Link>
 
             <div className="flex items-center gap-0.5">
-              {NAV.map(({ label, page, icon: Icon }) => (
+              {/* Language switcher */}
+              <div className="flex items-center mr-1 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
+                {["en", "de"].map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => setLanguage(l)}
+                    className="px-2.5 py-1 text-[10px] font-bold uppercase transition-all"
+                    style={lang === l
+                      ? { background: "rgba(27,143,160,0.25)", color: "#6EC6C6" }
+                      : { background: "transparent", color: "rgba(255,255,255,0.3)" }
+                    }
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+              {NAV.map(({ labelKey, page, icon: Icon }) => (
                 <Link
                   key={page}
                   to={createPageUrl(page)}
@@ -93,9 +111,9 @@ export default function Layout({ children, currentPageName }) {
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  <span className="hidden md:block">{label}</span>
+                  <span className="hidden md:block">{t(labelKey)}</span>
                 </Link>
-              ))}
+            ))}
 
               {user ? (
                 <div className="flex items-center gap-1 ml-2 pl-2 border-l border-white/10">
@@ -121,7 +139,7 @@ export default function Layout({ children, currentPageName }) {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/5 transition-all"
                   >
                     <LogOut className="w-3.5 h-3.5" />
-                    <span className="hidden sm:block">Sign out</span>
+                    <span className="hidden sm:block">{t("sign_out")}</span>
                   </button>
                 </div>
               ) : (
@@ -131,7 +149,7 @@ export default function Layout({ children, currentPageName }) {
                   style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
                 >
                   <LogIn className="w-3.5 h-3.5" />
-                  <span>Sign in</span>
+                  <span>{t("sign_in")}</span>
                 </button>
               )}
             </div>
