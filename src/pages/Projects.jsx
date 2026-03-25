@@ -5,16 +5,19 @@ import { createPageUrl } from "@/utils";
 import { Plus, Sparkles, Loader2, Recycle, Trash2, Download, Pencil, ShoppingBag, Clock, Heart, Share2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
+import { de } from "date-fns/locale";
 import ProjectFilters from "@/components/projects/ProjectFilters";
+import { useLanguage } from "@/lib/LanguageContext";
 
 const STATUS_CONFIG = {
-  draft:      { label: "Saved",      color: "text-white/50 bg-white/5 border-white/10"                 },
+  draft:      { label: "Saved",      color: "text-white/50 bg-white/5 border-white/10" },
   generating: { label: "Generating", color: "border", style: { background: "rgba(27,143,160,0.1)", borderColor: "rgba(27,143,160,0.3)", color: "#6EC6C6" } },
   ready:      { label: "Shopped ✦",  color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
-  shopping:   { label: "Shopping",   color: "text-amber-400 bg-amber-500/10 border-amber-500/20"       },
+  shopping:   { label: "Shopping",   color: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
 };
 
 function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSave, onShare }) {
+  const { t, lang } = useLanguage();
   const status = STATUS_CONFIG[design.status] || STATUS_CONFIG.draft;
   const [downloading, setDownloading] = useState(false);
   const isSaved = savedDesigns?.some((s) => s.design_id === design.id);
@@ -43,7 +46,6 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
       className="group bg-white/3 border border-white/8 rounded-3xl overflow-hidden hover:border-white/15 transition-all duration-300"
     >
       <div className="relative w-full aspect-video bg-white/5 overflow-hidden">
-        {/* Show generated render as the main image; if draft, show original faintly behind */}
         {design.generated_render_url ? (
           <img src={design.generated_render_url} alt={design.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
         ) : design.room_image_url ? (
@@ -54,7 +56,6 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
           </div>
         )}
 
-        {/* For drafts with both images: show a small "before" thumbnail in corner */}
         {design.status === "draft" && design.generated_render_url && design.room_image_url && (
           <div className="absolute bottom-2 left-2 w-16 h-12 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg">
             <img src={design.room_image_url} alt="Before" className="w-full h-full object-cover" />
@@ -67,7 +68,7 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
         {design.status === "generating" && (
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
             <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#1B8FA0" }} />
-            <p className="text-xs font-medium" style={{ color: "#6EC6C6" }}>Generating…</p>
+            <p className="text-xs font-medium" style={{ color: "#6EC6C6" }}>{t("projects_generating")}</p>
           </div>
         )}
 
@@ -79,13 +80,13 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
               style={{ background: design.status === "draft" ? "linear-gradient(135deg,#1B8FA0,#C9963A)" : "white", color: design.status === "draft" ? "white" : "black" }}
             >
               <ShoppingBag className="w-3.5 h-3.5" />
-              {design.status === "draft" ? "Shop this look" : "View & Shop"}
+              {design.status === "draft" ? t("projects_shop") : t("projects_view_shop")}
             </Link>
             <Link
               to={createPageUrl("Studio") + `?redesign_id=${design.id}`}
               className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white font-medium px-4 py-2 rounded-xl text-xs hover:bg-white/25 transition-colors"
             >
-              <Pencil className="w-3.5 h-3.5" /> Redesign
+              <Pencil className="w-3.5 h-3.5" /> {t("projects_redesign")}
             </Link>
           </div>
         )}
@@ -100,11 +101,7 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
           {user && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleSave(design.id); }}
-              className={`w-8 h-8 rounded-xl backdrop-blur-sm border flex items-center justify-center transition-all ${
-                isSaved
-                  ? "bg-pink-500/30 border-pink-500/50 text-pink-300"
-                  : "bg-black/50 border-white/10 text-white/60 hover:text-white hover:bg-black/70"
-              }`}
+              className={`w-8 h-8 rounded-xl backdrop-blur-sm border flex items-center justify-center transition-all ${isSaved ? "bg-pink-500/30 border-pink-500/50 text-pink-300" : "bg-black/50 border-white/10 text-white/60 hover:text-white hover:bg-black/70"}`}
             >
               <Heart className={`w-3.5 h-3.5 ${isSaved ? "fill-current" : ""}`} />
             </button>
@@ -148,7 +145,7 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
           )}
           {design.sustainability_mode && (
             <span className="text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full flex items-center gap-1">
-              <Recycle className="w-2.5 h-2.5" /> Pre-loved
+              <Recycle className="w-2.5 h-2.5" /> {t("projects_preloved")}
             </span>
           )}
           {design.budget_max && (
@@ -164,7 +161,7 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
 
         <div className="flex items-center gap-1 text-white/25 text-xs">
           <Clock className="w-3 h-3" />
-          {formatDistanceToNow(new Date(design.created_date), { addSuffix: true })}
+          {formatDistanceToNow(new Date(design.created_date), { addSuffix: true, locale: lang === "de" ? de : undefined })}
         </div>
       </div>
     </motion.div>
@@ -172,15 +169,16 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
 }
 
 export default function Projects() {
-  const [designs,       setDesigns]       = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [deleting,      setDeleting]      = useState(null);
-  const [user,          setUser]          = useState(null);
-  const [savedDesigns,  setSavedDesigns]  = useState([]);
-  const [shareLink,     setShareLink]     = useState("");
+  const { t, lang } = useLanguage();
+  const [designs,        setDesigns]        = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [deleting,       setDeleting]       = useState(null);
+  const [user,           setUser]           = useState(null);
+  const [savedDesigns,   setSavedDesigns]   = useState([]);
+  const [shareLink,      setShareLink]      = useState("");
   const [showShareModal, setShowShareModal] = useState(false);
-  const [copied,        setCopied]        = useState(false);
-  const [filters,       setFilters]       = useState({ styles: [], roomTypes: [], budgetRange: null });
+  const [copied,         setCopied]         = useState(false);
+  const [filters,        setFilters]        = useState({ styles: [], roomTypes: [], budgetRange: null });
 
   const load = useCallback(async (currentUser) => {
     if (!currentUser) return;
@@ -206,13 +204,13 @@ export default function Projects() {
   }, [designs, load, user]);
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this design? This cannot be undone.")) return;
+    if (!window.confirm(t("projects_delete_confirm"))) return;
     setDeleting(id);
     try {
       await base44.entities.RoomDesign.delete(id);
       setDesigns((prev) => prev.filter((d) => d.id !== id));
     } catch {
-      alert("Couldn't delete. Please try again.");
+      alert(t("projects_delete_fail"));
     } finally {
       setDeleting(null);
     }
@@ -231,11 +229,8 @@ export default function Projects() {
   };
 
   const handleShare = async (designId) => {
-    // Check if there's already a saved/favourited record with a share token
     const existing = savedDesigns.find((s) => s.design_id === designId);
-
     if (existing) {
-      // Already favourited — reuse or generate token
       let token = existing.share_token;
       if (!token) {
         token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -247,23 +242,15 @@ export default function Projects() {
       }
       setShareLink(`${window.location.origin}/SharedDesign?token=${token}`);
     } else {
-      // Not favourited — create a SavedDesign record on the fly so we can generate a token
       const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       try {
-        const created = await base44.entities.SavedDesign.create({
-          design_id: designId,
-          user_email: user.email,
-          share_token: token,
-          is_public: true,
-        });
+        const created = await base44.entities.SavedDesign.create({ design_id: designId, user_email: user.email, share_token: token, is_public: true });
         setSavedDesigns((prev) => [...prev, created]);
         setShareLink(`${window.location.origin}/SharedDesign?token=${token}`);
       } catch {
-        // Fallback: just share the Design page URL directly
         setShareLink(`${window.location.origin}/Design?id=${designId}`);
       }
     }
-
     setShowShareModal(true);
   };
 
@@ -274,51 +261,36 @@ export default function Projects() {
   };
 
   const filteredDesigns = designs.filter((design) => {
-    // Style filter
-    if (filters.styles?.length > 0 && !filters.styles.includes(design.style)) {
-      return false;
-    }
-    
-    // Room type filter
-    if (filters.roomTypes?.length > 0 && !filters.roomTypes.includes(design.room_type)) {
-      return false;
-    }
-    
-    // Budget range filter
+    if (filters.styles?.length > 0 && !filters.styles.includes(design.style)) return false;
+    if (filters.roomTypes?.length > 0 && !filters.roomTypes.includes(design.room_type)) return false;
     if (filters.budgetRange) {
       const designMax = design.budget_max || 0;
-      if (designMax < filters.budgetRange.min || designMax > filters.budgetRange.max) {
-        return false;
-      }
+      if (designMax < filters.budgetRange.min || designMax > filters.budgetRange.max) return false;
     }
-    
     return true;
   });
+
+  const designCountLabel = designs.length === 1 ? t("projects_design_count_one") : t("projects_design_count_other");
 
   return (
     <div className="min-h-screen bg-[#0A0A0B] text-white px-4 py-12">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">My Projects</h1>
-            <p className="text-white/35 text-sm mt-1">{designs.length} room design{designs.length !== 1 ? "s" : ""}</p>
+            <h1 className="text-2xl font-bold">{t("projects_title")}</h1>
+            <p className="text-white/35 text-sm mt-1">{designs.length} {designCountLabel}</p>
           </div>
           <Link
             to={createPageUrl("Studio")}
             className="flex items-center gap-2 text-white font-semibold px-5 py-3 rounded-2xl transition-opacity hover:opacity-90 text-sm"
             style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
           >
-            <Plus className="w-4 h-4" /> New design
+            <Plus className="w-4 h-4" /> {t("projects_new")}
           </Link>
         </div>
 
         {designs.length > 0 && (
-          <ProjectFilters
-            filters={filters}
-            onFiltersChange={setFilters}
-            totalCount={designs.length}
-            filteredCount={filteredDesigns.length}
-          />
+          <ProjectFilters filters={filters} onFiltersChange={setFilters} totalCount={designs.length} filteredCount={filteredDesigns.length} />
         )}
 
         {loading ? (
@@ -330,13 +302,13 @@ export default function Projects() {
             <div className="w-16 h-16 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-5">
               <Sparkles className="w-7 h-7 text-white/20" />
             </div>
-            <p className="text-white/40 mb-6">No designs yet. Create your first one.</p>
+            <p className="text-white/40 mb-6">{t("projects_empty")}</p>
             <Link
               to={createPageUrl("Studio")}
               className="inline-flex items-center gap-2 text-white font-semibold px-6 py-3 rounded-2xl transition-opacity hover:opacity-90 text-sm"
               style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
             >
-              <Plus className="w-4 h-4" /> Start designing
+              <Plus className="w-4 h-4" /> {t("projects_start")}
             </Link>
           </div>
         ) : filteredDesigns.length === 0 ? (
@@ -344,27 +316,18 @@ export default function Projects() {
             <div className="w-16 h-16 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-5">
               <Sparkles className="w-7 h-7 text-white/20" />
             </div>
-            <p className="text-white/40 mb-4">No designs match your filters.</p>
-            <button
-              onClick={() => setFilters({ styles: [], roomTypes: [], budgetRange: null })}
-              className="text-sm transition-colors"
-              style={{ color: "#1B8FA0" }}
-            >
-              Clear all filters
+            <p className="text-white/40 mb-4">{t("projects_empty_filtered")}</p>
+            <button onClick={() => setFilters({ styles: [], roomTypes: [], budgetRange: null })} className="text-sm transition-colors" style={{ color: "#1B8FA0" }}>
+              {t("projects_clear_filters")}
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredDesigns.map((design) => (
               <DesignCard
-                key={design.id}
-                design={design}
-                onDelete={handleDelete}
-                deleting={deleting === design.id}
-                user={user}
-                savedDesigns={savedDesigns}
-                onToggleSave={handleToggleSave}
-                onShare={handleShare}
+                key={design.id} design={design} onDelete={handleDelete}
+                deleting={deleting === design.id} user={user}
+                savedDesigns={savedDesigns} onToggleSave={handleToggleSave} onShare={handleShare}
               />
             ))}
           </div>
@@ -375,16 +338,12 @@ export default function Projects() {
       <AnimatePresence>
         {showShareModal && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm"
             onClick={() => setShowShareModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
               className="relative w-full max-w-lg rounded-3xl p-8 shadow-2xl"
               style={{ background: "#111114", border: "1px solid rgba(255,255,255,0.1)" }}
@@ -392,35 +351,18 @@ export default function Projects() {
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6" style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}>
                 <Share2 className="w-7 h-7 text-white" />
               </div>
-              
-              <h2 className="text-2xl font-bold mb-2 text-center">Share Your Design</h2>
-              <p className="text-white/40 text-sm text-center mb-6">
-                Anyone with this link can view your room design — no login required.
-              </p>
-
+              <h2 className="text-2xl font-bold mb-2 text-center">{t("share_title")}</h2>
+              <p className="text-white/40 text-sm text-center mb-6">{t("share_subtitle")}</p>
               <div className="bg-white/5 rounded-2xl p-4 mb-6 border border-white/10">
                 <div className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    value={shareLink}
-                    readOnly
-                    className="flex-1 bg-transparent text-white/70 text-sm outline-none"
-                  />
-                  <button
-                    onClick={copyLink}
-                    className="flex items-center gap-1.5 text-white px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-90"
-                    style={{ background: "#1B8FA0" }}
-                  >
-                    {copied ? "Copied!" : "Copy"}
+                  <input type="text" value={shareLink} readOnly className="flex-1 bg-transparent text-white/70 text-sm outline-none" />
+                  <button onClick={copyLink} className="flex items-center gap-1.5 text-white px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-90" style={{ background: "#1B8FA0" }}>
+                    {copied ? t("share_copied") : t("share_copy")}
                   </button>
                 </div>
               </div>
-
-              <button
-                onClick={() => setShowShareModal(false)}
-                className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 px-6 py-3 rounded-2xl font-medium transition-all"
-              >
-                Close
+              <button onClick={() => setShowShareModal(false)} className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 px-6 py-3 rounded-2xl font-medium transition-all">
+                {t("share_close")}
               </button>
             </motion.div>
           </motion.div>
