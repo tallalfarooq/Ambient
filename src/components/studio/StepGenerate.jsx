@@ -132,13 +132,15 @@ const FINE_TUNE_OPTIONS = {
 };
 
 // Negative prompt — shared by all generation modes.
-// Tells SD what NOT to render; structural items listed here can never appear unless reference has them.
 const STRUCTURE_NEGATIVE_PROMPT =
-  "new door, added door, extra door, removed door, new window, added window, extra window, removed window, " +
+  "new window, added window, extra window, imaginary window, window where none exists, removed window, " +
+  "new door, added door, extra door, imaginary door, door where none exists, removed door, " +
+  "new wall opening, new archway, blocked opening, " +
   "new wall, removed wall, different room shape, different floor plan, different ceiling height, " +
-  "structural change, remodeled walls, new opening, blocked window, different room layout, " +
+  "structural change, remodeled walls, different room layout, " +
   "different architecture, extra room, different perspective, different camera angle, " +
-  "fisheye, distorted perspective, warped walls, CGI, render, illustration, painting";
+  "fisheye, distorted perspective, warped walls, CGI, render, illustration, painting, " +
+  "unrealistic lighting, fake sunlight from non-existent window";
 
 const buildPrompt = (data) => {
   const style = data.style || "modern";
@@ -158,12 +160,12 @@ const buildPrompt = (data) => {
   const furnitureStr = roomFurniture ? ` Include: ${roomFurniture}.` : "";
 
   if (data.room_mode === "furnish") {
-    // Furnish: start from empty room — architecture anchor first, then furniture instruction
     return (
       `Photorealistic interior design photograph. ` +
-      `ARCHITECTURE LOCKED — identical camera angle, identical perspective, identical window positions and sizes, ` +
-      `identical room dimensions and proportions, identical ceiling height, identical wall layout, identical floor plan from reference photo. ` +
-      `Same number of windows. Same number of doors. No new openings. No removed walls. ` +
+      `CRITICAL ARCHITECTURE LOCK — copy exact camera angle, exact perspective, exact room proportions from reference. ` +
+      `WINDOWS: reproduce ONLY the windows that exist in the reference photo — exact positions, exact sizes, exact number. DO NOT ADD any new windows. ` +
+      `DOORS: reproduce ONLY the doors that exist in the reference photo. DO NOT ADD any new doors. ` +
+      `Same ceiling height. Same wall positions. Same floor plan. Zero structural changes. ` +
       `Task: add realistic ${style}-style furniture and decor only. ${styleDetail}.${furnitureStr}` +
       ` Real purchasable furniture — crisp edges, accurate fabric/wood/metal textures, proper floor contact shadows.` +
       `${palette}${customStr}${vibeStr}` +
@@ -171,13 +173,13 @@ const buildPrompt = (data) => {
     );
   }
 
-  // Redesign mode: change style/decor/furniture ONLY — architecture is frozen
+  // Redesign mode
   return (
     `Photorealistic interior design photograph. ` +
-    `ARCHITECTURE LOCKED — identical camera angle, identical perspective, identical window positions and sizes, ` +
-    `identical room dimensions, identical ceiling height, identical wall positions, identical door positions, ` +
-    `identical floor plan from reference photo. Same number of windows. Same number of doors. ` +
-    `No new architectural elements. No removed architectural elements. ` +
+    `CRITICAL ARCHITECTURE LOCK — copy exact camera angle, exact perspective, exact room geometry from reference. ` +
+    `WINDOWS: reproduce ONLY the windows visible in the reference photo — same positions, same sizes, same count. DO NOT ADD any windows that do not exist in the reference. ` +
+    `DOORS: reproduce ONLY the doors visible in the reference photo — same positions, same count. DO NOT ADD new doors. ` +
+    `Same ceiling height. Same wall positions. Same floor plan. Zero structural changes. ` +
     `Apply ${style} interior design style to this ${roomType}: ${styleDetail}.${furnitureStr}` +
     ` Change ONLY: furniture pieces, upholstery fabrics, soft furnishings, decorative objects, paint finish, surface materials.` +
     ` Do NOT change: wall structure, window count/position, door count/position, ceiling shape, floor area, room footprint.` +
@@ -363,7 +365,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [prevGenerated,setPrevGenerated]= useState(null); // the render BEFORE the latest fine-tune (for slider "before")
   const [designId,     setDesignId]     = useState(data.design_id || null); // auto-saved draft record
   const [prompt,       setPrompt]       = useState(buildPrompt(data));
-  const [intensity,    setIntensity]    = useState(data.intensity ?? 65);
+  const [intensity,    setIntensity]    = useState(data.intensity ?? 55);
   const [feedback,     setFeedback]     = useState(null);
   const [feedbackNote, setFeedbackNote] = useState("");
   const [error,        setError]        = useState(null);
@@ -501,12 +503,11 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           ? `${prompt}, avoid: ${feedbackNote}`
           : prompt;
       if (data.room_mode === "furnish") {
-        // Furnish needs higher strength to place furniture into empty room
-        strength = Math.max(intensity / 100, 0.75);
+        // Furnish: cap at 0.82 so furniture appears but room structure is still preserved
+        strength = Math.min(Math.max(intensity / 100, 0.70), 0.82);
       } else {
-        // Redesign: cap at 0.65 — above this SD starts ignoring reference image structure.
-        // At 0.65 the style/furniture fully transforms while walls/windows/doors are preserved.
-        strength = Math.min(intensity / 100, 0.65);
+        // Redesign: hard cap at 0.60 — above this SD ignores reference structure (adds fake windows etc)
+        strength = Math.min(intensity / 100, 0.60);
       }
     }
 
@@ -787,7 +788,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         <input
           type="range"
           min={20}
-          max={90}
+          max={80}
           value={intensity}
           onChange={(e) => setIntensity(parseInt(e.target.value))}
           disabled={loading}
@@ -795,8 +796,14 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         />
         <div className="flex justify-between text-[10px] text-white/25 mt-1">
           <span>Keep original character</span>
-          <span>Full reimagination</span>
+          <span>Bold transformation</span>
         </div>
+        {intensity > 65 && (
+          <div className="mt-2 flex items-start gap-2 px-3 py-2 rounded-xl text-xs" style={{ background: "rgba(201,150,58,0.08)", border: "1px solid rgba(201,150,58,0.2)", color: "rgba(201,150,58,0.8)" }}>
+            <span className="flex-shrink-0 mt-0.5">⚠</span>
+            <span>High intensity may alter room structure. If windows or doors change, lower the slider and regenerate.</span>
+          </div>
+        )}
       </div>
 
       {/* Preview area */}
