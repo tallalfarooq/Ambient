@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext } from "react";
 import { useLanguage } from "@/lib/LanguageContext";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
 import { Layers, Home, BookImage, LogIn, LogOut, User, Sparkles, Heart } from "lucide-react";
@@ -157,7 +157,7 @@ export default function Layout({ children, currentPageName }) {
         </nav>
 
         {/* Page content */}
-        <div className="pt-14">
+        <div className="pt-14 pb-16 sm:pb-0">
           {children}
         </div>
 
@@ -193,6 +193,42 @@ export default function Layout({ children, currentPageName }) {
             <p className="text-white/15 text-xs">© 2026 AmbientSpace.ai. All rights reserved.</p>
           </div>
         </footer>
+
+        {/* Mobile bottom nav */}
+        <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0A0A0B]/95 backdrop-blur-xl">
+          <div className="flex items-center justify-around px-2 py-2">
+            {NAV.map(({ labelKey, page, icon: Icon }) => (
+              <Link
+                key={page}
+                to={createPageUrl(page)}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
+                  currentPageName === page ? "text-white" : "text-white/35"
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-[9px] font-semibold tracking-wide">{t(labelKey)}</span>
+              </Link>
+            ))}
+            {user ? (
+              <button
+                onClick={() => base44.auth.logout()}
+                className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-white/35"
+              >
+                <LogOut className="w-5 h-5" />
+                <span className="text-[9px] font-semibold tracking-wide">{t("sign_out")}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => base44.auth.redirectToLogin(window.location.href)}
+                className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl"
+                style={{ color: "#1B8FA0" }}
+              >
+                <LogIn className="w-5 h-5" />
+                <span className="text-[9px] font-semibold tracking-wide">{t("sign_in")}</span>
+              </button>
+            )}
+          </div>
+        </nav>
 
         {/* Cookie banner */}
         {!consent && <CookieBanner onConsent={handleConsent} />}
