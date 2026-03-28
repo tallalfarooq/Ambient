@@ -190,7 +190,7 @@ export default function Home() {
       <Ticker />
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section id="hero" className="relative flex items-center min-h-screen overflow-hidden" style={{ paddingTop: 0 }}>
+      <section id="hero" className="relative flex items-center min-h-[60vh] lg:min-h-screen overflow-hidden" style={{ paddingTop: 0 }}>
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="absolute w-[700px] h-[700px] rounded-full"
             style={{ top: -100, left: -200, background: "radial-gradient(circle, rgba(29,158,117,0.1), transparent 70%)", filter: "blur(100px)", animation: "floatOrb 14s ease-in-out infinite" }} />

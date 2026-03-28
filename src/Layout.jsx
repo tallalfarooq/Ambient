@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext } from "react";
 import { useLanguage } from "@/lib/LanguageContext";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
 import { Layers, Home, BookImage, LogIn, LogOut, User, Sparkles, Heart } from "lucide-react";
@@ -215,7 +215,7 @@ export default function Layout({ children, currentPageName }) {
                 className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-white/35"
               >
                 <LogOut className="w-5 h-5" />
-                <span className="text-[9px] font-semibold tracking-wide">{t("sign_out")}</span>
+                <span className="text-[9px] font-semibold tracking-wide">Logout</span>
               </button>
             ) : (
               <button
