@@ -85,4 +85,9 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  button, a, [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
 }
