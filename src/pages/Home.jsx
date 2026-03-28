@@ -224,7 +224,7 @@ export default function Home() {
                 <Sparkles className="w-4 h-4" />
                 {t("hero_cta_primary")}
               </button>
-              <button onClick={handleStart} className="flex items-center gap-2 font-medium text-sm transition-all duration-300 hover:bg-white/5"
+              <button onClick={() => navigate(createPageUrl("Projects"))} className="flex items-center gap-2 font-medium text-sm transition-all duration-300 hover:bg-white/5"
                 style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", padding: "15px 26px", borderRadius: 100 }}>
                 {t("hero_cta_secondary")}
                 <ArrowRight className="w-4 h-4" />
