@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Check, Sparkles, Crown, Zap, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { useLanguage } from "@/lib/LanguageContext";
 
 export default function Pricing() {
@@ -51,10 +52,13 @@ export default function Pricing() {
     }
     setPurchasing(planId);
     try {
-      const response = await base44.functions.invoke("createCheckout", { plan: planId, returnUrl: window.location.origin });
+      // Return to /Studio so the ?payment=success handler fires and shows the confirmation toast
+      const returnUrl = `${window.location.origin}/Studio`;
+      const response = await base44.functions.invoke("createCheckout", { plan: planId, returnUrl });
       if (response.data?.url) window.location.href = response.data.url;
     } catch (err) {
       console.error("Checkout failed:", err);
+      toast.error("Payment setup failed. Please try again.");
       setPurchasing(null);
     }
   };

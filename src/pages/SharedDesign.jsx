@@ -138,7 +138,7 @@ export default function SharedDesign() {
           <div>
             <h1 className="font-semibold text-lg">{design.name}</h1>
             <p className="text-white/35 text-xs">
-              {design.style} · €{design.budget_min?.toLocaleString()}–€{design.budget_max?.toLocaleString()}
+              {[design.style, design.room_type].filter(Boolean).join(" · ")}
             </p>
           </div>
           <Link

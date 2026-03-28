@@ -8,6 +8,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import Favorites from '@/pages/Favorites';
 import SharedDesign from '@/pages/SharedDesign';
 import Pricing from '@/pages/Pricing';
@@ -92,19 +93,20 @@ const AuthenticatedApp = () => {
 
 
 function App() {
-
   return (
-    <LanguageProvider>
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
-    </LanguageProvider>
-  )
+    <ErrorBoundary>
+      <LanguageProvider>
+        <AuthProvider>
+          <QueryClientProvider client={queryClientInstance}>
+            <Router>
+              <AuthenticatedApp />
+            </Router>
+            <Toaster />
+          </QueryClientProvider>
+        </AuthProvider>
+      </LanguageProvider>
+    </ErrorBoundary>
+  );
 }
 
 export default App

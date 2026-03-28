@@ -152,7 +152,7 @@ export default function CartDrawer({ items, isOpen, onClose, onRemove }) {
                             <span className={`text-xs px-1.5 py-0.5 rounded-full border ${SOURCE_COLORS[match.source] || "text-white/40 bg-white/5 border-white/10"}`}>
                               {match.source}
                             </span>
-                            <span className="text-sm font-bold text-white">€{match.price?.toLocaleString()}</span>
+                            <span className="text-sm font-bold text-white">€{match.price != null ? match.price.toLocaleString() : "—"}</span>
                           </div>
                           {match.url && (
                             <a

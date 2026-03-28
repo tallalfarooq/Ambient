@@ -156,7 +156,7 @@ export default function Design() {
     
     let token = savedDesign.share_token;
     if (!token) {
-      token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      token = crypto.randomUUID().replace(/-/g, "");
       await base44.entities.SavedDesign.update(savedDesign.id, { share_token: token, is_public: true });
       setSavedDesign({ ...savedDesign, share_token: token, is_public: true });
     } else if (!savedDesign.is_public) {
@@ -177,22 +177,38 @@ export default function Design() {
 
   const loadDesign = useCallback(async () => {
     if (!designId) return;
-    const d = await base44.entities.RoomDesign.filter({ id: designId });
-    if (d.length) setDesign(d[0]);
-    const existing = await base44.entities.FurnitureItem.filter({ design_id: designId });
-    setItems(existing);
-    setLoading(false);
+    try {
+      const d = await base44.entities.RoomDesign.filter({ id: designId });
+      if (d.length) setDesign(d[0]);
+      const existing = await base44.entities.FurnitureItem.filter({ design_id: designId });
+      setItems(existing);
+    } catch (err) {
+      console.error("Failed to load design:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [designId]);
 
   useEffect(() => { loadDesign(); }, [loadDesign]);
 
   useEffect(() => {
     if (!design || design.status !== "generating") return;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 40; // ~2 minutes at 3 s intervals
     const timer = setInterval(async () => {
-      const d = await base44.entities.RoomDesign.filter({ id: designId });
-      if (d.length) {
-        setDesign(d[0]);
-        if (d[0].status !== "generating") clearInterval(timer);
+      attempts++;
+      try {
+        const d = await base44.entities.RoomDesign.filter({ id: designId });
+        if (d.length) {
+          setDesign(d[0]);
+          if (d[0].status !== "generating") clearInterval(timer);
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+      if (attempts >= MAX_ATTEMPTS) {
+        clearInterval(timer);
+        setDesign((prev) => prev ? { ...prev, status: "error" } : prev);
       }
     }, 3000);
     return () => clearInterval(timer);
