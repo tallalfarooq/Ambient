@@ -519,15 +519,20 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           ? `${prompt}, avoid: ${feedbackNote}`
           : prompt;
       if (data.room_mode === "furnish") {
-        // Furnish: cap at 0.82; if structure locked cap tighter at 0.72
+        // Furnish: placing furniture into an empty room — needs moderate-high strength.
+        // Map intensity 0–100 → strength 0.55–0.78; tighten slightly when locked.
+        const furnishBase = 0.55 + (intensity / 100) * 0.23;
         strength = data.structure_locked
-          ? Math.min(Math.max(intensity / 100, 0.70), 0.72)
-          : Math.min(Math.max(intensity / 100, 0.70), 0.82);
+          ? Math.min(furnishBase, 0.68)
+          : Math.min(furnishBase, 0.78);
       } else {
-        // Redesign: hard cap at 0.60; if structure locked enforce stricter 0.45 cap
+        // Redesign: change style/materials ONLY — structure must stay intact.
+        // Map intensity 0–100 → strength 0.15–0.38 so the model never wanders far
+        // from the original composition. Higher intensity = bolder style, not new walls.
+        const redesignBase = 0.15 + (intensity / 100) * 0.23;
         strength = data.structure_locked
-          ? Math.min(intensity / 100, 0.45)
-          : Math.min(intensity / 100, 0.60);
+          ? Math.min(redesignBase, 0.28)   // locked: max 0.28 — very tight to original
+          : Math.min(redesignBase, 0.38);  // unlocked: max 0.38
       }
     }
 
@@ -549,7 +554,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         existing_image_urls: [baseImageUrl],
         options: {
           strength,
-          guidance_scale: data.structure_locked ? (isPaid ? 14 : 10) : (isPaid ? 12 : 8),
+          guidance_scale: data.structure_locked ? (isPaid ? 16 : 12) : (isPaid ? 13 : 9),
           num_inference_steps: isPaid ? 40 : 18,
           negative_prompt: activeNegativePrompt,
           ...(isPaid ? { width: 1024, height: 1024 } : { width: 768, height: 768 }),
@@ -706,10 +711,10 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   }, [generated, isPaidUser]);
 
   const intensityLabel =
-    intensity < 35 ? "Subtle refresh"
+    intensity < 30 ? "Subtle style refresh"
     : intensity < 55 ? "Balanced redesign"
-    : intensity < 75 ? "Bold transformation"
-    : "Full reimagination";
+    : intensity < 75 ? "Bold style change"
+    : "Max style — may shift structure";
 
   // Still loading auth
   if (user === undefined) {

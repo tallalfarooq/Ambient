@@ -24,7 +24,7 @@ export default function Studio() {
     color_palette:       "",
     vibes:               [],
     sustainability_mode: false,
-    intensity:           55,
+    intensity:           35,
     room_dimensions:     { width: 4, length: 5, height: 2.8 },
     wall_color:          null,
     sofa_color:          null,
@@ -54,7 +54,7 @@ export default function Studio() {
   const resetData = () => ({
     name: "My Room Design", room_type: null, room_mode: "redesign",
     room_image_url: null, room_file_url: null, style: null,
-    color_palette: "", vibes: [], sustainability_mode: false, intensity: 55,
+    color_palette: "", vibes: [], sustainability_mode: false, intensity: 35,
     room_dimensions: { width: 4, length: 5, height: 2.8 },
     wall_color: null, sofa_color: null, floor_type: null,
     ceiling_design: null, custom_note: "", design_id: null,
