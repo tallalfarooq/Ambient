@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useTransition } from "react";
 import { base44 } from "@/api/base44Client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Palette, Sparkles, Check, ScanSearch, Plus } from "lucide-react";
@@ -24,7 +24,7 @@ export default function Studio() {
     color_palette:       "",
     vibes:               [],
     sustainability_mode: false,
-    intensity:           65,
+    intensity:           55,
     room_dimensions:     { width: 4, length: 5, height: 2.8 },
     wall_color:          null,
     sofa_color:          null,
@@ -32,9 +32,6 @@ export default function Studio() {
     ceiling_design:      null,
     custom_note:         "",
     design_id:           null,
-    structure_locked:    false,
-    window_count:        1,
-    door_count:          1,
   });
 
   const { t } = useLanguage();
@@ -53,6 +50,15 @@ export default function Studio() {
 
   const update = (patch) => setData((d) => ({ ...d, ...patch }));
   const stepProps = { data, update, onNext: () => setStep((s) => s + 1), onBack: () => setStep((s) => s - 1) };
+
+  const resetData = () => ({
+    name: "My Room Design", room_type: null, room_mode: "redesign",
+    room_image_url: null, room_file_url: null, style: null,
+    color_palette: "", vibes: [], sustainability_mode: false, intensity: 55,
+    room_dimensions: { width: 4, length: 5, height: 2.8 },
+    wall_color: null, sofa_color: null, floor_type: null,
+    ceiling_design: null, custom_note: "", design_id: null,
+  });
 
   useEffect(() => {
     if (!data.room_image_url) return;
@@ -146,45 +152,43 @@ export default function Studio() {
       <div className="relative z-10 max-w-3xl mx-auto px-4 pb-24 pt-10">
 
         {/* ── Mode Switcher ─────────────────────────────────── */}
-        <div className="flex items-center justify-center mb-10" style={{ position: "relative" }}>
+        <div className="flex flex-col gap-3 mb-8">
+          {/* Mode tabs — full width on mobile */}
+          <div className="flex items-center gap-1 p-1 rounded-2xl w-full"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <button
+              onClick={() => setMode("design")}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${mode === "design" ? "text-white shadow-lg" : "text-white/40 hover:text-white/70"}`}
+              style={mode === "design" ? { background: "#1B8FA0" } : {}}
+            >
+              <Sparkles className="w-4 h-4 flex-shrink-0" />
+              <span>{t("studio_mode_design")}</span>
+            </button>
+            <button
+              onClick={() => setMode("find")}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${mode === "find" ? "text-white shadow-lg" : "text-white/40 hover:text-white/70"}`}
+              style={mode === "find" ? { background: "#C9963A" } : {}}
+            >
+              <ScanSearch className="w-4 h-4 flex-shrink-0" />
+              <span>{t("studio_mode_find")}</span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full hidden sm:inline" style={{ background: "rgba(201,150,58,0.25)", color: "#C9963A" }}>PRO</span>
+            </button>
+          </div>
+
+          {/* New design button — only when in multi-step flow */}
           {step > 0 && (
             <button
               onClick={() => {
                 try { localStorage.removeItem("ambient_studio_session"); } catch {}
                 setStep(0);
-                setData({
-                  name: "My Room Design", room_type: null, room_mode: "redesign",
-                  room_image_url: null, room_file_url: null, style: null,
-                  color_palette: "", vibes: [], sustainability_mode: false, intensity: 65,
-                  room_dimensions: { width: 4, length: 5, height: 2.8 },
-                  wall_color: null, sofa_color: null, floor_type: null,
-                  ceiling_design: null, custom_note: "", design_id: null,
-                });
+                setData(resetData());
               }}
-              className="absolute right-0 flex items-center gap-2 text-white font-semibold px-4 py-2.5 rounded-2xl transition-opacity hover:opacity-90 text-sm"
+              className="flex items-center justify-center gap-2 text-white font-semibold px-4 py-2.5 rounded-2xl transition-opacity hover:opacity-90 text-sm w-full"
               style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
             >
               <Plus className="w-4 h-4" /> {t("studio_new_design")}
             </button>
           )}
-          <div className="flex items-center gap-1 p-1 rounded-2xl"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <button
-              onClick={() => setMode("design")}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${mode === "design" ? "text-white shadow-lg" : "text-white/40 hover:text-white/70"}`}
-              style={mode === "design" ? { background: "#1B8FA0" } : {}}
-            >
-              <Sparkles className="w-4 h-4" /> {t("studio_mode_design")}
-            </button>
-            <button
-              onClick={() => setMode("find")}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${mode === "find" ? "text-white shadow-lg" : "text-white/40 hover:text-white/70"}`}
-              style={mode === "find" ? { background: "#C9963A" } : {}}
-            >
-              <ScanSearch className="w-4 h-4" /> {t("studio_mode_find")}
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(201,150,58,0.25)", color: "#C9963A" }}>PRO</span>
-            </button>
-          </div>
         </div>
 
         {/* ── Find Similar Mode ─────────────────────────────── */}
@@ -194,8 +198,8 @@ export default function Studio() {
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">{t("studio_find_title")}</h1>
               <p className="text-white/40 text-sm">{t("studio_find_sub")}</p>
             </div>
-            <div className="rounded-3xl p-6 sm:p-8 shadow-2xl"
-              style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03)" }}>
+            <div className="rounded-3xl p-5 sm:p-8 shadow-2xl"
+              style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "0 32px 80px rgba(0,0,0,0.5)" }}>
               <StepFindSimilar user={user} credits={credits} />
             </div>
           </div>
@@ -208,14 +212,14 @@ export default function Studio() {
               <motion.div
                 key={`hd-${step}`}
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }} className="text-center mb-10"
+                transition={{ duration: 0.3 }} className="text-center mb-8"
               >
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold tracking-widest uppercase px-3 py-1.5 rounded-full mb-4"
                   style={{ background: "rgba(27,143,160,0.12)", border: "1px solid rgba(27,143,160,0.25)", color: "#1B8FA0" }}>
                   {(() => { const s = STEPS[step] || STEPS[STEPS.length - 1]; const Icon = s.Icon; return <Icon className="w-3 h-3" />; })()}
                   {t("studio_step_label")} {Math.min(step, STEPS.length - 1) + 1} {t("studio_step_of")} {STEPS.length}
                 </span>
-                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-2">
+                <h1 className="text-2xl sm:text-4xl font-bold tracking-tight mb-2">
                   {(STEP_HEADLINES[step] || STEP_HEADLINES[STEP_HEADLINES.length - 1]).title}
                 </h1>
                 <p className="text-white/40 text-sm">
@@ -224,13 +228,14 @@ export default function Studio() {
               </motion.div>
             </AnimatePresence>
 
-            <div className="flex items-center mb-10">
+            {/* Step progress bar */}
+            <div className="flex items-center mb-8">
               {STEPS.map((s, i) => (
                 <React.Fragment key={s.label}>
                   <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
                     <div className="relative">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 ${i < step ? "" : i === step ? "ring-2 ring-offset-2 ring-offset-[#0A0A0B]" : "bg-white/5 ring-1 ring-white/10"}`}
-                        style={i < step ? { background: "#1B8FA0" } : i === step ? { background: "rgba(27,143,160,0.15)", ringColor: "#1B8FA0" } : {}}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-500 ${i < step ? "" : i === step ? "ring-2 ring-offset-2 ring-offset-[#0A0A0B]" : "bg-white/5 ring-1 ring-white/10"}`}
+                        style={i < step ? { background: "#1B8FA0" } : i === step ? { background: "rgba(27,143,160,0.15)" } : {}}>
                         {i < step
                           ? <Check className="w-4 h-4 text-white" />
                           : <s.Icon className={`w-4 h-4 ${i === step ? "" : "text-white/20"}`} style={i === step ? { color: "#1B8FA0" } : {}} />
@@ -245,7 +250,7 @@ export default function Studio() {
                     </span>
                   </div>
                   {i < STEPS.length - 1 && (
-                    <div className="flex-1 mx-3 mb-5 h-px relative overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
+                    <div className="flex-1 mx-2 mb-5 h-px relative overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
                       <motion.div
                         className="absolute inset-y-0 left-0 rounded-full"
                         style={{ background: "linear-gradient(90deg, #1B8FA0, #C9963A)" }}
@@ -259,8 +264,8 @@ export default function Studio() {
               ))}
             </div>
 
-            <div className="rounded-3xl p-6 sm:p-8 shadow-2xl"
-              style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03)" }}>
+            <div className="rounded-3xl p-5 sm:p-8 shadow-2xl"
+              style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", boxShadow: "0 32px 80px rgba(0,0,0,0.5)" }}>
               <AnimatePresence mode="wait">
                 <motion.div key={step} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -18 }} transition={{ duration: 0.28, ease: "easeOut" }}>
                   {step === 0 && <StepUpload   {...stepProps} />}
