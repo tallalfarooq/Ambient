@@ -159,12 +159,22 @@ const buildPrompt = (data) => {
   const customStr = customParts.length ? ` ${customParts.join(". ")}.` : "";
   const furnitureStr = roomFurniture ? ` Include: ${roomFurniture}.` : "";
 
+  // Build window/door lock strings — more explicit when structure lock is on
+  const winCount  = data.structure_locked ? (data.window_count  ?? 1) : null;
+  const doorCount = data.structure_locked ? (data.door_count    ?? 1) : null;
+  const windowStr = winCount !== null
+    ? `WINDOWS: EXACTLY ${winCount} window${winCount !== 1 ? "s" : ""} — no more, no less. Copy exact positions and sizes from reference. DO NOT add or remove any window. `
+    : `WINDOWS: reproduce ONLY the windows that exist in the reference photo — exact positions, exact sizes, exact number. DO NOT ADD any new windows. `;
+  const doorStr = doorCount !== null
+    ? `DOORS: EXACTLY ${doorCount} door${doorCount !== 1 ? "s" : ""} — no more, no less. Copy exact position from reference. DO NOT add or remove any door. `
+    : `DOORS: reproduce ONLY the doors that exist in the reference photo. DO NOT ADD any new doors. `;
+
   if (data.room_mode === "furnish") {
     return (
       `Photorealistic interior design photograph. ` +
       `CRITICAL ARCHITECTURE LOCK — copy exact camera angle, exact perspective, exact room proportions from reference. ` +
-      `WINDOWS: reproduce ONLY the windows that exist in the reference photo — exact positions, exact sizes, exact number. DO NOT ADD any new windows. ` +
-      `DOORS: reproduce ONLY the doors that exist in the reference photo. DO NOT ADD any new doors. ` +
+      windowStr +
+      doorStr +
       `Same ceiling height. Same wall positions. Same floor plan. Zero structural changes. ` +
       `Task: add realistic ${style}-style furniture and decor only. ${styleDetail}.${furnitureStr}` +
       ` Real purchasable furniture — crisp edges, accurate fabric/wood/metal textures, proper floor contact shadows.` +
@@ -177,8 +187,8 @@ const buildPrompt = (data) => {
   return (
     `Photorealistic interior design photograph. ` +
     `CRITICAL ARCHITECTURE LOCK — copy exact camera angle, exact perspective, exact room geometry from reference. ` +
-    `WINDOWS: reproduce ONLY the windows visible in the reference photo — same positions, same sizes, same count. DO NOT ADD any windows that do not exist in the reference. ` +
-    `DOORS: reproduce ONLY the doors visible in the reference photo — same positions, same count. DO NOT ADD new doors. ` +
+    windowStr +
+    doorStr +
     `Same ceiling height. Same wall positions. Same floor plan. Zero structural changes. ` +
     `Apply ${style} interior design style to this ${roomType}: ${styleDetail}.${furnitureStr}` +
     ` Change ONLY: furniture pieces, upholstery fabrics, soft furnishings, decorative objects, paint finish, surface materials.` +
@@ -196,11 +206,17 @@ const buildFineTunePrompt = (data) => {
     return buildPrompt(data);
   }
 
+  const winCount  = data.structure_locked ? (data.window_count  ?? 1) : null;
+  const doorCount = data.structure_locked ? (data.door_count    ?? 1) : null;
+  const exactCounts = winCount !== null
+    ? `EXACTLY ${winCount} window${winCount !== 1 ? "s" : ""} and EXACTLY ${doorCount ?? 1} door${(doorCount ?? 1) !== 1 ? "s" : ""} — no more, no less. `
+    : `Same number of windows. Same number of doors. `;
+
   const parts = [
     `Photorealistic interior design photograph. ` +
     `ARCHITECTURE LOCKED — identical camera angle, identical perspective, identical room proportions, ` +
     `identical window positions and sizes, identical ceiling height, identical wall positions, identical door positions, ` +
-    `identical floor plan from reference image. Same number of windows. Same number of doors. No new openings. No removed walls.`,
+    `identical floor plan from reference image. ${exactCounts}No new openings. No removed walls.`,
     `${style} style ${roomType}.`,
   ];
   if (data.wall_color)          parts.push(`${data.wall_color} painted walls.`);
@@ -503,15 +519,29 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           ? `${prompt}, avoid: ${feedbackNote}`
           : prompt;
       if (data.room_mode === "furnish") {
-        // Furnish: cap at 0.82 so furniture appears but room structure is still preserved
-        strength = Math.min(Math.max(intensity / 100, 0.70), 0.82);
+        // Furnish: cap at 0.82; if structure locked cap tighter at 0.72
+        strength = data.structure_locked
+          ? Math.min(Math.max(intensity / 100, 0.70), 0.72)
+          : Math.min(Math.max(intensity / 100, 0.70), 0.82);
       } else {
-        // Redesign: hard cap at 0.60 — above this SD ignores reference structure (adds fake windows etc)
-        strength = Math.min(intensity / 100, 0.60);
+        // Redesign: hard cap at 0.60; if structure locked enforce stricter 0.45 cap
+        strength = data.structure_locked
+          ? Math.min(intensity / 100, 0.45)
+          : Math.min(intensity / 100, 0.60);
       }
     }
 
     const isPaid = credits && credits.plan_type !== "free";
+
+    // Strengthen negative prompt when structure lock is on
+    const LOCKED_EXTRA =
+      ", extra window, missing window, repositioned window, moved window, " +
+      "extra door, missing door, repositioned door, moved door, " +
+      "changed camera angle, rotated view, different viewpoint, zoomed in, zoomed out, " +
+      "wide angle distortion, perspective shift";
+    const activeNegativePrompt = data.structure_locked
+      ? STRUCTURE_NEGATIVE_PROMPT + LOCKED_EXTRA
+      : STRUCTURE_NEGATIVE_PROMPT;
 
     try {
       const result = await base44.integrations.Core.GenerateImage({
@@ -519,9 +549,9 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         existing_image_urls: [baseImageUrl],
         options: {
           strength,
-          guidance_scale: isPaid ? 12 : 8,
+          guidance_scale: data.structure_locked ? (isPaid ? 14 : 10) : (isPaid ? 12 : 8),
           num_inference_steps: isPaid ? 40 : 18,
-          negative_prompt: STRUCTURE_NEGATIVE_PROMPT,
+          negative_prompt: activeNegativePrompt,
           ...(isPaid ? { width: 1024, height: 1024 } : { width: 768, height: 768 }),
         },
       });
@@ -775,6 +805,85 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
             >
               ✕ clear
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Structure Lock ─────────────────────────────────────── */}
+      <div className="mb-6 rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${data.structure_locked ? "rgba(27,143,160,0.35)" : "rgba(255,255,255,0.08)"}` }}>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: data.structure_locked ? "rgba(27,143,160,0.25)" : "rgba(255,255,255,0.06)" }}>
+            <Lock className="w-3.5 h-3.5" style={{ color: data.structure_locked ? "#6EC6C6" : "rgba(255,255,255,0.4)" }} />
+          </div>
+          <p className="text-sm font-semibold text-white">Structure Lock</p>
+          {/* Toggle */}
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => update({ structure_locked: !data.structure_locked })}
+            className="ml-auto w-10 h-5 rounded-full relative transition-all focus:outline-none disabled:opacity-40"
+            style={{ background: data.structure_locked ? "#1B8FA0" : "rgba(255,255,255,0.12)" }}
+            aria-label="Toggle structure lock"
+          >
+            <span
+              className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"
+              style={{ left: data.structure_locked ? "calc(100% - 18px)" : "2px" }}
+            />
+          </button>
+        </div>
+        <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.35)" }}>
+          Prevents the AI from adding, removing or repositioning windows, doors and changing the camera angle.
+        </p>
+
+        {data.structure_locked && (
+          <div className="mt-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wider mb-3" style={{ color: "rgba(255,255,255,0.3)" }}>
+              Tell the AI exactly how many exist in your photo
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Windows */}
+              <div className="rounded-xl p-3" style={{ background: "rgba(27,143,160,0.07)", border: "1px solid rgba(27,143,160,0.18)" }}>
+                <p className="text-[11px] font-semibold mb-2" style={{ color: "#6EC6C6" }}>🪟 Windows</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => update({ window_count: Math.max(0, (data.window_count ?? 1) - 1) })}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-base font-bold transition-all disabled:opacity-40"
+                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
+                  >−</button>
+                  <span className="text-white font-bold w-6 text-center tabular-nums">{data.window_count ?? 1}</span>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => update({ window_count: Math.min(10, (data.window_count ?? 1) + 1) })}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-base font-bold transition-all disabled:opacity-40"
+                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
+                  >+</button>
+                </div>
+              </div>
+              {/* Doors */}
+              <div className="rounded-xl p-3" style={{ background: "rgba(27,143,160,0.07)", border: "1px solid rgba(27,143,160,0.18)" }}>
+                <p className="text-[11px] font-semibold mb-2" style={{ color: "#6EC6C6" }}>🚪 Doors</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => update({ door_count: Math.max(0, (data.door_count ?? 1) - 1) })}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-base font-bold transition-all disabled:opacity-40"
+                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
+                  >−</button>
+                  <span className="text-white font-bold w-6 text-center tabular-nums">{data.door_count ?? 1}</span>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => update({ door_count: Math.min(5, (data.door_count ?? 1) + 1) })}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-base font-bold transition-all disabled:opacity-40"
+                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
+                  >+</button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

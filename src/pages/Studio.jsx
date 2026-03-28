@@ -32,6 +32,9 @@ export default function Studio() {
     ceiling_design:      null,
     custom_note:         "",
     design_id:           null,
+    structure_locked:    false,
+    window_count:        1,
+    door_count:          1,
   });
 
   const { t } = useLanguage();
