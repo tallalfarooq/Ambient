@@ -9,11 +9,11 @@ import CookieBanner from "@/components/consent/CookieBanner";
 export const ConsentContext = createContext(null);
 
 const NAV = [
-  { labelKey: "nav_home",      page: "Home",      icon: Home      },
-  { labelKey: "nav_studio",    page: "Studio",    icon: Sparkles  },
-  { labelKey: "nav_projects",  page: "Projects",  icon: BookImage },
-  { labelKey: "nav_favorites", page: "Favorites", icon: Heart     },
-  { labelKey: "nav_pricing",   page: "Pricing",   icon: Layers    },
+  { labelKey: "nav_home",      page: "Home",      icon: Home,     mobileLabel: "Home"      },
+  { labelKey: "nav_studio",    page: "Studio",    icon: Sparkles, mobileLabel: "Studio"   },
+  { labelKey: "nav_projects",  page: "Projects",  icon: BookImage,mobileLabel: "Designs"  },
+  { labelKey: "nav_favorites", page: "Favorites", icon: Heart,    mobileLabel: "Favorites"},
+  { labelKey: "nav_pricing",   page: "Pricing",   icon: Layers,   mobileLabel: "Pricing"  },
 ];
 
 const CONSENT_KEY = "ambient_consent";
@@ -197,7 +197,7 @@ export default function Layout({ children, currentPageName }) {
         {/* Mobile bottom nav */}
         <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0A0A0B]/95 backdrop-blur-xl">
           <div className="flex items-center justify-around px-2 py-2">
-            {NAV.map(({ labelKey, page, icon: Icon }) => (
+            {NAV.map(({ page, icon: Icon, mobileLabel }) => (
               <Link
                 key={page}
                 to={createPageUrl(page)}
@@ -206,7 +206,7 @@ export default function Layout({ children, currentPageName }) {
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-[9px] font-semibold tracking-wide">{t(labelKey)}</span>
+                <span className="text-[9px] font-semibold">{mobileLabel}</span>
               </Link>
             ))}
             {user ? (
