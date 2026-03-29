@@ -1,4 +1,31 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+
+const AUDIENCE_NAME = "AmbientSpace Users";
+
+async function addToResendAudience(email, fullName) {
+  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+  // Get or create audience
+  const listRes = await fetch("https://api.resend.com/audiences", {
+    headers: { "Authorization": `Bearer ${RESEND_API_KEY}` },
+  });
+  const { data: audiences } = await listRes.json();
+  let audienceId = audiences?.find((a) => a.name === AUDIENCE_NAME)?.id;
+  if (!audienceId) {
+    const cr = await fetch("https://api.resend.com/audiences", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ name: AUDIENCE_NAME }),
+    });
+    audienceId = (await cr.json()).id;
+  }
+  if (!audienceId) return;
+  const parts = (fullName || "").split(" ");
+  await fetch(`https://api.resend.com/audiences/${audienceId}/contacts`, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ email, first_name: parts[0] || "", last_name: parts.slice(1).join(" ") || "", unsubscribed: false }),
+  });
+}
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const FROM           = "Ambient Space <hello@ambientspace.ai>";
@@ -36,6 +63,9 @@ Deno.serve(async (req) => {
     total_purchased:   0,
   });
   console.log("[sendWelcomeEmail] Credits created for", user.email);
+
+  // Add to Resend audience for marketing
+  try { await addToResendAudience(user.email, user.full_name || ""); } catch (e) { console.error("[sendWelcomeEmail] Resend audience sync failed:", e); }
 
   if (!RESEND_API_KEY) {
     console.error("[sendWelcomeEmail] RESEND_API_KEY is not set!");

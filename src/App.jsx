@@ -10,6 +10,7 @@ import { LanguageProvider } from '@/lib/LanguageContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Favorites from '@/pages/Favorites';
+import AdminEmail from '@/pages/AdminEmail';
 import SharedDesign from '@/pages/SharedDesign';
 import Pricing from '@/pages/Pricing';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
@@ -85,6 +86,7 @@ const AuthenticatedApp = () => {
         </LayoutWrapper>
       } />
       <Route path="/privacy-policy" element={<LayoutWrapper currentPageName="PrivacyPolicy"><PrivacyPolicy /></LayoutWrapper>} />
+      <Route path="/AdminEmail" element={<LayoutWrapper currentPageName="AdminEmail"><AdminEmail /></LayoutWrapper>} />
       <Route path="/terms-of-service" element={<LayoutWrapper currentPageName="TermsOfService"><TermsOfService /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
