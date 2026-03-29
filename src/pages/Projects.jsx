@@ -32,8 +32,13 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
       const a = document.createElement("a");
       a.href = url;
       a.download = `${design.name.replace(/\s+/g, "-").toLowerCase()}-render.jpg`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    } catch {
+      // Fallback for mobile browsers that block blob downloads
+      window.open(design.generated_render_url, '_blank', 'noopener,noreferrer');
     } finally {
       setDownloading(false);
     }
