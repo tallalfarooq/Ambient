@@ -24,6 +24,12 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
 
   const handleDownload = async () => {
     if (!design.generated_render_url) return;
+    // On mobile, blob downloads are blocked — open in new tab instead
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.open(design.generated_render_url, '_blank', 'noopener,noreferrer');
+      return;
+    }
     setDownloading(true);
     try {
       const res = await fetch(design.generated_render_url);
@@ -36,9 +42,6 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch {
-      // Fallback for mobile browsers that block blob downloads
-      window.open(design.generated_render_url, '_blank', 'noopener,noreferrer');
     } finally {
       setDownloading(false);
     }
