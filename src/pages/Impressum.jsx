@@ -3,13 +3,13 @@ export default function Impressum() {
     <div className="min-h-screen bg-[#0A0A0B] text-white px-6 py-16">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold mb-2">Legal Notice</h1>
-        <p className="text-white/40 text-sm mb-8">This service is currently in testing phase.</p>
+        <p className="text-white/40 text-sm mb-8">Information pursuant to § 5 TMG</p>
 
         <section className="space-y-6 text-white/60 text-sm leading-relaxed">
 
           <div>
-            <h2 className="text-white font-semibold mb-1">Service</h2>
-            <p>AmbientSpace AI</p>
+            <h2 className="text-white font-semibold mb-1">Service Provider</h2>
+            <p>AmbientSpace AI<br />ambientspace.ai</p>
           </div>
 
           <div>

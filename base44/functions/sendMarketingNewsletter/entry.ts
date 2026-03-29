@@ -31,17 +31,15 @@ Deno.serve(async (req) => {
   const BATCH = 50;
   let sent = 0, failed = 0;
 
-  const wrappedHtml = wrapInTemplate(subject, html);
-
   for (let i = 0; i < emails.length; i += BATCH) {
     const batch = emails.slice(i, i + BATCH);
 
-    // Send to each individually so unsubscribes work properly
+    // Wrap per-recipient so each unsubscribe link contains the correct email
     const results = await Promise.allSettled(batch.map((to) =>
       fetch("https://api.resend.com/emails", {
         method:  "POST",
         headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: FROM, to: [to], subject, html: wrappedHtml }),
+        body: JSON.stringify({ from: FROM, to: [to], subject, html: wrapInTemplate(subject, html, to) }),
       })
     ));
 
@@ -58,7 +56,8 @@ Deno.serve(async (req) => {
   return Response.json({ sent, failed, total: emails.length, segment: segment || "all" });
 });
 
-function wrapInTemplate(subject, content) {
+function wrapInTemplate(subject, content, recipientEmail = "") {
+  const unsubUrl = `${APP_URL}/unsubscribe?email=${encodeURIComponent(recipientEmail)}`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>${subject}</title></head>
@@ -85,11 +84,14 @@ function wrapInTemplate(subject, content) {
         <!-- Footer -->
         <tr><td align="center" style="padding:28px 0 0;border-top:1px solid rgba(255,255,255,0.06);margin-top:28px;">
           <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.18);">
-            © 2026 AmbientSpace.ai · 
+            © 2026 AmbientSpace.ai ·
             <a href="mailto:support@ambientspace.ai" style="color:rgba(255,255,255,0.35);text-decoration:none;">support@ambientspace.ai</a>
           </p>
           <p style="margin:6px 0 0;font-size:11px;color:rgba(255,255,255,0.12);">
             You're receiving this because you signed up at ambientspace.ai.
+          </p>
+          <p style="margin:8px 0 0;font-size:11px;">
+            <a href="${unsubUrl}" style="color:rgba(255,255,255,0.25);text-decoration:underline;">Unsubscribe</a>
           </p>
         </td></tr>
       </table>

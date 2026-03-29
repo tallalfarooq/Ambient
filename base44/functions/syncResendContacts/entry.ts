@@ -42,11 +42,13 @@ Deno.serve(async (req) => {
 
   for (const uc of allCredits) {
     const nameParts = (nameMap[uc.user_email] || "").split(" ");
+    // Do NOT include unsubscribed field — omitting it preserves the
+    // contact's existing opt-out status in Resend (GDPR compliance).
+    // Only set unsubscribed: false on brand-new contacts (Resend default).
     const body = {
-      email:       uc.user_email,
-      first_name:  nameParts[0] || "",
-      last_name:   nameParts.slice(1).join(" ") || "",
-      unsubscribed: false,
+      email:      uc.user_email,
+      first_name: nameParts[0] || "",
+      last_name:  nameParts.slice(1).join(" ") || "",
     };
 
     const res = await fetch(`https://api.resend.com/audiences/${audienceId}/contacts`, {
