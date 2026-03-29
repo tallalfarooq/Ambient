@@ -267,33 +267,24 @@ Return 4 matches maximum. Only include items that genuinely resemble what is in 
 
                   {/* Shop buttons row — all three retailers */}
                   <div className="flex items-center gap-2 px-4 pb-4">
-                    <a
-                      href={m.all_urls.amazon}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
-                      style={{ background: "rgba(255,153,0,0.12)", border: "1px solid rgba(255,153,0,0.25)", color: "#FF9900" }}
-                    >
-                      <ShoppingBag className="w-3 h-3" /> Amazon
-                    </a>
-                    <a
-                      href={m.all_urls.ikea}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
-                      style={{ background: "rgba(0,88,163,0.12)", border: "1px solid rgba(0,88,163,0.3)", color: "#6BA3D6" }}
-                    >
-                      <ShoppingBag className="w-3 h-3" /> IKEA
-                    </a>
-                    <a
-                      href={m.all_urls.google}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
-                      style={{ background: "rgba(66,133,244,0.1)", border: "1px solid rgba(66,133,244,0.25)", color: "#7EB3F8" }}
-                    >
-                      <ExternalLink className="w-3 h-3" /> Google
-                    </a>
+                    {[
+                      { label: "Amazon", url: m.all_urls.amazon, bg: "rgba(255,153,0,0.12)", border: "rgba(255,153,0,0.25)", color: "#FF9900" },
+                      { label: "IKEA",   url: m.all_urls.ikea,   bg: "rgba(0,88,163,0.12)",  border: "rgba(0,88,163,0.3)",   color: "#6BA3D6" },
+                      { label: "Google", url: m.all_urls.google,  bg: "rgba(66,133,244,0.1)", border: "rgba(66,133,244,0.25)", color: "#7EB3F8" },
+                    ].map(({ label, url, bg, border, color }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(url, "_blank", "noopener,noreferrer");
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all active:opacity-60"
+                        style={{ background: bg, border: `1px solid ${border}`, color }}
+                      >
+                        <ShoppingBag className="w-3 h-3" /> {label}
+                      </button>
+                    ))}
                   </div>
                 </motion.div>
               ))}

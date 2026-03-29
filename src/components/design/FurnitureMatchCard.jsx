@@ -112,15 +112,16 @@ export default function FurnitureMatchCard({ item, onItemUpdate }) {
               </div>
 
               {/* Branded CTA */}
-              <a
-                href={affiliateUrl}
-                target="_blank"
-                rel="noopener noreferrer nofollow"
-                onClick={(e) => e.stopPropagation()}
-                className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm transition-colors ${cta.className}`}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(affiliateUrl, "_blank", "noopener,noreferrer,nofollow");
+                }}
+                className={`flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm transition-colors active:opacity-60 ${cta.className}`}
               >
                 {cta.label}* <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+              </button>
             </div>
           );
         })}
