@@ -503,16 +503,14 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
 
               {/* Global search with Google Lens — paid users only */}
               {isPaidUser ? (
-                <a
-                  href={`https://www.google.com/searchbyimage?image_url=${encodeURIComponent(design.generated_render_url)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => window.open(`https://www.google.com/searchbyimage?image_url=${encodeURIComponent(design.generated_render_url)}`, '_blank', 'noopener,noreferrer')}
                   className="mt-2 w-full flex items-center justify-center gap-2 font-semibold py-3.5 rounded-2xl hover:opacity-90 transition-all"
                   style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)" }}
                 >
                   <Globe className="w-4 h-4" />
                   Search globally with Google
-                </a>
+                </button>
               ) : (
                 <div
                   className="mt-2 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl cursor-not-allowed"
@@ -575,15 +573,12 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                   </button>
                   {/* Google Lens search for this specific item — paid only */}
                   {isPaidUser && (
-                    <a
-                      href={`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(`${item.label || ""} ${item.style_tags?.slice(0,2).join(" ") || ""}`.trim())}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(`${item.label || ""} ${item.style_tags?.slice(0,2).join(" ") || ""}`.trim())}`, '_blank', 'noopener,noreferrer'); }}
                       className="w-full flex items-center gap-1 px-3 py-1.5 border-t border-white/5 text-[10px] text-white/35 hover:text-white/60 hover:bg-white/3 transition-all active:opacity-60"
                     >
                       <Globe className="w-2.5 h-2.5 flex-shrink-0" /> Search globally
-                    </a>
+                    </button>
                   )}
                 </div>
               ))}
