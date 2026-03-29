@@ -272,18 +272,17 @@ Return 4 matches maximum. Only include items that genuinely resemble what is in 
                       { label: "IKEA",   url: m.all_urls.ikea,   bg: "rgba(0,88,163,0.12)",  border: "rgba(0,88,163,0.3)",   color: "#6BA3D6" },
                       { label: "Google", url: m.all_urls.google,  bg: "rgba(66,133,244,0.1)", border: "rgba(66,133,244,0.25)", color: "#7EB3F8" },
                     ].map(({ label, url, bg, border, color }) => (
-                      <button
+                      <a
                         key={label}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(url, "_blank", "noopener,noreferrer");
-                        }}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all active:opacity-60"
                         style={{ background: bg, border: `1px solid ${border}`, color }}
                       >
                         <ShoppingBag className="w-3 h-3" /> {label}
-                      </button>
+                      </a>
                     ))}
                   </div>
                 </motion.div>

@@ -1214,8 +1214,10 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                 {/* Google Lens — search full image */}
                 <div>
                   <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2.5">Search entire room</p>
-                  <button
-                    onClick={() => window.open(`https://www.google.com/searchbyimage?image_url=${encodeURIComponent(generated)}`, "_blank", "noopener,noreferrer")}
+                  <a
+                    href={`https://www.google.com/searchbyimage?image_url=${encodeURIComponent(generated)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all hover:opacity-90 active:opacity-60"
                     style={{ background: "rgba(66,133,244,0.1)", border: "1px solid rgba(66,133,244,0.25)", color: "#7EB1F8" }}
                   >
@@ -1224,7 +1226,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                       <div className="font-semibold">Google Image Search</div>
                       <div className="text-[11px] text-white/35 font-normal">Find similar items from the full room image</div>
                     </div>
-                  </button>
+                  </a>
                 </div>
 
                 {/* Amazon chips — per furniture item from the room context */}
@@ -1241,19 +1243,18 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                         const query = `${clean} ${data.style || ""} ${data.room_type || ""}`.trim();
                         const url = `https://www.amazon.de/s?k=${encodeURIComponent(query)}&tag=ambient019-21`;
                         return (
-                          <button
+                          <a
                             key={clean}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(url, "_blank", "noopener,noreferrer");
-                            }}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border transition-all hover:opacity-90 active:opacity-60"
                             style={{ borderColor: "rgba(201,150,58,0.3)", background: "rgba(201,150,58,0.08)", color: "rgba(201,150,58,0.9)" }}
                           >
                             <ShoppingBag className="w-2.5 h-2.5 flex-shrink-0" />
                             {clean}
-                          </button>
+                          </a>
                         );
                       })}
                     </div>

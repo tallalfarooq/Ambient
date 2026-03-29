@@ -155,16 +155,15 @@ export default function CartDrawer({ items, isOpen, onClose, onRemove }) {
                             <span className="text-sm font-bold text-white">€{match.price != null ? match.price.toLocaleString() : "—"}</span>
                           </div>
                           {match.url && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(match.url, "_blank", "noopener,noreferrer,nofollow");
-                              }}
+                            <a
+                              href={match.url}
+                              target="_blank"
+                              rel="noopener noreferrer nofollow"
+                              onClick={(e) => e.stopPropagation()}
                               className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 transition-colors active:opacity-60"
                             >
                               Shop <ExternalLink className="w-3 h-3" />
-                            </button>
+                            </a>
                           )}
                         </div>
                       </div>
