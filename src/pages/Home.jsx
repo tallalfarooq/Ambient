@@ -450,7 +450,7 @@ export default function Home() {
   ];
 
   const STEPS = [
-    { n: "01", Icon: Upload,      title: t("step1_title"), desc: t("step1_desc"), accent: "#1B8FA0", rgb: "27,143,160",   img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=700&q=80" },
+    { n: "01", Icon: Upload,      title: t("step1_title"), desc: t("step1_desc"), accent: "#1B8FA0", rgb: "27,143,160",   img: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=700&q=80" },
     { n: "02", Icon: Palette,     title: t("step2_title"), desc: t("step2_desc"), accent: "#C9963A", rgb: "201,150,58",  img: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=700&q=80" },
     { n: "03", Icon: ShoppingBag, title: t("step3_title"), desc: t("step3_desc"), accent: "#9B7EC8", rgb: "155,126,200", img: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=700&q=80" },
   ];
@@ -508,24 +508,28 @@ export default function Home() {
             {t("hero_badge")}
           </motion.div>
 
-          {/* Headline — line 1 normal, line 2 image-clipped */}
-          <h1 style={{ fontWeight:800, letterSpacing:"-3px", lineHeight:1.0, marginBottom:26 }}>
+          {/* Headline — 3 distinct lines with clear visual hierarchy */}
+          <h1 style={{ fontWeight:800, lineHeight:1.0, marginBottom:26 }}>
+
+            {/* Line 1: plain white — smallest of the three */}
             <motion.span
-              initial={{ opacity:0, y:30, filter:"blur(6px)" }}
+              initial={{ opacity:0, y:28, filter:"blur(5px)" }}
               animate={{ opacity:1, y:0,  filter:"blur(0px)" }}
-              transition={{ delay:0.1, duration:0.7, ease:[0.16,1,0.3,1] }}
-              style={{ display:"block", fontSize:"clamp(38px,5.2vw,74px)", color:"#fff" }}
+              transition={{ delay:0.1, duration:0.65, ease:[0.16,1,0.3,1] }}
+              style={{ display:"block", fontSize:"clamp(32px,4vw,58px)", color:"#fff", letterSpacing:"-2px" }}
             >
-              {t("hero_title_1")}&nbsp;{t("hero_title_2")}
+              {t("hero_title_1")}
             </motion.span>
-            {/* The image-bleed accent word */}
+
+            {/* Line 2: image-bleed — the visual centrepiece, one clear phrase */}
             <motion.span
-              initial={{ opacity:0, scale:0.95, y:10 }}
-              animate={{ opacity:1, scale:1, y:0 }}
-              transition={{ delay:0.38, duration:0.9, ease:[0.16,1,0.3,1] }}
+              initial={{ opacity:0, scale:0.96, y:14 }}
+              animate={{ opacity:1, scale:1,    y:0 }}
+              transition={{ delay:0.3, duration:0.9, ease:[0.16,1,0.3,1] }}
               style={{
                 display:"block",
-                fontSize:"clamp(52px,8vw,116px)",
+                fontSize:"clamp(50px,7.5vw,110px)",
+                letterSpacing:"-4px",
                 backgroundImage:"url('https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1600&q=90')",
                 backgroundSize:"160% 160%",
                 backgroundPosition:"center 35%",
@@ -535,6 +539,16 @@ export default function Home() {
                 filter:"brightness(1.15) saturate(1.2)",
                 lineHeight:0.9,
               }}
+            >
+              {t("hero_title_2")}
+            </motion.span>
+
+            {/* Line 3: "in minutes" — clean, muted, clearly subordinate */}
+            <motion.span
+              initial={{ opacity:0, y:14 }}
+              animate={{ opacity:1, y:0 }}
+              transition={{ delay:0.5, duration:0.65, ease:[0.16,1,0.3,1] }}
+              style={{ display:"block", fontSize:"clamp(28px,3.4vw,50px)", letterSpacing:"-2px", color:"rgba(255,255,255,0.38)", fontWeight:500, marginTop:4 }}
             >
               {t("hero_title_3")}
             </motion.span>
