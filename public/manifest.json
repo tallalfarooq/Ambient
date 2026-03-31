@@ -1,6 +1,6 @@
 {
   "name": "Ambient Space",
-  "short_name": "Ambient",
+  "short_name": "Ambient Space",
   "description": "AI-powered interior design. Upload your room photo, choose a style, and shop real furniture from the render.",
   "start_url": "/",
   "display": "browser",
