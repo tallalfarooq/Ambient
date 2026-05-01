@@ -52,6 +52,7 @@ export default async function handler(req, res) {
     guidance_scale,
     image_size,
     num_inference_steps,
+    negative_prompt,
     mode,
     model,
     design_id,
@@ -61,7 +62,12 @@ export default async function handler(req, res) {
     return json(res, 400, { error: 'Missing or invalid `prompt`' });
   }
   if (!image_url || typeof image_url !== 'string') {
-    return json(res, 400, { error: 'Missing or invalid `image_url`' });
+    // eslint-disable-next-line no-console
+    console.error('[api/generate] body keys:', Object.keys(body || {}));
+    return json(res, 400, {
+      error: 'Missing or invalid `image_url`',
+      received_keys: Object.keys(body || {}),
+    });
   }
 
   // 1. Atomic credit debit with CAS (compare-and-swap).
@@ -136,6 +142,23 @@ export default async function handler(req, res) {
   // 2. Call fal.ai.
   let falResult;
   try {
+    // Resolve image_size: accept preset strings, {width,height} objects, or
+    // fall through to a sensible default.
+    let resolvedImageSize = 'landscape_4_3';
+    if (typeof image_size === 'string' && image_size.length > 0) {
+      resolvedImageSize = image_size;
+    } else if (
+      image_size &&
+      typeof image_size === 'object' &&
+      Number.isFinite(image_size.width) &&
+      Number.isFinite(image_size.height)
+    ) {
+      resolvedImageSize = {
+        width: clamp(image_size.width, 256, 1536),
+        height: clamp(image_size.height, 256, 1536),
+      };
+    }
+
     falResult = await fal.subscribe(model || DEFAULT_MODEL, {
       input: {
         prompt,
@@ -144,9 +167,10 @@ export default async function handler(req, res) {
         guidance_scale: typeof guidance_scale === 'number' ? guidance_scale : 3.5,
         num_inference_steps:
           typeof num_inference_steps === 'number' ? num_inference_steps : 28,
-        image_size: image_size || 'landscape_4_3',
+        image_size: resolvedImageSize,
         num_images: 1,
         enable_safety_checker: true,
+        ...(negative_prompt ? { negative_prompt } : {}),
       },
       logs: false,
     });

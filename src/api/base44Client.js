@@ -382,11 +382,51 @@ async function InvokeLLM({ prompt, response_json_schema, file_urls, model } = {}
 
 /**
  * Call the image generator via the server-side /api/generate route.
- * The server reads FAL_KEY, decrements credits in a transaction, then runs
- * fal.ai. Returns a URL to the generated image stored in Supabase Storage.
+ * Translates the Base44 SDK payload shape (existing_image_urls + nested
+ * options) into the flat shape our route expects.
+ *
+ * Returns a URL to the generated image stored in Supabase Storage.
  */
-async function GenerateImage(payload) {
-  return functions.invoke('generate', payload);
+async function GenerateImage(payload = {}) {
+  const {
+    prompt,
+    existing_image_urls,
+    options = {},
+    image_url: directImageUrl,
+    ...rest
+  } = payload;
+
+  // Base44 uses an array; we use a single image_url. First non-empty wins.
+  const image_url =
+    directImageUrl ||
+    (Array.isArray(existing_image_urls) ? existing_image_urls.find(Boolean) : undefined);
+
+  const {
+    strength,
+    guidance_scale,
+    num_inference_steps,
+    negative_prompt,
+    width,
+    height,
+    image_size,
+    ...optionRest
+  } = options;
+
+  // fal.ai accepts either a preset string or {width, height} for image_size.
+  const resolvedImageSize =
+    image_size ?? (width && height ? { width, height } : undefined);
+
+  return functions.invoke('generate', {
+    prompt,
+    image_url,
+    strength,
+    guidance_scale,
+    num_inference_steps,
+    negative_prompt,
+    image_size: resolvedImageSize,
+    ...optionRest,
+    ...rest,
+  });
 }
 
 const integrations = {
