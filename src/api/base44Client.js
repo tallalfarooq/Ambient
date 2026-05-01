@@ -309,29 +309,57 @@ const entities = {
  *     service_role; UploadFile in the browser only writes to 'rooms')
  */
 async function UploadFile({ file, bucket = 'rooms' }) {
-  // Read from session (no network, no lock) instead of getUser (both)
+  const tag = '[UploadFile]';
+  // eslint-disable-next-line no-console
+  console.log(tag, 'start', {
+    bucket,
+    name: file?.name,
+    type: file?.type,
+    size: file?.size,
+  });
+
+  // Read from session (no network, no lock).
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) {
     throw new Error('Not authenticated. Please sign in and try again.');
   }
+  // eslint-disable-next-line no-console
+  console.log(tag, 'session OK, user:', session.user.id);
 
   const userId = session.user.id;
   const safeName = (file.name || 'upload')
     .replace(/[^a-zA-Z0-9._-]/g, '_')
     .slice(-80);
   const objectKey = `${userId}/${Date.now()}-${safeName}`;
+  // eslint-disable-next-line no-console
+  console.log(tag, 'uploading to', `${bucket}/${objectKey}`);
 
-  const { error: uploadError } = await supabase.storage
+  // Cap the upload at 60s so the UI never hangs forever.
+  const TIMEOUT_MS = 60_000;
+  const uploadPromise = supabase.storage
     .from(bucket)
     .upload(objectKey, file, {
       cacheControl: '3600',
       upsert: false,
       contentType: file.type || 'image/jpeg',
     });
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(
+      () => reject(new Error(`Upload timed out after ${TIMEOUT_MS / 1000}s`)),
+      TIMEOUT_MS
+    )
+  );
 
-  if (uploadError) throw uploadError;
+  const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]);
+  if (uploadError) {
+    // eslint-disable-next-line no-console
+    console.error(tag, 'upload error:', uploadError);
+    throw uploadError;
+  }
 
   const { data: pub } = supabase.storage.from(bucket).getPublicUrl(objectKey);
+  // eslint-disable-next-line no-console
+  console.log(tag, 'success', pub.publicUrl);
   return {
     file_url: pub.publicUrl,
     bucket,
