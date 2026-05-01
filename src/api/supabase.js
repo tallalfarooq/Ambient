@@ -27,5 +27,11 @@ export const supabase = createClient(supabaseUrl ?? '', supabaseAnonKey ?? '', {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    // Disable the cross-tab navigator.locks acquisition that supabase-js v2 uses
+    // by default. With multiple tabs open it caused "Lock released because
+    // another request stole it" errors that broke uploads and made sign-out
+    // feel laggy across tabs. Each tab now refreshes its own token; the
+    // BroadcastChannel still propagates SIGNED_IN / SIGNED_OUT cross-tab.
+    lock: async (_name, _timeout, fn) => fn(),
   },
 });

@@ -63,11 +63,21 @@ const auth = {
 
   /**
    * Logs the user out and clears the local session.
+   * No forced navigation — AuthContext's onAuthStateChange listener flips
+   * isAuthenticated immediately, and BroadcastChannel propagates SIGNED_OUT
+   * to any other open tabs.
    */
   logout: async () => {
-    await supabase.auth.signOut();
-    if (typeof window !== 'undefined') {
-      window.location.href = '/';
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      // Don't block logout on network or lock errors
+      // eslint-disable-next-line no-console
+      console.warn('[auth] signOut error (ignored):', err?.message ?? err);
+    }
+    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+      // Bring the user to the home page if they were on a protected route.
+      window.location.assign('/');
     }
   },
 
