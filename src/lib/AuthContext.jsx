@@ -10,83 +10,82 @@ export const AuthProvider = ({ children }) => {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [authError, setAuthError] = useState(null);
 
-  // Hydrate the user from the Supabase session and keep it in sync.
+  // Subscribe to Supabase auth state changes — single source of truth.
+  // INITIAL_SESSION fires once on subscribe with the current session
+  // (whether loaded from storage or freshly detected from a URL hash/code),
+  // which gives us hydration without a separate hydrate() call.
+  // No race between hydrate and onAuthStateChange because there's only one path.
   useEffect(() => {
     let mounted = true;
 
-    const hydrate = async () => {
-      // Safety timeout: never let the spinner block the page for more than 5s.
-      // If Supabase is slow/unreachable, treat as logged-out and keep going.
-      const TIMEOUT_MS = 5000;
-      try {
-        const currentUser = await Promise.race([
-          base44.auth.me(),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('auth_hydrate_timeout')), TIMEOUT_MS)
-          ),
-        ]);
-        if (!mounted) return;
-        setUser(currentUser);
-        setIsAuthenticated(true);
-        setAuthError(null);
-      } catch (err) {
-        if (err?.message === 'auth_hydrate_timeout') {
-          // eslint-disable-next-line no-console
-          console.warn('[Auth] Hydration timed out after 5s — proceeding as logged-out.');
-        }
-        // No session (or timeout) — fine. Public pages render; protected pages
-        // should check `isAuthenticated` and call `navigateToLogin` themselves.
+    const applySession = async (session) => {
+      if (!session?.user) {
         if (!mounted) return;
         setUser(null);
         setIsAuthenticated(false);
+        return;
+      }
+      const sessionUser = session.user;
+      // Best-effort profile hydration; don't block UI on RLS or transient errors.
+      let profileData = null;
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('full_name, role')
+          .eq('id', sessionUser.id)
+          .maybeSingle();
+        profileData = data;
+      } catch {
+        /* swallow — fall back to defaults */
+      }
+      if (!mounted) return;
+      setUser({
+        id: sessionUser.id,
+        email: sessionUser.email,
+        full_name:
+          profileData?.full_name ??
+          sessionUser.email?.split('@')[0] ??
+          null,
+        role: profileData?.role ?? 'user',
+      });
+      setIsAuthenticated(true);
+      setAuthError(null);
+    };
+
+    // Belt-and-suspenders: kick off an explicit getSession() so we still
+    // resolve isLoadingAuth even if INITIAL_SESSION is delayed for any reason.
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        await applySession(session);
+      } catch {
+        /* ignore — onAuthStateChange will recover */
       } finally {
         if (mounted) setIsLoadingAuth(false);
       }
-    };
+    })();
 
-    hydrate();
-
-    // Subscribe to Supabase auth state changes. We get the session directly from
-    // the event payload — no extra getUser() call, no lock contention.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
+      // eslint-disable-next-line no-console
+      if (typeof window !== 'undefined' && import.meta.env.DEV) {
+        console.debug('[AuthContext]', event, session?.user?.email ?? '(no session)');
+      }
       if (
-        (event === 'SIGNED_IN' ||
-          event === 'TOKEN_REFRESHED' ||
-          event === 'USER_UPDATED' ||
-          event === 'INITIAL_SESSION') &&
-        session?.user
+        event === 'INITIAL_SESSION' ||
+        event === 'SIGNED_IN' ||
+        event === 'TOKEN_REFRESHED' ||
+        event === 'USER_UPDATED'
       ) {
-        const sessionUser = session.user;
-        // Hydrate the profile in the background; don't block UI on it.
-        let profileData = null;
-        try {
-          const { data } = await supabase
-            .from('profiles')
-            .select('full_name, role')
-            .eq('id', sessionUser.id)
-            .maybeSingle();
-          profileData = data;
-        } catch {
-          /* RLS or transient error — ignore, fall back to defaults */
-        }
-        if (!mounted) return;
-        setUser({
-          id: sessionUser.id,
-          email: sessionUser.email,
-          full_name:
-            profileData?.full_name ??
-            sessionUser.email?.split('@')[0] ??
-            null,
-          role: profileData?.role ?? 'user',
-        });
-        setIsAuthenticated(true);
-        setAuthError(null);
+        await applySession(session);
+        if (mounted) setIsLoadingAuth(false);
       } else if (event === 'SIGNED_OUT') {
+        if (!mounted) return;
         setUser(null);
         setIsAuthenticated(false);
+        setIsLoadingAuth(false);
       }
     });
 
@@ -98,6 +97,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     await base44.auth.logout();
+    // Optimistic clear for instant UI feedback; auth listener also fires SIGNED_OUT.
     setUser(null);
     setIsAuthenticated(false);
   };
