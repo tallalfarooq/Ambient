@@ -38,17 +38,9 @@ export default function Layout({ children, currentPageName }) {
         base44.entities.UserCredits.filter({ user_email: u.email })
           .then((uc) => { if (uc.length > 0) setPlanType(uc[0].plan_type); })
           .catch(() => {});
-        const key = `ambient_welcomed_${u.email}`;
-        if (!localStorage.getItem(key)) {
-          base44.functions.invoke("sendWelcomeEmail", {})
-            .then((res) => {
-              // Mark as sent when the server confirms sent or says already skipped
-              if (res?.data?.sent || res?.data?.skipped) {
-                localStorage.setItem(key, "1");
-              }
-            })
-            .catch((err) => console.error("[Welcome email] Error:", err));
-        }
+        // Welcome email — wired up in Phase 2D. For now, silently no-op
+        // unless the API route exists, to avoid 404 console noise.
+        // (Phase 2D will wire /api/sendWelcomeEmail with Resend.)
       }
     }).catch(() => setUser(null));
   }, []);
@@ -73,7 +65,7 @@ export default function Layout({ children, currentPageName }) {
         <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/6 bg-[#0A0A0B]/80 backdrop-blur-xl">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
             <Link to={createPageUrl("Home")} className="flex items-center gap-2.5 group">
-              <img src="https://media.base44.com/images/public/69a33ae1bd1ae899284f21e8/c8bd4ea0c_251dc708f_logo.png" alt="AmbientSpace logo" className="w-8 h-8 rounded-lg object-cover" />
+              <img src="/logo.png" alt="AmbientSpace logo" className="w-8 h-8 rounded-lg object-cover" />
               <div className="flex items-baseline gap-0">
                 <span className="font-black text-white text-sm tracking-tight">Ambient</span>
                 <span className="font-semibold text-sm tracking-tight ml-1" style={{ color: "#6EC6C6" }}>Space</span>
@@ -162,7 +154,7 @@ export default function Layout({ children, currentPageName }) {
         <footer className="border-t border-white/6 py-8 px-6">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
             <Link to={createPageUrl("Home")} className="flex items-center gap-2">
-              <img src="https://media.base44.com/images/public/69a33ae1bd1ae899284f21e8/c8bd4ea0c_251dc708f_logo.png" alt="AmbientSpace logo" className="w-6 h-6 rounded-md object-cover opacity-60" />
+              <img src="/logo.png" alt="AmbientSpace logo" className="w-6 h-6 rounded-md object-cover opacity-60" />
               <div className="flex items-baseline gap-0">
                 <span className="font-black text-white/30 text-xs tracking-tight">Ambient</span>
                 <span className="font-semibold text-xs tracking-tight ml-1" style={{ color: "rgba(110,198,198,0.4)" }}>Space</span>

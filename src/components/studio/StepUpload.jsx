@@ -33,9 +33,12 @@ export default function StepUpload({ data, update, onNext }) {
   const fileRef   = useRef();
   const cameraRef = useRef();
 
+  const [uploadError, setUploadError] = useState(null);
+
   const handleFile = async (file) => {
     if (!file) return;
     setHeicError(false);
+    setUploadError(null);
     setUploading(true);
     try {
       const processedFile = await convertToJpeg(file);
@@ -44,11 +47,17 @@ export default function StepUpload({ data, update, onNext }) {
       if (isImage) { update({ room_image_url: file_url }); setPreview(file_url); }
       else          { update({ room_file_url: file_url }); }
     } catch (err) {
-      if (err.message === "HEIC_FAILED" || err.message === "HEIC_NOT_SUPPORTED") {
+      // Surface the real error so we can debug, instead of silent spinner forever
+      // eslint-disable-next-line no-console
+      console.error("[StepUpload] Upload failed:", err);
+      if (err?.message === "HEIC_FAILED" || err?.message === "HEIC_NOT_SUPPORTED") {
         setHeicError(true);
+      } else {
+        setUploadError(err?.message || err?.error?.message || String(err));
       }
+    } finally {
+      setUploading(false);
     }
-    setUploading(false);
   };
 
   const clearPreview = (e) => {
@@ -182,6 +191,13 @@ export default function StepUpload({ data, update, onNext }) {
       {heicError && (
         <div className="px-4 py-3 rounded-2xl text-sm" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#fca5a5" }}>
           <strong>HEIC photo not supported in this browser.</strong> On your iPhone, open the photo in the Photos app, tap Share → Save to Files as JPEG. Or use Safari on Mac which supports HEIC natively.
+        </div>
+      )}
+
+      {/* Generic upload error */}
+      {uploadError && (
+        <div className="px-4 py-3 rounded-2xl text-sm" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#fca5a5" }}>
+          <strong>Upload failed.</strong> {uploadError}
         </div>
       )}
 

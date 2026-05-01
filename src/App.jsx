@@ -1,5 +1,4 @@
 import { Toaster } from "@/components/ui/toaster"
-import { base44 } from "@/api/base44Client"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { pagesConfig } from './pages.config'
@@ -7,7 +6,6 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { LanguageProvider } from '@/lib/LanguageContext';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Favorites from '@/pages/Favorites';
 import AdminEmail from '@/pages/AdminEmail';
@@ -16,6 +14,7 @@ import Unsubscribe from '@/pages/Unsubscribe';
 import Pricing from '@/pages/Pricing';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import TermsOfService from '@/pages/TermsOfService';
+import Login from '@/pages/Login';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -26,35 +25,25 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth } = useAuth();
 
-  // Show loading spinner while checking app public settings or auth
-  if (isLoadingPublicSettings || isLoadingAuth) {
+  // Show a single loading spinner during initial auth hydration.
+  // Public pages render once auth is resolved (logged in or not).
+  if (isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      <div className="fixed inset-0 flex items-center justify-center bg-[#0A0A0B]">
+        <div className="w-8 h-8 border-4 border-white/20 border-t-white/60 rounded-full animate-spin"></div>
       </div>
     );
   }
 
-  // Handle authentication errors
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      // Use SDK login redirect - don't render null to avoid flicker
-      base44.auth.redirectToLogin(window.location.href);
-      return (
-        <div className="fixed inset-0 flex items-center justify-center bg-[#0A0A0B]">
-          <div className="w-8 h-8 border-4 border-white/20 border-t-white/60 rounded-full animate-spin"></div>
-        </div>
-      );
-    }
-  }
-
-  // Render the main app
   return (
     <Routes>
+      {/* Auth routes — rendered without the app Layout */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Login />} />
+
+      {/* Main app routes — wrapped in Layout */}
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>
           <MainPage />
