@@ -32,15 +32,19 @@ const auth = {
   /**
    * Returns the current user in the Base44-style shape.
    * Throws an Error with .type = 'auth_required' when no session exists.
+   *
+   * Uses getSession() (fast localStorage read, no network call, no auth lock)
+   * instead of getUser() (network call, contends for auth-token lock).
+   * Token refresh is handled in the background by supabase-js itself.
    */
   me: async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data?.user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
       const err = new Error('auth_required');
       err.type = 'auth_required';
       throw err;
     }
-    const user = data.user;
+    const user = session.user;
 
     // Hydrate full_name + role from profiles
     const { data: profile } = await supabase
@@ -148,17 +152,16 @@ function applyFilters(query, where) {
 }
 
 /**
- * Get the current user's email once per call-stack frame, cached on a Promise.
- * Used to hydrate response rows for UI compatibility.
+ * Get the current user's email — uses getSession() (synchronous-ish, no
+ * auth-token lock, no network call). Promise-cached for one render cycle.
  */
 let cachedEmailPromise = null;
 async function getCurrentEmail() {
   if (cachedEmailPromise) return cachedEmailPromise;
   cachedEmailPromise = supabase.auth
-    .getUser()
-    .then(({ data }) => data?.user?.email ?? null)
+    .getSession()
+    .then(({ data }) => data?.session?.user?.email ?? null)
     .catch(() => null);
-  // Cache invalidates after 30s — long enough for a render cycle, short enough to handle login changes
   setTimeout(() => {
     cachedEmailPromise = null;
   }, 30_000);
@@ -296,12 +299,13 @@ const entities = {
  *     service_role; UploadFile in the browser only writes to 'rooms')
  */
 async function UploadFile({ file, bucket = 'rooms' }) {
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData?.user) {
-    throw new Error('Not authenticated. Cannot upload.');
+  // Read from session (no network, no lock) instead of getUser (both)
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) {
+    throw new Error('Not authenticated. Please sign in and try again.');
   }
 
-  const userId = userData.user.id;
+  const userId = session.user.id;
   const safeName = (file.name || 'upload')
     .replace(/[^a-zA-Z0-9._-]/g, '_')
     .slice(-80);

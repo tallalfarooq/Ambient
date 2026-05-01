@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext } from "react";
 import { useLanguage } from "@/lib/LanguageContext";
+import { useAuth } from "@/lib/AuthContext";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { createPageUrl } from "@/utils";
@@ -20,30 +21,28 @@ const CONSENT_KEY = "ambient_consent";
 
 export default function Layout({ children, currentPageName }) {
   const [consent, setConsent] = useState(null);
-  const [user, setUser] = useState(null);
   const [planType, setPlanType] = useState(null);
   const { lang, setLanguage, t } = useLanguage();
+  // Single source of auth truth — AuthContext handles the session lifecycle.
+  // No more independent base44.auth.me() call here (was causing lock contention).
+  const { user, logout: authLogout } = useAuth();
 
   useEffect(() => {
     const stored = localStorage.getItem(CONSENT_KEY);
     if (stored) setConsent(JSON.parse(stored));
   }, []);
 
+  // When the auth user becomes available, fetch their plan tier for the badge.
   useEffect(() => {
-    base44.auth.me().then((u) => {
-      setUser(u);
-      // Fire welcome email once per user — guarded by localStorage so it never runs twice
-      if (u?.email) {
-        // Fetch plan
-        base44.entities.UserCredits.filter({ user_email: u.email })
-          .then((uc) => { if (uc.length > 0) setPlanType(uc[0].plan_type); })
-          .catch(() => {});
-        // Welcome email — wired up in Phase 2D. For now, silently no-op
-        // unless the API route exists, to avoid 404 console noise.
-        // (Phase 2D will wire /api/sendWelcomeEmail with Resend.)
-      }
-    }).catch(() => setUser(null));
-  }, []);
+    if (!user?.email) {
+      setPlanType(null);
+      return;
+    }
+    base44.entities.UserCredits.filter({ user_email: user.email })
+      .then((uc) => { if (uc.length > 0) setPlanType(uc[0].plan_type); })
+      .catch(() => {});
+    // Welcome email — wired up in Phase 2D when /api/sendWelcomeEmail exists.
+  }, [user?.email]);
 
   const handleConsent = (prefs) => {
     localStorage.setItem(CONSENT_KEY, JSON.stringify(prefs));
@@ -124,7 +123,7 @@ export default function Layout({ children, currentPageName }) {
                     )}
                   </div>
                   <button
-                    onClick={() => base44.auth.logout()}
+                    onClick={() => authLogout()}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-white/40 hover:text-white/70 hover:bg-white/5 transition-all"
                   >
                     <LogOut className="w-3.5 h-3.5" />
@@ -200,7 +199,7 @@ export default function Layout({ children, currentPageName }) {
             ))}
             {user ? (
               <button
-                onClick={() => base44.auth.logout()}
+                onClick={() => authLogout()}
                 className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-white/35"
               >
                 <LogOut className="w-5 h-5" />

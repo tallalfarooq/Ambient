@@ -46,20 +46,44 @@ export const AuthProvider = ({ children }) => {
 
     hydrate();
 
-    // Subscribe to Supabase auth state changes (sign in / sign out / token refresh).
+    // Subscribe to Supabase auth state changes. We get the session directly from
+    // the event payload — no extra getUser() call, no lock contention.
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+      if (
+        (event === 'SIGNED_IN' ||
+          event === 'TOKEN_REFRESHED' ||
+          event === 'USER_UPDATED' ||
+          event === 'INITIAL_SESSION') &&
+        session?.user
+      ) {
+        const sessionUser = session.user;
+        // Hydrate the profile in the background; don't block UI on it.
+        let profileData = null;
         try {
-          const u = await base44.auth.me();
-          setUser(u);
-          setIsAuthenticated(true);
-          setAuthError(null);
+          const { data } = await supabase
+            .from('profiles')
+            .select('full_name, role')
+            .eq('id', sessionUser.id)
+            .maybeSingle();
+          profileData = data;
         } catch {
-          /* swallow — covered by next state change */
+          /* RLS or transient error — ignore, fall back to defaults */
         }
+        if (!mounted) return;
+        setUser({
+          id: sessionUser.id,
+          email: sessionUser.email,
+          full_name:
+            profileData?.full_name ??
+            sessionUser.email?.split('@')[0] ??
+            null,
+          role: profileData?.role ?? 'user',
+        });
+        setIsAuthenticated(true);
+        setAuthError(null);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAuthenticated(false);
