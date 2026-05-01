@@ -1,34 +1,29 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Sparkles, Mail, Lock, ArrowRight, Check, Loader2 } from 'lucide-react';
+import { Mail, ArrowRight, Check, Loader2 } from 'lucide-react';
 import { supabase } from '@/api/supabase';
 import { useAuth } from '@/lib/AuthContext';
 
 /**
- * Single-page auth flow:
- *   - Tab: Magic link (default)  → email → Supabase emails a one-click sign-in link
- *   - Tab: Password              → email + password → sign in
- *   - Mode toggle: Sign in / Sign up
+ * Single-step auth: Google OAuth as primary, magic link as fallback.
  *
- * After magic link or password sign-in, Supabase fires SIGNED_IN, AuthContext
- * picks it up, and we redirect to the returnUrl (or /Studio).
+ * No password, no signup/signin distinction — magic link auto-creates the
+ * user if they don't exist. After clicking the email link or completing
+ * Google's consent screen, AuthContext picks up the session and the
+ * effect below redirects to `returnUrl` (default /Studio).
  */
 export default function Login() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isAuthenticated, isLoadingAuth } = useAuth();
 
-  const [tab, setTab] = useState('magic'); // 'magic' | 'password'
-  const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [magicSent, setMagicSent] = useState(false);
 
-  // Normalize returnUrl so it's always a same-origin path (no full URLs).
-  // Defends against legacy callers that passed window.location.href.
+  // Normalize returnUrl: only accept same-origin paths.
   const returnUrl = (() => {
     const raw = searchParams.get('returnUrl') || '/Studio';
     try {
@@ -41,12 +36,34 @@ export default function Login() {
     }
   })();
 
-  // If already authenticated, bounce back to where we came from
+  // Already authenticated? Bounce back to where we came from.
   useEffect(() => {
     if (!isLoadingAuth && isAuthenticated) {
       navigate(returnUrl, { replace: true });
     }
   }, [isAuthenticated, isLoadingAuth, navigate, returnUrl]);
+
+  const handleGoogle = async () => {
+    setError(null);
+    setGoogleSubmitting(true);
+    try {
+      const { error: err } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}${returnUrl}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+          },
+        },
+      });
+      if (err) throw err;
+      // Browser navigates to Google's consent screen — the rest happens after the callback.
+    } catch (err) {
+      setError(err?.message || 'Google sign-in failed.');
+      setGoogleSubmitting(false);
+    }
+  };
 
   const handleMagicLink = async (e) => {
     e.preventDefault();
@@ -56,45 +73,14 @@ export default function Login() {
       const { error: err } = await supabase.auth.signInWithOtp({
         email: email.trim(),
         options: {
-          emailRedirectTo: `${window.location.origin}${returnUrl.startsWith('/') ? returnUrl : '/' + returnUrl}`,
-          shouldCreateUser: true, // Magic link doubles as signup
+          emailRedirectTo: `${window.location.origin}${returnUrl}`,
+          shouldCreateUser: true,
         },
       });
       if (err) throw err;
       setMagicSent(true);
     } catch (err) {
       setError(err?.message || 'Failed to send magic link.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handlePasswordAuth = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      if (mode === 'signup') {
-        const { error: err } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            data: { full_name: fullName.trim() || undefined },
-            emailRedirectTo: `${window.location.origin}${returnUrl.startsWith('/') ? returnUrl : '/' + returnUrl}`,
-          },
-        });
-        if (err) throw err;
-        setMagicSent(true); // Reuse the success state — Supabase emails confirmation
-      } else {
-        const { error: err } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-        if (err) throw err;
-        // Auth state change → AuthContext → useEffect above redirects
-      }
-    } catch (err) {
-      setError(err?.message || 'Authentication failed.');
     } finally {
       setSubmitting(false);
     }
@@ -119,100 +105,68 @@ export default function Login() {
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 backdrop-blur-sm">
           {magicSent ? (
-            <SuccessState email={email} onReset={() => { setMagicSent(false); setEmail(''); }} />
+            <SuccessState
+              email={email}
+              onReset={() => { setMagicSent(false); setEmail(''); }}
+            />
           ) : (
             <>
-              <h1 className="text-2xl font-semibold text-white mb-1">
-                {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+              <h1 className="text-2xl font-semibold text-white mb-1 text-center">
+                Welcome to Ambient Space
               </h1>
-              <p className="text-sm text-white/50 mb-8">
-                {mode === 'signup'
-                  ? 'Sign up to start redesigning your space.'
-                  : 'Sign in to continue redesigning your space.'}
+              <p className="text-sm text-white/50 mb-7 text-center">
+                Sign in or create an account in one step.
               </p>
 
-              {/* Tabs */}
-              <div className="flex gap-1 p-1 mb-6 rounded-xl bg-white/[0.04] border border-white/10">
-                <TabButton active={tab === 'magic'} onClick={() => setTab('magic')} icon={Sparkles}>
-                  Magic link
-                </TabButton>
-                <TabButton active={tab === 'password'} onClick={() => setTab('password')} icon={Lock}>
-                  Password
-                </TabButton>
+              {/* Google button */}
+              <button
+                type="button"
+                onClick={handleGoogle}
+                disabled={googleSubmitting || submitting}
+                className="w-full flex items-center justify-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{
+                  background: '#FFFFFF',
+                  color: '#0A0A0B',
+                }}
+              >
+                {googleSubmitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <GoogleIcon />
+                    Continue with Google
+                  </>
+                )}
+              </button>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3 my-6">
+                <div className="flex-1 h-px bg-white/10" />
+                <span className="text-[10px] uppercase tracking-widest text-white/30">
+                  or continue with email
+                </span>
+                <div className="flex-1 h-px bg-white/10" />
               </div>
 
-              {/* Magic link tab */}
-              {tab === 'magic' && (
-                <form onSubmit={handleMagicLink} className="space-y-4">
-                  <Field
-                    label="Email"
-                    icon={Mail}
-                    type="email"
-                    required
-                    autoFocus
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                  />
-                  <SubmitButton submitting={submitting}>
-                    Send magic link <ArrowRight className="w-4 h-4" />
-                  </SubmitButton>
-                  <p className="text-xs text-white/40 text-center">
-                    No password to remember. We'll email you a one-click sign-in link.
-                  </p>
-                </form>
-              )}
-
-              {/* Password tab */}
-              {tab === 'password' && (
-                <form onSubmit={handlePasswordAuth} className="space-y-4">
-                  {mode === 'signup' && (
-                    <Field
-                      label="Full name"
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Your name (optional)"
-                    />
-                  )}
-                  <Field
-                    label="Email"
-                    icon={Mail}
-                    type="email"
-                    required
-                    autoFocus
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                  />
-                  <Field
-                    label="Password"
-                    icon={Lock}
-                    type="password"
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={mode === 'signup' ? 'At least 8 characters' : 'Your password'}
-                  />
-                  <SubmitButton submitting={submitting}>
-                    {mode === 'signup' ? 'Create account' : 'Sign in'}
-                    <ArrowRight className="w-4 h-4" />
-                  </SubmitButton>
-
-                  <div className="text-center">
-                    <button
-                      type="button"
-                      onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setError(null); }}
-                      className="text-xs text-white/50 hover:text-white/80 transition"
-                    >
-                      {mode === 'signin'
-                        ? "Don't have an account? Sign up"
-                        : 'Already have an account? Sign in'}
-                    </button>
-                  </div>
-                </form>
-              )}
+              {/* Magic link form */}
+              <form onSubmit={handleMagicLink} className="space-y-4">
+                <Field
+                  label="Email"
+                  icon={Mail}
+                  type="email"
+                  required
+                  autoFocus
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                />
+                <SubmitButton submitting={submitting} disabled={googleSubmitting}>
+                  Continue with email <ArrowRight className="w-4 h-4" />
+                </SubmitButton>
+                <p className="text-xs text-white/40 text-center pt-1">
+                  We&rsquo;ll email you a one-click sign-in link. New here? An account is created automatically.
+                </p>
+              </form>
 
               {error && (
                 <p className="mt-4 text-sm text-red-400/90 text-center">
@@ -238,18 +192,14 @@ export default function Login() {
 // Sub-components
 // =============================================================================
 
-function TabButton({ active, onClick, icon: Icon, children }) {
+function GoogleIcon() {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold uppercase tracking-wide transition ${
-        active ? 'bg-white/10 text-white shadow-sm' : 'text-white/40 hover:text-white/70'
-      }`}
-    >
-      <Icon className="w-3.5 h-3.5" />
-      {children}
-    </button>
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
   );
 }
 
@@ -274,11 +224,11 @@ function Field({ label, icon: Icon, ...inputProps }) {
   );
 }
 
-function SubmitButton({ submitting, children }) {
+function SubmitButton({ submitting, disabled, children }) {
   return (
     <button
       type="submit"
-      disabled={submitting}
+      disabled={submitting || disabled}
       className="w-full flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-[#0A0A0B] transition disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90"
       style={{ background: 'linear-gradient(135deg, #6EC6C6, #1B8FA0)' }}
     >
