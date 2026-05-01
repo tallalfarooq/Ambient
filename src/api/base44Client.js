@@ -469,9 +469,11 @@ const functions = {
     }
 
     if (!response.ok) {
-      const err = new Error(
-        json?.error || json?.message || `API ${name} failed (${response.status})`
-      );
+      const baseMsg =
+        json?.error || json?.message || `API ${name} failed (${response.status})`;
+      const detail = json?.detail;
+      const fullMsg = detail ? `${baseMsg}: ${detail}` : baseMsg;
+      const err = new Error(fullMsg);
       err.status = response.status;
       err.body = json ?? text;
       throw err;

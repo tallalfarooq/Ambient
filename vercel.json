@@ -9,5 +9,13 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/generate.js": {
+      "maxDuration": 60
+    },
+    "api/llm.js": {
+      "maxDuration": 30
+    }
+  }
 }

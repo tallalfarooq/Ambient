@@ -38,6 +38,10 @@ fal.config({ credentials: FAL_KEY });
 const DEFAULT_MODEL = 'fal-ai/flux/dev/image-to-image';
 const CREDITS_PER_GENERATION = 1;
 
+// Tell Vercel this function may run long.
+// Mirrored in vercel.json; both are honored.
+export const config = { maxDuration: 60 };
+
 export default async function handler(req, res) {
   if (!allow(res, req, ['POST'])) return;
 
@@ -176,11 +180,25 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     await refund('fal.ai call failed');
+    // Pull as much detail as we can out of the fal-client error envelope
+    const detail =
+      err?.body?.detail ||
+      err?.body?.message ||
+      err?.body?.error?.message ||
+      (typeof err?.body === 'string' ? err.body : null) ||
+      err?.message ||
+      String(err);
     // eslint-disable-next-line no-console
-    console.error('[api/generate] fal.ai error:', err);
+    console.error('[api/generate] fal.ai error:', {
+      message: err?.message,
+      status: err?.status,
+      body: err?.body,
+      stack: err?.stack,
+    });
     return json(res, 502, {
       error: 'Image generation failed',
-      detail: err?.message || String(err),
+      detail,
+      fal_status: err?.status,
     });
   }
 
