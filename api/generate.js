@@ -248,8 +248,14 @@ export default async function handler(req, res) {
 // =============================================================================
 
 /**
- * Hugging Face Inference API — free tier, slower (cold starts), SDXL refiner.
- * Returns a Buffer of JPEG bytes.
+ * Hugging Face Inference API — free tier, slower (cold starts).
+ *
+ * Bypasses the @huggingface/inference SDK so we can surface real HTTP errors
+ * instead of the SDK's generic "An error occurred while fetching the blob".
+ *
+ * Note: HF moved many img2img models to paid Inference Providers in 2025.
+ * If the configured model returns 404/401/402, switch HUGGINGFACE_MODEL env
+ * var to one still on the free Serverless API, OR move to Together.ai/fal.
  */
 async function generateWithHuggingFace({
   model,
@@ -260,37 +266,74 @@ async function generateWithHuggingFace({
   numInferenceSteps,
   negativePrompt,
 }) {
-  if (!hf) throw new Error('HUGGINGFACE_API_KEY is not configured');
+  if (!HF_TOKEN) throw new Error('HUGGINGFACE_API_KEY is not configured');
 
-  // Pull the source image as a Blob for the SDK.
+  // 1. Pull the source image bytes.
   const sourceRes = await fetch(imageUrl);
   if (!sourceRes.ok) {
     throw new Error(`Source image fetch failed (${sourceRes.status})`);
   }
-  const sourceBlob = await sourceRes.blob();
+  const sourceBuf = Buffer.from(await sourceRes.arrayBuffer());
+  const sourceB64 = sourceBuf.toString('base64');
 
-  const result = await hf.imageToImage(
-    {
-      model,
-      inputs: sourceBlob,
-      parameters: {
-        prompt,
-        strength,
-        guidance_scale: typeof guidanceScale === 'number' ? guidanceScale : 7.5,
-        num_inference_steps:
-          typeof numInferenceSteps === 'number' ? numInferenceSteps : 30,
-        ...(negativePrompt ? { negative_prompt: negativePrompt } : {}),
-      },
+  // 2. Build the request. Most diffusion models on HF accept this shape:
+  //    { inputs: <base64 image>, parameters: { prompt, strength, ... } }
+  const requestBody = {
+    inputs: sourceB64,
+    parameters: {
+      prompt,
+      strength,
+      guidance_scale: typeof guidanceScale === 'number' ? guidanceScale : 7.5,
+      num_inference_steps:
+        typeof numInferenceSteps === 'number' ? numInferenceSteps : 30,
+      ...(negativePrompt ? { negative_prompt: negativePrompt } : {}),
     },
-    {
-      // Wait through cold-start instead of erroring out with 503.
+    options: {
       wait_for_model: true,
       use_cache: false,
-    }
-  );
+    },
+  };
 
-  // Result is a Blob.
-  const arrayBuf = await result.arrayBuffer();
+  const url = `https://api-inference.huggingface.co/models/${model}`;
+  const hfResponse = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${HF_TOKEN}`,
+      'Content-Type': 'application/json',
+      Accept: 'image/png',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  // 3. Inspect the response. If it's JSON, it's an error. If it's binary, it's the image.
+  const contentType = hfResponse.headers.get('content-type') || '';
+  if (!hfResponse.ok || contentType.includes('application/json')) {
+    let bodyText;
+    try {
+      bodyText = await hfResponse.text();
+    } catch {
+      bodyText = '<unreadable>';
+    }
+    let parsed = null;
+    try {
+      parsed = JSON.parse(bodyText);
+    } catch {
+      /* not JSON */
+    }
+    const detail =
+      parsed?.error ||
+      parsed?.message ||
+      bodyText ||
+      `HF returned ${hfResponse.status}`;
+    const err = new Error(detail);
+    err.status = hfResponse.status;
+    err.body = parsed ?? bodyText;
+    err.model = model;
+    throw err;
+  }
+
+  // 4. Return the image bytes.
+  const arrayBuf = await hfResponse.arrayBuffer();
   return Buffer.from(arrayBuf);
 }
 
