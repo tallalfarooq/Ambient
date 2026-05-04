@@ -144,12 +144,34 @@ export default async function handler(req, res) {
       .eq('id', creditsRow.id);
   };
 
-  // 2. Strength clamp — wider range for "furnish empty room" mode.
+  // 2. Strength clamp.
+  //
+  // For "furnish" mode (empty room → furnished room), the slider's max from
+  // the frontend is ~0.7 — too low for FLUX img2img to actually paint new
+  // furniture into an empty room. Force a floor of 0.85 so the model has
+  // enough latitude to populate the scene. The frontend slider then maps
+  // to "more aggressive" within 0.85–0.95.
+  //
+  // For "redesign" mode (already-furnished room), 0.5–0.85 is the right
+  // working range — AI swaps furniture without altering the architecture.
   const isFurnish = mode === 'furnish';
+
+  // === Prompt rewrite for FLUX in furnish mode =============================
+  // The frontend's buildPrompt was tuned for SDXL on Base44 — heavy on
+  // "DO NOT change" instructions, all-caps "EXACTLY", "Zero structural
+  // changes". FLUX is more literal than SDXL and follows the dominant tone,
+  // so it preserves the empty room. We rewrite the prompt to lead with the
+  // furnishing task (descriptive) and only briefly mention preservation.
+  const finalPrompt = isFurnish ? rewritePromptForFurnish(prompt) : prompt;
+
+  const minStrength = isFurnish ? 0.85 : 0.4;
+  const maxStrength = isFurnish ? 0.95 : 0.85;
+  const requestedStrength =
+    typeof strength === 'number' ? strength : isFurnish ? 0.9 : 0.65;
   const safeStrength = clamp(
-    typeof strength === 'number' ? strength : isFurnish ? 0.85 : 0.6,
-    0.2,
-    isFurnish ? 0.95 : 0.85
+    isFurnish ? Math.max(requestedStrength, minStrength) : requestedStrength,
+    minStrength,
+    maxStrength
   );
 
   // 3. Generate via the configured provider.
@@ -158,7 +180,7 @@ export default async function handler(req, res) {
     if (PROVIDER === 'huggingface') {
       imageBuffer = await generateWithHuggingFace({
         model: model || DEFAULT_MODELS.huggingface,
-        prompt,
+        prompt: finalPrompt,
         imageUrl: image_url,
         strength: safeStrength,
         guidanceScale: guidance_scale,
@@ -169,7 +191,7 @@ export default async function handler(req, res) {
     } else if (PROVIDER === 'fal') {
       imageBuffer = await generateWithFal({
         model: model || DEFAULT_MODELS.fal,
-        prompt,
+        prompt: finalPrompt,
         imageUrl: image_url,
         strength: safeStrength,
         guidanceScale: guidance_scale,
@@ -180,7 +202,7 @@ export default async function handler(req, res) {
     } else if (PROVIDER === 'together') {
       imageBuffer = await generateWithTogether({
         model: model || DEFAULT_MODELS.together,
-        prompt,
+        prompt: finalPrompt,
         imageUrl: image_url,
         strength: safeStrength,
       });
@@ -466,4 +488,51 @@ async function generateWithTogether({ model, prompt, imageUrl, strength }) {
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
+}
+
+/**
+ * Rewrites a verbose SDXL-style prompt into a FLUX-friendly descriptive prompt
+ * for "furnish empty room" generations. FLUX interprets prompts more literally
+ * than SDXL — wall-of-DO-NOTs causes it to preserve the empty room. We extract
+ * the meaningful bits (style, furniture list, palette, mood) and present them
+ * as a description of the desired output instead of preservation rules.
+ */
+function rewritePromptForFurnish(originalPrompt) {
+  const p = originalPrompt;
+
+  // Pull the style: "Apply <Style> interior design" or "<Style>-style furniture"
+  const styleMatch =
+    p.match(/(?:add realistic |Apply )([\w-]+)(?:-style| interior| style)/i) ||
+    p.match(/\b(Japandi|Scandinavian|Mid-century|Modern|Industrial|Bohemian|Minimalist|Coastal|Farmhouse|Art Deco|Cottagecore|Contemporary)\b/i);
+  const style = styleMatch?.[1] || 'modern';
+
+  // Pull the furniture list after "Include: "
+  const includeMatch = p.match(/Include:\s*([^.]+)\./i);
+  const furnitureList = includeMatch?.[1]?.trim();
+
+  // Pull color palette after "Color palette: "
+  const paletteMatch = p.match(/Color palette:\s*([^.]+)\./i);
+  const palette = paletteMatch?.[1]?.trim();
+
+  // Pull mood after "Mood: "
+  const moodMatch = p.match(/Mood:\s*([^.]+)\./i);
+  const mood = moodMatch?.[1]?.trim();
+
+  // Pull style-specific descriptors that come right after the style declaration
+  // (e.g., "neutral linen/cotton textiles, low-profile solid oak furniture, ...")
+  const detailMatch = p.match(/-style furniture and decor only\.\s*([^.]+)\./i);
+  const styleDetail = detailMatch?.[1]?.trim();
+
+  // Build the new descriptive prompt — declarative, not imperative.
+  const parts = [
+    `A fully furnished and beautifully decorated ${style} interior room`,
+    furnitureList ? `featuring ${furnitureList}` : null,
+    styleDetail ? styleDetail : null,
+    palette ? `${palette} color palette` : null,
+    mood ? `${mood.toLowerCase()} atmosphere` : null,
+    `same camera angle, same perspective, same wall positions, same windows and doors as the reference photo`,
+    `photorealistic, magazine-quality interior design photograph, soft natural daylight, hyperdetailed, 8K`,
+  ].filter(Boolean);
+
+  return parts.join('. ') + '.';
 }
