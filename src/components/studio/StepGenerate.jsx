@@ -548,6 +548,11 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       const result = await base44.integrations.Core.GenerateImage({
         prompt: refinedPrompt,
         existing_image_urls: [baseImageUrl],
+        // Pass the room mode so the server can pick the right strength range:
+        // 'furnish' = empty room → high strength (add furniture)
+        // 'redesign' = furnished room → mid strength (change style, keep structure)
+        mode: data.room_mode || 'redesign',
+        design_id: designId,
         options: {
           strength,
           guidance_scale: data.structure_locked ? (isPaid ? 16 : 12) : (isPaid ? 13 : 9),

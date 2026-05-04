@@ -12,9 +12,15 @@
   ],
   "functions": {
     "api/generate.js": {
-      "maxDuration": 60
+      "maxDuration": 120
     },
     "api/llm.js": {
+      "maxDuration": 30
+    },
+    "api/createCheckout.js": {
+      "maxDuration": 30
+    },
+    "api/stripeWebhook.js": {
       "maxDuration": 30
     }
   }
