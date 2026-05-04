@@ -54,10 +54,11 @@ if (FAL_KEY) fal.config({ credentials: FAL_KEY });
 
 const DEFAULT_MODELS = {
   huggingface: 'stabilityai/stable-diffusion-xl-refiner-1.0', // free, SDXL img2img
-  // FLUX-dev img2img — ~$0.025/image, dramatically better at adding furniture
-  // and following interior-design prompts than fast-sdxl. With $10 of fal
-  // credits you get ~400 generations, plenty for testing + early launch.
-  fal: 'fal-ai/flux/dev/image-to-image',
+  // FLUX Kontext — purpose-built image-EDITING model. Unlike vanilla img2img
+  // which preserves the input image (and so preserves emptiness), Kontext
+  // actually executes prompts like "add a bed, nightstand, lamp, rug" while
+  // keeping the room's walls, windows, and perspective intact. ~$0.04/image.
+  fal: 'fal-ai/flux-pro/kontext',
   together: 'black-forest-labs/FLUX.1-schnell-Free', // free with $5 trial
 };
 
@@ -363,15 +364,16 @@ async function generateWithHuggingFace({
 }
 
 /**
- * fal.ai — paid, fast, high quality. Default = FLUX-dev img2img.
+ * fal.ai — paid, fast, high quality.
  *
- * FLUX vs SDXL takes very different guidance_scale ranges:
- *   - SDXL: 5–15, default ~7.5
- *   - FLUX: 1–7, default 3.5 (anything over ~5 looks oversaturated)
+ * Routes to one of two parameter shapes based on the model:
  *
- * The existing StepGenerate.jsx frontend was tuned for SDXL and sends
- * guidance_scale 9–16. We clamp to FLUX-friendly ranges when the chosen
- * model is FLUX, so the frontend doesn't need code changes.
+ *   1. FLUX Kontext (fal-ai/flux-pro/kontext) — image EDITING.
+ *      Takes prompt + image, NO strength. Designed for "add/remove/change X
+ *      while keeping everything else". Best for our redesign + furnish flows.
+ *
+ *   2. FLUX img2img (fal-ai/flux/dev/image-to-image) and SDXL variants —
+ *      classic img2img with strength control.
  */
 async function generateWithFal({
   model,
@@ -383,8 +385,36 @@ async function generateWithFal({
   negativePrompt,
   imageSize,
 }) {
+  const isKontext = /kontext/i.test(model);
   const isFlux = /flux/i.test(model);
 
+  // ---- FLUX Kontext path ---------------------------------------------------
+  if (isKontext) {
+    // Kontext-specific input: no strength, no image_size (it follows input
+    // dimensions), low guidance_scale (it's tuned for editing tasks).
+    const result = await fal.subscribe(model, {
+      input: {
+        prompt,
+        image_url: imageUrl,
+        guidance_scale: clamp(
+          typeof guidanceScale === 'number' ? Math.min(guidanceScale / 3, 5) : 3.5,
+          1.5,
+          7
+        ),
+        num_images: 1,
+        output_format: 'jpeg',
+        safety_tolerance: '2', // 1 strictest, 6 most permissive; default 2
+      },
+      logs: false,
+    });
+    const url = result?.data?.images?.[0]?.url;
+    if (!url) throw new Error('fal.ai (Kontext) returned no image');
+    const fetchRes = await fetch(url);
+    if (!fetchRes.ok) throw new Error(`Download failed (${fetchRes.status})`);
+    return Buffer.from(await fetchRes.arrayBuffer());
+  }
+
+  // ---- FLUX img2img / SDXL path -------------------------------------------
   let resolvedImageSize = 'landscape_4_3';
   if (typeof imageSize === 'string' && imageSize.length > 0) {
     resolvedImageSize = imageSize;
@@ -400,10 +430,8 @@ async function generateWithFal({
     };
   }
 
-  // Per-model guidance_scale clamping.
   let resolvedGuidanceScale;
   if (isFlux) {
-    // FLUX. Max useful is ~7. Above that, oversaturated.
     resolvedGuidanceScale = clamp(
       typeof guidanceScale === 'number' ? Math.min(guidanceScale / 2, 5) : 3.5,
       1.5,
@@ -413,7 +441,6 @@ async function generateWithFal({
     resolvedGuidanceScale = typeof guidanceScale === 'number' ? guidanceScale : 7.5;
   }
 
-  // FLUX-dev does best around 28 steps; SDXL refiner around 30.
   const resolvedSteps =
     typeof numInferenceSteps === 'number'
       ? numInferenceSteps
@@ -431,7 +458,6 @@ async function generateWithFal({
       image_size: resolvedImageSize,
       num_images: 1,
       enable_safety_checker: true,
-      // FLUX ignores negative_prompt; SDXL uses it. Pass conditionally.
       ...(!isFlux && negativePrompt ? { negative_prompt: negativePrompt } : {}),
     },
     logs: false,
