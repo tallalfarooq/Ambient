@@ -54,7 +54,10 @@ if (FAL_KEY) fal.config({ credentials: FAL_KEY });
 
 const DEFAULT_MODELS = {
   huggingface: 'stabilityai/stable-diffusion-xl-refiner-1.0', // free, SDXL img2img
-  fal: 'fal-ai/fast-sdxl/image-to-image', // ~$0.003/img, SDXL
+  // FLUX-dev img2img — ~$0.025/image, dramatically better at adding furniture
+  // and following interior-design prompts than fast-sdxl. With $10 of fal
+  // credits you get ~400 generations, plenty for testing + early launch.
+  fal: 'fal-ai/flux/dev/image-to-image',
   together: 'black-forest-labs/FLUX.1-schnell-Free', // free with $5 trial
 };
 
@@ -338,7 +341,15 @@ async function generateWithHuggingFace({
 }
 
 /**
- * fal.ai — paid, fast, high quality. Currently using fast-sdxl as a cheap default.
+ * fal.ai — paid, fast, high quality. Default = FLUX-dev img2img.
+ *
+ * FLUX vs SDXL takes very different guidance_scale ranges:
+ *   - SDXL: 5–15, default ~7.5
+ *   - FLUX: 1–7, default 3.5 (anything over ~5 looks oversaturated)
+ *
+ * The existing StepGenerate.jsx frontend was tuned for SDXL and sends
+ * guidance_scale 9–16. We clamp to FLUX-friendly ranges when the chosen
+ * model is FLUX, so the frontend doesn't need code changes.
  */
 async function generateWithFal({
   model,
@@ -350,6 +361,8 @@ async function generateWithFal({
   negativePrompt,
   imageSize,
 }) {
+  const isFlux = /flux/i.test(model);
+
   let resolvedImageSize = 'landscape_4_3';
   if (typeof imageSize === 'string' && imageSize.length > 0) {
     resolvedImageSize = imageSize;
@@ -365,18 +378,39 @@ async function generateWithFal({
     };
   }
 
+  // Per-model guidance_scale clamping.
+  let resolvedGuidanceScale;
+  if (isFlux) {
+    // FLUX. Max useful is ~7. Above that, oversaturated.
+    resolvedGuidanceScale = clamp(
+      typeof guidanceScale === 'number' ? Math.min(guidanceScale / 2, 5) : 3.5,
+      1.5,
+      7
+    );
+  } else {
+    resolvedGuidanceScale = typeof guidanceScale === 'number' ? guidanceScale : 7.5;
+  }
+
+  // FLUX-dev does best around 28 steps; SDXL refiner around 30.
+  const resolvedSteps =
+    typeof numInferenceSteps === 'number'
+      ? numInferenceSteps
+      : isFlux
+      ? 28
+      : 30;
+
   const falResult = await fal.subscribe(model, {
     input: {
       prompt,
       image_url: imageUrl,
       strength,
-      guidance_scale: typeof guidanceScale === 'number' ? guidanceScale : 7.5,
-      num_inference_steps:
-        typeof numInferenceSteps === 'number' ? numInferenceSteps : 30,
+      guidance_scale: resolvedGuidanceScale,
+      num_inference_steps: resolvedSteps,
       image_size: resolvedImageSize,
       num_images: 1,
       enable_safety_checker: true,
-      ...(negativePrompt ? { negative_prompt: negativePrompt } : {}),
+      // FLUX ignores negative_prompt; SDXL uses it. Pass conditionally.
+      ...(!isFlux && negativePrompt ? { negative_prompt: negativePrompt } : {}),
     },
     logs: false,
   });
