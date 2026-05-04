@@ -424,16 +424,12 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         const currentUser = await base44.auth.me();
         setUser(currentUser);
         const userCredits = await base44.entities.UserCredits.filter({ user_email: currentUser.email });
+        // The signup trigger always creates a user_credits row server-side; we
+        // trust it here. RLS prevents client-side INSERT to user_credits, so
+        // we don't try to create one if missing — the server-side /api/generate
+        // route will heal a missing row on first call.
         if (userCredits.length > 0) {
           setCredits(userCredits[0]);
-        } else {
-          const newCredits = await base44.entities.UserCredits.create({
-            user_email: currentUser.email,
-            credits_remaining: 2,
-            plan_type: "free",
-            total_purchased: 0,
-          });
-          setCredits(newCredits);
         }
       } catch (err) {
         console.error('Failed to fetch credits:', err);
@@ -564,10 +560,14 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       const url = result?.url || result;
       if (!url) throw new Error("No image returned. Please try again.");
 
-      await base44.entities.UserCredits.update(credits.id, {
-        credits_remaining: credits.credits_remaining - creditsNeeded,
-      });
-      setCredits({ ...credits, credits_remaining: credits.credits_remaining - creditsNeeded });
+      // Server (/api/generate) already debited the credit transactionally
+      // and returns the new balance. Trust it instead of writing from the
+      // client (which RLS blocks anyway).
+      const newBalance =
+        typeof result?.credits_remaining === 'number'
+          ? result.credits_remaining
+          : Math.max(0, credits.credits_remaining - creditsNeeded);
+      setCredits({ ...credits, credits_remaining: newBalance });
 
       clearInterval(timerRef.current);
       setProgress(100);
