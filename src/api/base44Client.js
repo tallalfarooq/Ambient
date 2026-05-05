@@ -63,21 +63,44 @@ const auth = {
 
   /**
    * Logs the user out and clears the local session.
-   * No forced navigation — AuthContext's onAuthStateChange listener flips
-   * isAuthenticated immediately, and BroadcastChannel propagates SIGNED_OUT
-   * to any other open tabs.
+   *
+   * supabase.auth.signOut() can hang indefinitely when the auth client is
+   * mid-token-refresh or in an inconsistent state. We race it against a 2s
+   * timeout, then forcibly clear the session from localStorage and navigate
+   * regardless of whether signOut resolved. This is what makes the sign-out
+   * button feel reliable instead of "click does nothing, must refresh".
    */
   logout: async () => {
+    const SIGNOUT_TIMEOUT_MS = 2000;
     try {
-      await supabase.auth.signOut();
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('signOut timeout')), SIGNOUT_TIMEOUT_MS)
+        ),
+      ]);
     } catch (err) {
-      // Don't block logout on network or lock errors
+      // Don't block logout on network, lock, or timeout errors.
       // eslint-disable-next-line no-console
-      console.warn('[auth] signOut error (ignored):', err?.message ?? err);
+      console.warn('[auth] signOut error (continuing anyway):', err?.message ?? err);
     }
-    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
-      // Bring the user to the home page if they were on a protected route.
-      window.location.assign('/');
+
+    // Belt-and-suspenders: nuke any leftover supabase auth keys from
+    // localStorage so a hung signOut can't leave a phantom session behind.
+    if (typeof window !== 'undefined') {
+      try {
+        Object.keys(window.localStorage)
+          .filter((k) => k.startsWith('sb-') || k === 'supabase.auth.token')
+          .forEach((k) => window.localStorage.removeItem(k));
+      } catch {
+        /* private mode / quota — fine to skip */
+      }
+    }
+
+    // Always navigate, even if the upstream signOut hung. Use replace so the
+    // back button doesn't bring the user back into a half-authed state.
+    if (typeof window !== 'undefined') {
+      window.location.replace('/');
     }
   },
 
@@ -459,8 +482,25 @@ const functions = {
    * unwrap before returning to their callers.
    */
   invoke: async (name, body = {}) => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData?.session?.access_token;
+    // supabase.auth.getSession() is normally a fast localStorage read, but
+    // can hang indefinitely if the auth client is mid-refresh or stuck in
+    // an inconsistent state — that's what causes "click Generate, nothing
+    // happens, must refresh." Race it against a short timeout and proceed
+    // unauthenticated if it fails; the server returns 401 cleanly which we
+    // already surface as a real error instead of a silent hang.
+    let token;
+    try {
+      const sessionResult = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('getSession timeout')), 1500)
+        ),
+      ]);
+      token = sessionResult?.data?.session?.access_token;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn(`[functions.invoke ${name}] getSession failed:`, err?.message);
+    }
 
     const response = await fetch(`/api/${name}`, {
       method: 'POST',
