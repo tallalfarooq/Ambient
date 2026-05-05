@@ -55,7 +55,15 @@ export default function Pricing() {
       // Return to /Studio so the ?payment=success handler fires and shows the confirmation toast
       const returnUrl = `${window.location.origin}/Studio`;
       const response = await base44.functions.invoke("createCheckout", { plan: planId, returnUrl });
-      if (response.data?.url) window.location.href = response.data.url;
+      const url = response?.data?.url || response?.url;
+      if (url) {
+        window.location.href = url;
+        return; // navigation pending — keep button in "loading" state
+      }
+      // 200 but no url: don't leave the button stuck spinning
+      console.error("Checkout response missing url:", response);
+      toast.error("Payment setup failed. Please try again.");
+      setPurchasing(null);
     } catch (err) {
       console.error("Checkout failed:", err);
       toast.error("Payment setup failed. Please try again.");

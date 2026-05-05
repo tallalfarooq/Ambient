@@ -370,14 +370,18 @@ async function UploadFile({ file, bucket = 'rooms' }) {
 /**
  * Call the LLM via the server-side /api/llm route.
  * Server reads ANTHROPIC_API_KEY and runs Claude with the requested schema.
+ *
+ * Unwraps functions.invoke()'s Base44-shaped {data, status} response so callers
+ * see the LLM JSON directly (e.g. `result.items` not `result.data.items`).
  */
 async function InvokeLLM({ prompt, response_json_schema, file_urls, model } = {}) {
-  return functions.invoke('llm', {
+  const response = await functions.invoke('llm', {
     prompt,
     response_json_schema,
     file_urls,
     model, // optional override; server picks a sensible default
   });
+  return response?.data ?? response;
 }
 
 /**
@@ -416,7 +420,7 @@ async function GenerateImage(payload = {}) {
   const resolvedImageSize =
     image_size ?? (width && height ? { width, height } : undefined);
 
-  return functions.invoke('generate', {
+  const response = await functions.invoke('generate', {
     prompt,
     image_url,
     strength,
@@ -427,6 +431,8 @@ async function GenerateImage(payload = {}) {
     ...optionRest,
     ...rest,
   });
+  // Unwrap Base44-shaped {data, status} so callers see {url, credits_remaining}
+  return response?.data ?? response;
 }
 
 const integrations = {
@@ -446,6 +452,11 @@ const functions = {
    * Calls a Vercel serverless function under /api/<name>.
    * Forwards the user's Supabase JWT so the route can identify them via
    * `supabase.auth.getUser(jwt)` server-side.
+   *
+   * Returns Base44's axios-style {data, status} shape so existing callers
+   * (Pricing.jsx, Design.jsx, AdminEmail.jsx) that read `response.data.X`
+   * keep working without modification. The InvokeLLM/GenerateImage helpers
+   * unwrap before returning to their callers.
    */
   invoke: async (name, body = {}) => {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -479,7 +490,7 @@ const functions = {
       throw err;
     }
 
-    return json;
+    return { data: json, status: response.status };
   },
 };
 
