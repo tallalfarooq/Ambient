@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Upload, CheckCircle2, AlertCircle, Loader2, Database } from "lucide-react";
-
-const AMAZON_TAG = "ambient019-21";
+import { AMAZON_TAG } from "@/components/affiliateLinks";
 const FURNITURE_KEYWORDS = [
   "furniture", "sofa", "couch", "chair", "table", "desk", "shelf", "bookcase",
   "lamp", "light", "lighting", "rug", "curtain", "pillow", "cushion", "bed",
@@ -205,7 +204,7 @@ export default function CatalogImport() {
 
         <div className="mt-6 p-4 rounded-2xl bg-white/3 border border-white/6">
           <p className="text-white/40 text-xs leading-relaxed">
-            <span className="text-white/60 font-medium">How it works:</span> The importer extracts furniture & home decor items, builds your affiliate URL (<code className="text-violet-400">amazon.com/dp/ASIN?tag=ambient019-21</code>), and stores them locally. The AI then searches this catalog first before generating product suggestions.
+            <span className="text-white/60 font-medium">How it works:</span> The importer extracts furniture & home decor items, builds your affiliate URL (<code className="text-violet-400">amazon.com/dp/ASIN?tag={AMAZON_TAG}</code>), and stores them locally. The AI then searches this catalog first before generating product suggestions.
           </p>
         </div>
       </div>

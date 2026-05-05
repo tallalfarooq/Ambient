@@ -158,7 +158,7 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
           )}
           {design.budget_max && (
             <span className="text-xs bg-white/5 border border-white/10 text-white/40 px-2 py-0.5 rounded-full">
-              €{design.budget_min?.toLocaleString()}–€{design.budget_max?.toLocaleString()}
+              ${design.budget_min?.toLocaleString()}–${design.budget_max?.toLocaleString()}
             </span>
           )}
         </div>

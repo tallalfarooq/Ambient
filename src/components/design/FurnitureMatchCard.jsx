@@ -105,7 +105,7 @@ export default function FurnitureMatchCard({ item, onItemUpdate }) {
               {/* Price + timestamp */}
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <span className="font-bold text-lg">€{match.price?.toLocaleString()}</span>
+                  <span className="font-bold text-lg">${match.price?.toLocaleString()}</span>
                   <span className="text-white/25 text-xs ml-1.5">ca. {priceTimestamp}</span>
                 </div>
                 {isSelected && <CheckCircle2 className="w-4 h-4 text-violet-400" />}

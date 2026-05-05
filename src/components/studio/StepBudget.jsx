@@ -110,7 +110,7 @@ export default function StepBudget({ data, update, onNext, onBack }) {
                 className="text-[10px] mt-0.5"
                 style={{ color: isActive ? p.color : "rgba(255,255,255,0.3)" }}
               >
-                €{p.min.toLocaleString()} – €{p.max.toLocaleString()}
+                ${p.min.toLocaleString()} – ${p.max.toLocaleString()}
               </div>
               <div className="text-[10px] mt-1.5" style={{ color: "rgba(255,255,255,0.3)" }}>
                 {p.desc}
@@ -136,7 +136,7 @@ export default function StepBudget({ data, update, onNext, onBack }) {
         </label>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs text-white/30 block mb-1">Min (€)</label>
+            <label className="text-xs text-white/30 block mb-1">Min ($)</label>
             <input
               type="number"
               value={data.budget_min}
@@ -148,7 +148,7 @@ export default function StepBudget({ data, update, onNext, onBack }) {
             />
           </div>
           <div>
-            <label className="text-xs text-white/30 block mb-1">Max (€)</label>
+            <label className="text-xs text-white/30 block mb-1">Max ($)</label>
             <input
               type="number"
               value={data.budget_max}
@@ -170,7 +170,7 @@ export default function StepBudget({ data, update, onNext, onBack }) {
         >
           <Sparkles className="w-4 h-4 text-violet-400 shrink-0" />
           <span className="text-white/45 text-xs">
-            AI will target ~<span className="text-white/70 font-medium">€{selectedPreset.perItem.toLocaleString()}</span> per furniture item for the <span className="text-white/70 font-medium">{selectedPreset.label}</span> tier.
+            AI will target ~<span className="text-white/70 font-medium">${selectedPreset.perItem.toLocaleString()}</span> per furniture item for the <span className="text-white/70 font-medium">{selectedPreset.label}</span> tier.
           </span>
         </div>
       )}

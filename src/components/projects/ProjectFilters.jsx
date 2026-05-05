@@ -4,11 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 const STYLES = ["Japandi", "Industrial", "Boho", "Modern Minimal", "Cottagecore", "Scandi", "Art Deco", "Mid-Century Modern"];
 const ROOM_TYPES = ["Living Room", "Bedroom", "Kitchen", "Dining Room", "Home Office", "Bathroom", "Hallway", "Kids Room", "Outdoor"];
 const BUDGET_RANGES = [
-  { label: "Under €500", min: 0, max: 500 },
-  { label: "€500 - €1,000", min: 500, max: 1000 },
-  { label: "€1,000 - €2,500", min: 1000, max: 2500 },
-  { label: "€2,500 - €5,000", min: 2500, max: 5000 },
-  { label: "€5,000+", min: 5000, max: 999999 },
+  { label: "Under $500", min: 0, max: 500 },
+  { label: "$500 - $1,000", min: 500, max: 1000 },
+  { label: "$1,000 - $2,500", min: 1000, max: 2500 },
+  { label: "$2,500 - $5,000", min: 2500, max: 5000 },
+  { label: "$5,000+", min: 5000, max: 999999 },
 ];
 
 export default function ProjectFilters({ filters, onFiltersChange, totalCount, filteredCount }) {

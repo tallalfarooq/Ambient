@@ -4,13 +4,14 @@ import { Upload, Camera, Search, Loader2, X, ExternalLink, Crown, Sparkles, Shop
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { AMAZON_TAG } from "@/components/affiliateLinks";
 
 // Build real retailer search URLs from a precise search term
 function buildSearchUrls(searchTerm) {
   const q = encodeURIComponent(searchTerm);
   return {
-    amazon:   `https://www.amazon.de/s?k=${q}&tag=ambient019-21`,
-    ikea:     `https://www.ikea.com/de/de/search/?q=${q}`,
+    amazon:   `https://www.amazon.com/s?k=${q}&tag=${AMAZON_TAG}`,
+    ikea:     `https://www.ikea.com/us/en/search/?q=${q}`,
     google:   `https://www.google.com/search?tbm=shop&q=${q}`,
   };
 }
@@ -67,7 +68,7 @@ Return 4 matches maximum. Only include items that genuinely resemble what is in 
                 properties: {
                   title:       { type: "string", description: "Specific product title that reads naturally, e.g. 'IKEA HEKTAR pendant lamp black'" },
                   search_term: { type: "string", description: "Optimised Amazon/IKEA search string with material+colour+type, e.g. 'black metal pendant lamp adjustable cord'" },
-                  price_range: { type: "string", description: "Realistic price range e.g. '€30–€80'" },
+                  price_range: { type: "string", description: "Realistic price range e.g. '$30–$80'" },
                   source:      { type: "string", enum: ["Amazon", "IKEA", "Google Shopping"] },
                   why_similar: { type: "string", description: "One short sentence on why this matches" },
                 },
@@ -130,7 +131,7 @@ Return 4 matches maximum. Only include items that genuinely resemble what is in 
           className="w-full flex items-center justify-center gap-2 text-white font-semibold py-4 rounded-2xl hover:opacity-90 transition-opacity"
           style={{ background: "linear-gradient(135deg, #C9963A, #a8782e)" }}
         >
-          <Crown className="w-4 h-4" /> Upgrade to Pro — €20
+          <Crown className="w-4 h-4" /> Upgrade to Pro — $20
         </Link>
       </div>
     );

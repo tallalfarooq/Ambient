@@ -181,7 +181,7 @@ export default function Favorites() {
                         {design.name}
                       </h3>
                       <p className="text-white/40 text-sm mb-3">
-                        {design.style} · €{design.budget_min?.toLocaleString()}–€{design.budget_max?.toLocaleString()}
+                        {design.style} · ${design.budget_min?.toLocaleString()}–${design.budget_max?.toLocaleString()}
                       </p>
                       {saved?.notes && (
                         <p className="text-white/30 text-xs italic line-clamp-2">{saved.notes}</p>

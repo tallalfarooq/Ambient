@@ -236,7 +236,7 @@ export default function SharedDesign() {
                                   <div className="flex-1 min-w-0">
                                     <div className="text-xs font-medium truncate">{match.title}</div>
                                     {match.price && (
-                                      <div className="text-xs opacity-70 mt-0.5">€{match.price.toFixed(2)}</div>
+                                      <div className="text-xs opacity-70 mt-0.5">${match.price.toFixed(2)}</div>
                                     )}
                                   </div>
                                 </div>

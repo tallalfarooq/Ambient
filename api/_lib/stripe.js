@@ -18,29 +18,27 @@ export const stripe = new Stripe(STRIPE_SECRET_KEY ?? 'sk_missing', {
 });
 
 /**
- * Plan catalog. Keyed by short slug (used in client-side calls).
+ * Plan catalog. Keyed by short slug (used in client-side calls from Pricing.jsx).
  * Each plan maps to:
  *   - the Price ID env var (set in Vercel)
  *   - how many credits to grant when purchase completes
  *   - a human label for receipts/UI
+ *
+ * IMPORTANT: keys here MUST match the `id` values in Pricing.jsx PLANS array.
+ * The `free` plan never reaches this code (the UI button is disabled or routes
+ * to /login), so it's intentionally absent.
  */
 export const PLANS = {
-  starter: {
-    label: 'Starter Pack',
-    priceIdEnv: 'STRIPE_PRICE_STARTER',
-    credits: 25,
+  basic: {
+    label: 'Basic Pack',
+    priceIdEnv: 'STRIPE_PRICE_BASIC',
+    credits: 20,
     planTier: 'basic',
   },
   pro: {
     label: 'Pro Pack',
     priceIdEnv: 'STRIPE_PRICE_PRO',
-    credits: 150,
-    planTier: 'pro',
-  },
-  studio: {
-    label: 'Studio Pack',
-    priceIdEnv: 'STRIPE_PRICE_STUDIO',
-    credits: 500,
+    credits: 100,
     planTier: 'pro',
   },
 };

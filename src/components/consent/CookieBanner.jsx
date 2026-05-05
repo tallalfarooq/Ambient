@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -55,12 +54,12 @@ export default function CookieBanner({ onConsent }) {
           <div className="flex items-start gap-3 mb-4">
             <Shield className="w-5 h-5 text-violet-400 mt-0.5 shrink-0" />
             <div>
-              <h2 className="text-white font-semibold text-sm">Datenschutz & Cookies</h2>
+              <h2 className="text-white font-semibold text-sm">Privacy & Cookies</h2>
               <p className="text-white/50 text-xs mt-1 leading-relaxed">
-                Wir verwenden Cookies und ähnliche Technologien. Marketing-Cookies (Amazon, IKEA, eBay) werden nur geladen, wenn Sie zustimmen.{" "}
-                <Link to={createPageUrl("Datenschutz")} className="underline hover:text-white/70 transition-colors">Datenschutz</Link>
+                We use cookies and similar technologies. Marketing cookies (Amazon, IKEA, eBay) are loaded only with your consent.{" "}
+                <Link to="/privacy-policy" className="underline hover:text-white/70 transition-colors">Privacy Policy</Link>
                 {" · "}
-                <Link to={createPageUrl("Impressum")} className="underline hover:text-white/70 transition-colors">Impressum</Link>
+                <Link to="/terms-of-service" className="underline hover:text-white/70 transition-colors">Terms</Link>
               </p>
             </div>
           </div>
@@ -71,15 +70,15 @@ export default function CookieBanner({ onConsent }) {
             className="flex items-center gap-1 text-xs text-white/40 hover:text-white/60 mb-4 transition-colors"
           >
             {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            Einstellungen anpassen
+            Customize settings
           </button>
 
           {expanded && (
             <div className="mb-4 space-y-3 border-t border-white/8 pt-4">
               {[
-                { key: "necessary", label: "Notwendig", desc: "Technisch erforderlich. Kann nicht deaktiviert werden.", locked: true },
-                { key: "functional", label: "Funktional", desc: "Speichert Ihre Designpräferenzen und Sitzungsdaten." },
-                { key: "marketing", label: "Marketing", desc: "Amazon Associates, IKEA Partnerize, eBay Partner Network – Affiliate-Tracking." },
+                { key: "necessary", label: "Necessary", desc: "Technically required. Cannot be disabled.", locked: true },
+                { key: "functional", label: "Functional", desc: "Saves your design preferences and session data." },
+                { key: "marketing", label: "Marketing", desc: "Amazon Associates, IKEA, eBay – affiliate link tracking." },
               ].map(({ key, label, desc, locked }) => (
                 <div key={key} className="flex items-start justify-between gap-4">
                   <div>
@@ -107,7 +106,7 @@ export default function CookieBanner({ onConsent }) {
                 onClick={saveCustom}
                 className="mt-2 w-full py-2 rounded-xl text-xs font-medium border border-white/15 text-white/60 hover:border-white/25 hover:text-white/80 transition-all"
               >
-                Auswahl speichern
+                Save selection
               </button>
             </div>
           )}
@@ -118,13 +117,13 @@ export default function CookieBanner({ onConsent }) {
               onClick={rejectAll}
               className="py-3 rounded-xl text-sm font-semibold border border-white/15 text-white/70 hover:border-white/30 hover:text-white transition-all"
             >
-              Ablehnen
+              Reject
             </button>
             <button
               onClick={acceptAll}
               className="py-3 rounded-xl text-sm font-semibold bg-violet-600 hover:bg-violet-500 text-white transition-all"
             >
-              Annehmen
+              Accept
             </button>
           </div>
         </div>

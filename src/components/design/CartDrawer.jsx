@@ -49,7 +49,7 @@ export default function CartDrawer({ items, isOpen, onClose, onRemove }) {
       doc.setFontSize(9);
       doc.setTextColor(80, 80, 80);
       const match = item.selectedMatch;
-      doc.text(`${match.source}  ·  €${match.price?.toLocaleString() || "–"}`, 20, y);
+      doc.text(`${match.source}  ·  $${match.price?.toLocaleString() || "–"}`, 20, y);
       y += 5;
 
       doc.setTextColor(100, 100, 200);
@@ -68,7 +68,7 @@ export default function CartDrawer({ items, isOpen, onClose, onRemove }) {
 
     doc.setFontSize(11);
     doc.setTextColor(30, 30, 30);
-    doc.text(`Estimated Total: €${total.toLocaleString()}`, 20, y);
+    doc.text(`Estimated Total: $${total.toLocaleString()}`, 20, y);
 
     y += 8;
     doc.setFontSize(7);
@@ -152,7 +152,7 @@ export default function CartDrawer({ items, isOpen, onClose, onRemove }) {
                             <span className={`text-xs px-1.5 py-0.5 rounded-full border ${SOURCE_COLORS[match.source] || "text-white/40 bg-white/5 border-white/10"}`}>
                               {match.source}
                             </span>
-                            <span className="text-sm font-bold text-white">€{match.price != null ? match.price.toLocaleString() : "—"}</span>
+                            <span className="text-sm font-bold text-white">${match.price != null ? match.price.toLocaleString() : "—"}</span>
                           </div>
                           {match.url && (
                             <a
@@ -178,7 +178,7 @@ export default function CartDrawer({ items, isOpen, onClose, onRemove }) {
               <div className="px-5 py-4 border-t border-white/8 space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-white/40">Estimated total</span>
-                  <span className="font-bold text-lg">€{total.toLocaleString()}</span>
+                  <span className="font-bold text-lg">${total.toLocaleString()}</span>
                 </div>
                 <button
                   onClick={handleExportPDF}

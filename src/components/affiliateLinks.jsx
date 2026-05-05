@@ -1,7 +1,10 @@
-const AMAZON_TAG = "ambient019-21";
+// Pulled from env so the real US tag can be swapped in without code changes
+// once Amazon Associates US approves the site. Falls back to a placeholder.
+export const AMAZON_TAG =
+  (import.meta.env?.VITE_AMAZON_AFFILIATE_TAG || "ambientspace-20").trim();
 
 /**
- * Takes a match object and returns a working URL for the German market.
+ * Takes a match object and returns a working Amazon US affiliate URL.
  * Always uses search-based links to avoid broken ASIN/article number links from AI hallucinations.
  */
 export function buildAffiliateUrl(match) {
@@ -11,18 +14,21 @@ export function buildAffiliateUrl(match) {
   switch (source) {
     case "Amazon":
       // Use direct /dp/ link when we have a real ASIN — tag stays on product page
-      if (asin) return `https://www.amazon.de/dp/${asin}?tag=${AMAZON_TAG}`;
+      if (asin) return `https://www.amazon.com/dp/${asin}?tag=${AMAZON_TAG}`;
       // Fallback to search with tag + linkCode so tag is preserved
-      return `https://www.amazon.de/s?k=${encoded}&tag=${AMAZON_TAG}&linkCode=ur2`;
+      return `https://www.amazon.com/s?k=${encoded}&tag=${AMAZON_TAG}&linkCode=ur2`;
 
     case "IKEA":
-      return `https://www.ikea.com/de/de/search/?q=${encoded}`;
+      return `https://www.ikea.com/us/en/search/?q=${encoded}`;
 
     case "eBay":
-      return `https://www.ebay.de/sch/i.html?_nkw=${encoded}`;
+      return `https://www.ebay.com/sch/i.html?_nkw=${encoded}`;
+
+    case "Wayfair":
+      return `https://www.wayfair.com/keyword.php?keyword=${encoded}`;
 
     default:
-      return `https://www.amazon.de/s?k=${encoded}&tag=${AMAZON_TAG}&linkCode=ur2`;
+      return `https://www.amazon.com/s?k=${encoded}&tag=${AMAZON_TAG}&linkCode=ur2`;
   }
 }
 

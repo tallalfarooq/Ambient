@@ -201,7 +201,7 @@ function HeroCard3D() {
           />
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#fff", letterSpacing: "-0.2px" }}>Muji Linen Sofa</div>
-            <div style={{ fontSize: 9, fontWeight: 700, color: "#C9963A", marginTop: 1 }}>€1,299 · Shop →</div>
+            <div style={{ fontSize: 9, fontWeight: 700, color: "#C9963A", marginTop: 1 }}>$1,299 · Shop →</div>
           </div>
         </motion.div>
 

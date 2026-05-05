@@ -4,6 +4,7 @@ import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock, Globe, Sliders, X, Search, ShoppingBag } from "lucide-react";
+import { AMAZON_TAG } from "@/components/affiliateLinks";
 
 // Burns watermark into the image using Canvas and returns a data URL
 async function applyWatermarkToImage(imageUrl) {
@@ -1246,7 +1247,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                         const clean = item.trim().replace(/ or .+$/, "").replace(/ with .+$/, "").replace(/ and .+$/, "").replace(/^\d+[-–] /, "").trim();
                         if (!clean) return null;
                         const query = `${clean} ${data.style || ""} ${data.room_type || ""}`.trim();
-                        const url = `https://www.amazon.de/s?k=${encodeURIComponent(query)}&tag=ambient019-21`;
+                        const url = `https://www.amazon.com/s?k=${encodeURIComponent(query)}&tag=${AMAZON_TAG}`;
                         return (
                           <a
                             key={clean}
@@ -1263,7 +1264,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                         );
                       })}
                     </div>
-                    <p className="text-[10px] text-white/20 mt-3">Tap any item to search Amazon.de. Links may include an affiliate commission — helps keep Ambient free.</p>
+                    <p className="text-[10px] text-white/20 mt-3">Tap any item to search Amazon. Links may include an affiliate commission — helps keep Ambient free.</p>
                   </div>
                 )}
 
@@ -1275,7 +1276,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                       e.preventDefault();
                       const val = e.target.elements.q.value.trim();
                       if (!val) return;
-                      window.open(`https://www.amazon.de/s?k=${encodeURIComponent(val)}&tag=ambient019-21`, "_blank");
+                      window.open(`https://www.amazon.com/s?k=${encodeURIComponent(val)}&tag=${AMAZON_TAG}`, "_blank");
                     }}
                     className="flex gap-2"
                   >

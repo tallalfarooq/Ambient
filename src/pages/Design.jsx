@@ -6,6 +6,7 @@ import { Loader2, ShoppingBag, Sparkles, ArrowLeft, Recycle, Lock, ShoppingCart,
 import { motion, AnimatePresence } from "framer-motion";
 import FurnitureMatchCard from "@/components/design/FurnitureMatchCard";
 import CartDrawer from "@/components/design/CartDrawer";
+import { AMAZON_TAG } from "@/components/affiliateLinks";
 
 function ImageWatermark() {
   return (
@@ -106,7 +107,7 @@ export default function Design() {
   const [copied,          setCopied]          = useState(false);
   const [showComparison,  setShowComparison]  = useState(false);
   const [isPaidUser,      setIsPaidUser]      = useState(false);
-  const [budgetMax,       setBudgetMax]       = useState(2000); // € budget filter — applied when shopping
+  const [budgetMax,       setBudgetMax]       = useState(2000); // $ budget filter — applied when shopping
 
   useEffect(() => {
     base44.auth.me().then(async (u) => {
@@ -221,14 +222,14 @@ export default function Design() {
 
     // Derive a quality hint from the user's live budget slider
     const budgetHint =
-      budgetMax <= 500  ? "günstig preiswert" :
-      budgetMax <= 1500 ? "gutes Preis-Leistungs-Verhältnis Qualität" :
-      budgetMax <= 4000 ? "Premium Design hochwertig" :
-                          "Luxus exklusiv Designer High-End";
+      budgetMax <= 500  ? "budget-friendly affordable" :
+      budgetMax <= 1500 ? "good value quality" :
+      budgetMax <= 4000 ? "premium high-end design" :
+                          "luxury exclusive designer";
 
     const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are an Amazon.de product search expert analyzing an AI-generated interior design render in the ${design.style} style.
-Budget: up to €${budgetMax} per item.
+      prompt: `You are an Amazon product search expert analyzing an AI-generated interior design render in the ${design.style} style.
+Budget: up to $${budgetMax} per item.
 
 TASK: Identify 8-12 distinct furniture or decor items clearly visible in this room render.
 
@@ -241,8 +242,8 @@ For each item provide:
 - bbox_bottom: bottom edge of the item as % of image height
   Example: a sofa that fills the bottom-center of the image → bbox_left:15, bbox_right:70, bbox_top:60, bbox_bottom:90
   Example: a pendant light in the upper-right quarter → bbox_left:60, bbox_right:80, bbox_top:5, bbox_bottom:25
-- search_query: precise GERMAN Amazon.de search query (5-7 words): COLOR + MATERIAL + STYLE + PRODUCT TYPE in German.
-  Examples: "beige Leinen Sofa niedrig Japandi", "Walnuss Couchtisch Mid-Century konische Beine", "Rattan Pendelleuchte Boho natur"
+- search_query: precise English Amazon search query (5-7 words): COLOR + MATERIAL + STYLE + PRODUCT TYPE.
+  Examples: "beige linen low-profile sofa Japandi", "walnut mid-century coffee table tapered legs", "rattan pendant light boho natural"
 
 Budget guidance — queries MUST reflect: "${budgetHint}".
 ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand options where possible." : ""}`,
@@ -291,8 +292,8 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
         if (matches.length === 0) {
           const query = encodeURIComponent(item.search_query || item.label);
           matches = [
-            { title: item.label, price: null, image_url: null, source: "Amazon", url: `https://www.amazon.de/s?k=${query}&tag=ambient019-21&linkCode=ur2&low-price=1&high-price=${budgetMax}`, is_preloved: false, similarity_score: 0.5 },
-            { title: item.label, price: null, image_url: null, source: "IKEA",   url: `https://www.ikea.com/de/de/search/?q=${query}`, is_preloved: false, similarity_score: 0.4 },
+            { title: item.label, price: null, image_url: null, source: "Amazon", url: `https://www.amazon.com/s?k=${query}&tag=${AMAZON_TAG}&linkCode=ur2&low-price=1&high-price=${budgetMax}`, is_preloved: false, similarity_score: 0.5 },
+            { title: item.label, price: null, image_url: null, source: "IKEA",   url: `https://www.ikea.com/us/en/search/?q=${query}`, is_preloved: false, similarity_score: 0.4 },
           ];
         }
         return { ...item, matches };
@@ -467,7 +468,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs font-semibold text-white/50">Shopping budget per item</p>
                   <span className="text-sm font-bold" style={{ color: "#1B8FA0" }}>
-                    up to €{budgetMax.toLocaleString()}
+                    up to ${budgetMax.toLocaleString()}
                   </span>
                 </div>
                 <input
@@ -481,10 +482,10 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                   style={{ accentColor: "#1B8FA0" }}
                 />
                 <div className="flex justify-between mt-1.5 text-[10px] text-white/25">
-                  <span>€100</span>
-                  <span>€2,500</span>
-                  <span>€5,000</span>
-                  <span>€10,000</span>
+                  <span>$100</span>
+                  <span>$2,500</span>
+                  <span>$5,000</span>
+                  <span>$10,000</span>
                 </div>
               </div>
 

@@ -14,17 +14,17 @@ export default function Pricing() {
 
   const PLANS = [
     {
-      id: "free", name: "Starter", price: "€0", credits: 2, icon: Sparkles,
+      id: "free", name: "Starter", price: "$0", credits: 2, icon: Sparkles,
       color: "from-gray-500 to-gray-600",
       features: [t("plan_starter_f1"), t("plan_starter_f2"), t("plan_starter_f3"), t("plan_starter_f4")],
     },
     {
-      id: "basic", name: "Basic", price: "€5", credits: 20, icon: Zap,
+      id: "basic", name: "Basic", price: "$5", credits: 20, icon: Zap,
       color: "from-teal-500 to-cyan-600", popular: true,
       features: [t("plan_basic_f1"), t("plan_basic_f2"), t("plan_basic_f3"), t("plan_basic_f4"), t("plan_basic_f5"), t("plan_basic_f6")],
     },
     {
-      id: "pro", name: "Pro", price: "€20", credits: 100, icon: Crown,
+      id: "pro", name: "Pro", price: "$20", credits: 100, icon: Crown,
       color: "from-amber-500 to-orange-600",
       features: [t("plan_pro_f1"), t("plan_pro_f2"), t("plan_pro_f3"), t("plan_pro_f4"), t("plan_pro_f5"), t("plan_pro_f6"), t("plan_pro_f7"), t("plan_pro_f8")],
     },
