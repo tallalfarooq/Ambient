@@ -49,11 +49,14 @@ if (PROVIDER === 'groq' && !GROQ_API_KEY) {
 
 const DEFAULT_MODELS = {
   // Gemini 2.0 Flash — vision + structured output, generous free tier.
-  gemini: 'gemini-2.0-flash',
-  // Llama 3.2 90B Vision — Groq's largest vision model, free tier rate-limited.
-  groq: 'llama-3.2-90b-vision-preview',
+  gemini: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+  // Llama 4 Scout — Groq's current default vision model. Llama 3.2 Vision was
+  // decommissioned. If Groq decommissions this one too, set GROQ_MODEL in
+  // Vercel env (no code change needed). Check https://console.groq.com/docs/models
+  // for the current vision-capable list.
+  groq: process.env.GROQ_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
   // Claude Sonnet — paid, highest quality.
-  anthropic: 'claude-sonnet-4-6',
+  anthropic: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
 };
 
 const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
