@@ -21,6 +21,7 @@
 import { HfInference } from '@huggingface/inference';
 import { fal } from '@fal-ai/client';
 import { allow, getUserFromRequest, json, readJson, supabaseAdmin } from './_lib/auth.js';
+import { checkRateLimit } from './_lib/ratelimit.js';
 
 const PROVIDER = (process.env.IMAGE_PROVIDER || 'huggingface').toLowerCase();
 const CREDITS_PER_GENERATION = 1;
@@ -69,6 +70,19 @@ export default async function handler(req, res) {
 
   const user = await getUserFromRequest(req);
   if (!user) return json(res, 401, { error: 'Not authenticated' });
+
+  // Abuse prevention. Without this a single authed user can drain fal.ai
+  // overnight (~$0.04/image × unbounded loop). Limits are per-user and live
+  // in Upstash Redis (free tier). Returns 429 + retry hint instead of
+  // burning credits + provider spend.
+  const rl = await checkRateLimit('generate', user.id);
+  if (!rl.success) {
+    return json(res, 429, {
+      error: rl.message,
+      retry_after_seconds: rl.retryAfter,
+      limit: rl.limit,
+    });
+  }
 
   const body = await readJson(req);
   const {
