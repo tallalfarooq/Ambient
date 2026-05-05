@@ -644,6 +644,8 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const handleSaveAndShop = async () => {
     if (!generated) return;
     setSaving(true);
+    setError(null);
+    let navigated = false;
     try {
       let id = designId;
       if (id) {
@@ -672,9 +674,24 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         id = record.id;
       }
       navigate(createPageUrl(`Design`) + `?id=${id}`);
+      navigated = true;
     } catch (err) {
-      setError("Couldn't save. Please try again.");
-      setSaving(false);
+      // Surface the real error to the console so we can diagnose schema /
+      // RLS / network issues quickly. The user-facing message stays generic.
+      // eslint-disable-next-line no-console
+      console.error("[handleSaveAndShop] save failed:", err);
+      const detail =
+        err?.message || err?.details || err?.hint || "";
+      setError(
+        detail
+          ? `Couldn't save: ${String(detail).slice(0, 160)}`
+          : "Couldn't save. Please try again."
+      );
+    } finally {
+      // Always reset the spinner unless we successfully kicked off navigation
+      // (in which case the page is unmounting). Without this finally, a hung
+      // request leaves the button stuck on "Saving..." indefinitely.
+      if (!navigated) setSaving(false);
     }
   };
 

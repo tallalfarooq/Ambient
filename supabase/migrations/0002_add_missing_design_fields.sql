@@ -37,6 +37,24 @@ create index if not exists room_designs_color_palette_idx
 create index if not exists room_designs_budget_tier_idx
   on public.room_designs(budget_tier);
 
+-- 4. Expand the status check constraint to match the values the app actually
+-- uses. Previously only ('draft','saved','archived') were allowed, but the
+-- code writes 'ready' on Save & Shop, 'generating' during async generation,
+-- and 'error' when generation fails. Every Save & Shop click was being
+-- rejected with a check-constraint violation.
+alter table public.room_designs
+  drop constraint if exists room_designs_status_check;
+alter table public.room_designs
+  add constraint room_designs_status_check
+  check (status in (
+    'draft',       -- auto-saved while user is in Studio
+    'generating',  -- async render in progress
+    'ready',       -- generation succeeded; user clicked Save & Shop
+    'saved',       -- legacy, kept for backward compat
+    'archived',    -- soft-deleted
+    'error'        -- generation failed
+  ));
+
 -- =============================================================================
 -- Verification queries — run these after the migration to confirm the
 -- schema looks right. Should return one row each.
