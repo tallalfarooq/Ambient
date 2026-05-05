@@ -136,7 +136,11 @@ const auth = {
 
 /**
  * Strips Base44-era email-based identity fields from write payloads.
- * Our schema uses UUIDs (created_by, user_id) auto-set from auth.uid().
+ * Components inherited from Base44 frequently send `created_by: <email>` and
+ * `user_email: <email>` — those are legacy and must not land in our UUID
+ * columns. We strip both unconditionally; the entity helpers below inject a
+ * fresh `created_by: <uuid>` from auth.uid() on insert when the schema
+ * requires it.
  */
 function stripEmailIdentityFields(payload) {
   if (!payload || typeof payload !== 'object') return payload;
@@ -144,6 +148,32 @@ function stripEmailIdentityFields(payload) {
   const { created_by, user_email, ...rest } = payload;
   return rest;
 }
+
+/**
+ * Returns the current Supabase user's UUID, or null if no session.
+ * Used to populate `created_by` on insert for tables that require it
+ * (room_designs, saved_designs.user_id, furniture_items via design ownership).
+ */
+async function getCurrentUserId() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Tables that require `created_by = auth.uid()` to be set explicitly on
+ * insert (NOT NULL + RLS with check). Our schema doesn't default this column,
+ * so the shim injects it when these tables receive a create() call.
+ */
+const TABLES_NEEDING_CREATED_BY = new Set(['room_designs']);
+
+/**
+ * Tables that require `user_id = auth.uid()` to be set explicitly on insert.
+ */
+const TABLES_NEEDING_USER_ID = new Set(['saved_designs', 'user_credits']);
 
 /**
  * Hydrates a row with backwards-compatible fields (created_by as email,
@@ -247,7 +277,18 @@ function makeEntity(table, options = {}) {
     /** Create a new row. Returns the inserted row. */
     create: async (payload) => {
       const userEmail = await getCurrentEmail();
-      const insertPayload = stripEmailIdentityFields(payload);
+      const userId = await getCurrentUserId();
+      let insertPayload = stripEmailIdentityFields(payload);
+      // Schema-driven identity injection — set the FK to current auth user
+      // on tables that require it. Without this, RLS rejects with 400.
+      if (userId) {
+        if (TABLES_NEEDING_CREATED_BY.has(table)) {
+          insertPayload = { ...insertPayload, created_by: userId };
+        }
+        if (TABLES_NEEDING_USER_ID.has(table)) {
+          insertPayload = { ...insertPayload, user_id: userId };
+        }
+      }
       const { data, error } = await supabase
         .from(table)
         .insert(insertPayload)
@@ -281,7 +322,15 @@ function makeEntity(table, options = {}) {
     /** Bulk-insert. Used by CatalogImport for product catalog seeding. */
     bulkCreate: async (rows) => {
       if (!Array.isArray(rows) || rows.length === 0) return [];
-      const cleaned = rows.map(stripEmailIdentityFields);
+      const userId = await getCurrentUserId();
+      const cleaned = rows.map((row) => {
+        let r = stripEmailIdentityFields(row);
+        if (userId) {
+          if (TABLES_NEEDING_CREATED_BY.has(table)) r = { ...r, created_by: userId };
+          if (TABLES_NEEDING_USER_ID.has(table)) r = { ...r, user_id: userId };
+        }
+        return r;
+      });
       const { data, error } = await supabase.from(table).insert(cleaned).select();
       if (error) throw error;
       return data ?? [];
