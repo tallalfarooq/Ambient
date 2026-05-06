@@ -1,61 +1,28 @@
 /**
- * pages.config.js - Page routing configuration
- * 
- * This file is AUTO-GENERATED. Do not add imports or modify PAGES manually.
- * Pages are auto-registered when you create files in the ./pages/ folder.
- * 
- * THE ONLY EDITABLE VALUE: mainPage
- * This controls which page is the landing page (shown when users visit the app).
- * 
- * Example file structure:
- * 
- *   import HomePage from './pages/HomePage';
- *   import Dashboard from './pages/Dashboard';
- *   import Settings from './pages/Settings';
- *   
- *   export const PAGES = {
- *       "HomePage": HomePage,
- *       "Dashboard": Dashboard,
- *       "Settings": Settings,
- *   }
- *   
- *   export const pagesConfig = {
- *       mainPage: "HomePage",
- *       Pages: PAGES,
- *   };
- * 
- * Example with Layout (wraps all pages):
+ * pages.config.js — page routing configuration.
  *
- *   import Home from './pages/Home';
- *   import Settings from './pages/Settings';
- *   import __Layout from './Layout.jsx';
+ * Heavy pages (Studio, Design, SharedDesign, admin pages) are wrapped in
+ * React.lazy() so their JS chunks aren't pulled into the initial bundle.
+ * The Home/Pricing/Projects/Favorites paths stay eager because they're
+ * tiny and on the critical path.
  *
- *   export const PAGES = {
- *       "Home": Home,
- *       "Settings": Settings,
- *   }
- *
- *   export const pagesConfig = {
- *       mainPage: "Home",
- *       Pages: PAGES,
- *       Layout: __Layout,
- *   };
- *
- * To change the main page from HomePage to Dashboard, use find_replace:
- *   Old: mainPage: "HomePage",
- *   New: mainPage: "Dashboard",
- *
- * The mainPage value must match a key in the PAGES object exactly.
+ * If you add a new heavy page (3D, large dependency, admin-only), prefer
+ * lazy() to keep the landing page snappy.
  */
-import CatalogImport from './pages/CatalogImport';
-import Design from './pages/Design';
-import Favorites from './pages/Favorites';
+import { lazy } from 'react';
+
+// Eager — small components on the critical path
 import Home from './pages/Home';
 import Pricing from './pages/Pricing';
 import Projects from './pages/Projects';
-import SharedDesign from './pages/SharedDesign';
-import Studio from './pages/Studio';
+import Favorites from './pages/Favorites';
 import __Layout from './Layout.jsx';
+
+// Lazy — heavy components or rarely-visited pages
+const Studio          = lazy(() => import('./pages/Studio'));
+const Design          = lazy(() => import('./pages/Design'));
+const SharedDesign    = lazy(() => import('./pages/SharedDesign'));
+const CatalogImport   = lazy(() => import('./pages/CatalogImport'));
 
 
 export const PAGES = {

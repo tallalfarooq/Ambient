@@ -33,8 +33,6 @@ const SOURCE_BADGE = {
 };
 
 export default function FurnitureMatchCard({ item, onItemUpdate }) {
-  // Computed at render time so it never shows a stale date if the tab is left open overnight
-  const priceTimestamp = new Date().toLocaleDateString("de-DE", { day: "numeric", month: "short", year: "numeric" });
   const [selected, setSelected] = useState(item.selected_match_index ?? null);
   const [saving, setSaving] = useState(false);
 
@@ -102,11 +100,15 @@ export default function FurnitureMatchCard({ item, onItemUpdate }) {
               {/* Title */}
               <p className="text-sm text-white/80 leading-snug line-clamp-2 mb-2">{match.title}</p>
 
-              {/* Price + timestamp */}
+              {/* Price (only shown when we actually have one — deep-link
+                  matches don't, since real pricing is on the retailer page) */}
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <span className="font-bold text-lg">${match.price?.toLocaleString()}</span>
-                  <span className="text-white/25 text-xs ml-1.5">ca. {priceTimestamp}</span>
+                  {match.price != null ? (
+                    <span className="font-bold text-lg">${match.price.toLocaleString()}</span>
+                  ) : (
+                    <span className="text-white/40 text-sm">See price on {match.source}</span>
+                  )}
                 </div>
                 {isSelected && <CheckCircle2 className="w-4 h-4 text-violet-400" />}
               </div>
@@ -130,9 +132,9 @@ export default function FurnitureMatchCard({ item, onItemUpdate }) {
         )}
       </div>
 
-      {/* Affiliate disclosure (German legal requirement) */}
+      {/* Affiliate disclosure (FTC requirement for US market) */}
       <p className="text-white/20 text-xs mt-2 leading-relaxed border-t border-white/5 pt-3">
-        *Bei diesen Links handelt es sich um Affiliate-Links. Wenn Sie darüber kaufen, erhalten wir eine kleine Provision. Preise sind unverbindlich und können sich ändern.
+        *These links are affiliate links. If you buy through them we may earn a small commission at no extra cost to you. Prices and availability are subject to change.
       </p>
     </div>
   );

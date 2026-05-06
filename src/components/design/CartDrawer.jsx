@@ -32,7 +32,7 @@ export default function CartDrawer({ items, isOpen, onClose, onRemove }) {
 
     doc.setFontSize(9);
     doc.setTextColor(120, 120, 120);
-    doc.text(`Generated ${new Date().toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" })}`, 20, 30);
+    doc.text(`Generated ${new Date().toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })}`, 20, 30);
 
     doc.setDrawColor(220, 220, 220);
     doc.line(20, 35, 190, 35);

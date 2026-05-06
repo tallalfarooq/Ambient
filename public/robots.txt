@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /Studio
+Disallow: /Design
+Disallow: /Projects
+Disallow: /Favorites
+Disallow: /AdminEmail
+Disallow: /CatalogImport
+Disallow: /SharedDesign
+Disallow: /api/
+Disallow: /unsubscribe
+
+# Sitemap
+Sitemap: https://ambientspace.ai/sitemap.xml

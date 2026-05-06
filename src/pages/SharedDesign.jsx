@@ -253,7 +253,7 @@ export default function SharedDesign() {
 
               <div className="mt-6 p-4 rounded-2xl bg-white/3 border border-white/8 text-center">
                 <p className="text-xs text-white/40 mb-3">
-                  Diese Seite enthält Affiliate-Links. Beim Kauf über diese Links erhalten wir eine Provision.
+                  This page contains affiliate links. We may earn a small commission when you buy through them, at no extra cost to you.
                 </p>
                 <Link
                   to={createPageUrl("Studio")}

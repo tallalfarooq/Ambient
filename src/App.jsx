@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -7,14 +8,26 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
+
+// Eager — small, on the critical path
 import Favorites from '@/pages/Favorites';
-import AdminEmail from '@/pages/AdminEmail';
-import SharedDesign from '@/pages/SharedDesign';
 import Unsubscribe from '@/pages/Unsubscribe';
 import Pricing from '@/pages/Pricing';
 import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import TermsOfService from '@/pages/TermsOfService';
 import Login from '@/pages/Login';
+
+// Lazy — admin only, also bigger Stripe / sharing flows
+const AdminEmail   = lazy(() => import('@/pages/AdminEmail'));
+const SharedDesign = lazy(() => import('@/pages/SharedDesign'));
+
+// Tiny fallback shown while a lazy chunk is loading. Matches the existing
+// auth-loading spinner so the transition feels seamless.
+const RouteFallback = () => (
+  <div className="fixed inset-0 flex items-center justify-center bg-[#0A0A0B]">
+    <div className="w-8 h-8 border-4 border-white/20 border-t-white/60 rounded-full animate-spin"></div>
+  </div>
+);
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -38,49 +51,51 @@ const AuthenticatedApp = () => {
   }
 
   return (
-    <Routes>
-      {/* Auth routes — rendered without the app Layout */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Login />} />
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        {/* Auth routes — rendered without the app Layout */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Login />} />
 
-      {/* Main app routes — wrapped in Layout */}
-      <Route path="/" element={
-        <LayoutWrapper currentPageName={mainPageKey}>
-          <MainPage />
-        </LayoutWrapper>
-      } />
-      {Object.entries(Pages).map(([path, Page]) => (
-        <Route
-          key={path}
-          path={`/${path}`}
-          element={
-            <LayoutWrapper currentPageName={path}>
-              <Page />
-            </LayoutWrapper>
-          }
-        />
-      ))}
-      <Route path="/Favorites" element={
-        <LayoutWrapper currentPageName="Favorites">
-          <Favorites />
-        </LayoutWrapper>
-      } />
-      <Route path="/SharedDesign" element={
-        <LayoutWrapper currentPageName="SharedDesign">
-          <SharedDesign />
-        </LayoutWrapper>
-      } />
-      <Route path="/Pricing" element={
-        <LayoutWrapper currentPageName="Pricing">
-          <Pricing />
-        </LayoutWrapper>
-      } />
-      <Route path="/privacy-policy" element={<LayoutWrapper currentPageName="PrivacyPolicy"><PrivacyPolicy /></LayoutWrapper>} />
-      <Route path="/AdminEmail" element={<LayoutWrapper currentPageName="AdminEmail"><AdminEmail /></LayoutWrapper>} />
-      <Route path="/terms-of-service" element={<LayoutWrapper currentPageName="TermsOfService"><TermsOfService /></LayoutWrapper>} />
-      <Route path="/unsubscribe" element={<Unsubscribe />} />
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
+        {/* Main app routes — wrapped in Layout */}
+        <Route path="/" element={
+          <LayoutWrapper currentPageName={mainPageKey}>
+            <MainPage />
+          </LayoutWrapper>
+        } />
+        {Object.entries(Pages).map(([path, Page]) => (
+          <Route
+            key={path}
+            path={`/${path}`}
+            element={
+              <LayoutWrapper currentPageName={path}>
+                <Page />
+              </LayoutWrapper>
+            }
+          />
+        ))}
+        <Route path="/Favorites" element={
+          <LayoutWrapper currentPageName="Favorites">
+            <Favorites />
+          </LayoutWrapper>
+        } />
+        <Route path="/SharedDesign" element={
+          <LayoutWrapper currentPageName="SharedDesign">
+            <SharedDesign />
+          </LayoutWrapper>
+        } />
+        <Route path="/Pricing" element={
+          <LayoutWrapper currentPageName="Pricing">
+            <Pricing />
+          </LayoutWrapper>
+        } />
+        <Route path="/privacy-policy" element={<LayoutWrapper currentPageName="PrivacyPolicy"><PrivacyPolicy /></LayoutWrapper>} />
+        <Route path="/AdminEmail" element={<LayoutWrapper currentPageName="AdminEmail"><AdminEmail /></LayoutWrapper>} />
+        <Route path="/terms-of-service" element={<LayoutWrapper currentPageName="TermsOfService"><TermsOfService /></LayoutWrapper>} />
+        <Route path="/unsubscribe" element={<Unsubscribe />} />
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
+    </Suspense>
   );
 };
 
