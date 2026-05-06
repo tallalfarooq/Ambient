@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { apiClient } from "@/api/apiClient";
-import { Upload, Image as ImageIcon, Box, Loader2, Camera, Sparkles, X, CheckCircle2, Armchair, Wand2 } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
+import { Upload, Image as ImageIcon, Box, Loader2, Camera, Sparkles, X, CheckCircle2, Armchair, Wand2, LogIn } from "lucide-react";
 import heic2any from "heic2any";
 
 const ROOM_TYPES = ["Living Room", "Bedroom", "Kitchen", "Dining Room", "Home Office", "Bathroom", "Hallway", "Kids Room", "Outdoor"];
@@ -26,14 +27,38 @@ const convertToJpeg = async (file) => {
 };
 
 export default function StepUpload({ data, update, onNext }) {
+  const { isAuthenticated } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview]     = useState(data.room_image_url);
   const [dragOver, setDragOver]   = useState(false);
   const [heicError, setHeicError] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const fileRef   = useRef();
   const cameraRef = useRef();
 
   const [uploadError, setUploadError] = useState(null);
+
+  // Gate upload triggers behind an auth check — show a friendly modal
+  // instead of letting the user select a file then hitting "Not authenticated".
+  const requireAuth = () => {
+    if (!isAuthenticated) {
+      setShowAuthPrompt(true);
+      return false;
+    }
+    return true;
+  };
+
+  const triggerFilePicker = (e) => {
+    if (e) e.stopPropagation();
+    if (!requireAuth()) return;
+    fileRef.current?.click();
+  };
+
+  const triggerCamera = (e) => {
+    if (e) e.stopPropagation();
+    if (!requireAuth()) return;
+    cameraRef.current?.click();
+  };
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -118,10 +143,15 @@ export default function StepUpload({ data, update, onNext }) {
 
       {/* ── Drop zone ── */}
       <div
-        onClick={() => !uploading && !preview && fileRef.current.click()}
+        onClick={() => !uploading && !preview && triggerFilePicker()}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          if (!requireAuth()) return;
+          handleFile(e.dataTransfer.files[0]);
+        }}
         className="relative rounded-2xl overflow-hidden transition-all duration-300"
         style={{
           minHeight: preview ? "auto" : 240,
@@ -204,14 +234,14 @@ export default function StepUpload({ data, update, onNext }) {
       {/* ── Upload actions ── */}
       <div className="flex gap-2">
         <button
-          onClick={(e) => { e.stopPropagation(); fileRef.current.click(); }}
+          onClick={triggerFilePicker}
           className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all"
           style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.6)" }}
         >
           <ImageIcon className="w-4 h-4" /> Upload photo
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); cameraRef.current.click(); }}
+          onClick={triggerCamera}
           className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
           style={{ background: "rgba(27,143,160,0.12)", border: "1px solid rgba(27,143,160,0.3)", color: "#6EC6C6" }}
         >
@@ -261,6 +291,57 @@ export default function StepUpload({ data, update, onNext }) {
         {canContinue ? "Continue to Style →" : "Upload a photo to continue"}
       </button>
 
+      {/* ── Sign-in prompt for unauthenticated users ── */}
+      {showAuthPrompt && (
+        <SignInPromptModal onClose={() => setShowAuthPrompt(false)} />
+      )}
+    </div>
+  );
+}
+
+// Modal shown when an unauthenticated visitor tries to upload. Replaces the
+// raw "Not authenticated" error from the upload API with a friendly CTA.
+function SignInPromptModal({ onClose }) {
+  const handleSignIn = () => {
+    // Take them to /login with a returnUrl back to /Studio so they bounce
+    // straight back here after auth instead of landing on Home.
+    apiClient.auth.redirectToLogin('/Studio');
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-[#141418] border border-white/12 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-5"
+          style={{ background: "rgba(27,143,160,0.15)", border: "1px solid rgba(27,143,160,0.3)" }}
+        >
+          <Sparkles className="w-7 h-7" style={{ color: "#1B8FA0" }} />
+        </div>
+        <h3 className="text-xl font-bold text-white mb-2">Sign in to start designing</h3>
+        <p className="text-white/55 text-sm mb-6 leading-relaxed">
+          Free to start — get <strong className="text-white/80">2 free credits</strong> the
+          moment you sign up. Save your designs and shop the furniture from any render.
+        </p>
+        <button
+          onClick={handleSignIn}
+          className="w-full flex items-center justify-center gap-2 text-white font-semibold py-3.5 rounded-2xl mb-3 transition-all hover:opacity-90"
+          style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
+        >
+          <LogIn className="w-4 h-4" /> Sign in / Sign up — free
+        </button>
+        <button
+          onClick={onClose}
+          className="text-white/40 text-sm hover:text-white/70 transition-colors"
+        >
+          Maybe later
+        </button>
+      </div>
     </div>
   );
 }
