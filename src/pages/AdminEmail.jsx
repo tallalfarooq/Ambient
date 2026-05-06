@@ -169,7 +169,7 @@ export default function AdminEmail() {
               rows={10}
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder={`<h2 style="color:#ffffff;">Big news from AmbientSpace ✦</h2>\n<p>We just added 3 new design styles...</p>\n<p><a href="https://ambientspace.ai/Studio" style="color:#6EC6C6;">Try them now →</a></p>`}
+              placeholder={`<h2 style="color:#ffffff;">Big news from AmbientSpace ✦</h2>\n<p>We just added 3 new design styles...</p>\n<p><a href="https://www.ambientspace.ai/Studio" style="color:#6EC6C6;">Try them now →</a></p>`}
               className="w-full text-sm px-4 py-3 rounded-xl text-white/80 placeholder-white/20 focus:outline-none resize-y font-mono"
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", minHeight: 200 }}
               onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(201,150,58,0.4)"; }}

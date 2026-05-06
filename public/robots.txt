@@ -11,4 +11,4 @@ Disallow: /api/
 Disallow: /unsubscribe
 
 # Sitemap
-Sitemap: https://ambientspace.ai/sitemap.xml
+Sitemap: https://www.ambientspace.ai/sitemap.xml

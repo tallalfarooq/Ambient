@@ -70,10 +70,10 @@ export default async function handler(req, res) {
   }
 
   // Build success/cancel URLs from the request origin so it works on
-  // localhost, ambient-smoky.vercel.app, and ambientspace.ai alike.
+  // localhost, ambient-smoky.vercel.app, and www.ambientspace.ai alike.
   const origin =
     req.headers.origin ||
-    `https://${req.headers.host || 'ambientspace.ai'}`;
+    `https://${req.headers.host || 'www.ambientspace.ai'}`;
   const successUrl = `${origin}/Pricing?success=true&session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${origin}/Pricing?canceled=true`;
 

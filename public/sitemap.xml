@@ -7,27 +7,27 @@
     logged-in user.
   -->
   <url>
-    <loc>https://ambientspace.ai/</loc>
+    <loc>https://www.ambientspace.ai/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://ambientspace.ai/Pricing</loc>
+    <loc>https://www.ambientspace.ai/Pricing</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://ambientspace.ai/login</loc>
+    <loc>https://www.ambientspace.ai/login</loc>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://ambientspace.ai/privacy-policy</loc>
+    <loc>https://www.ambientspace.ai/privacy-policy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://ambientspace.ai/terms-of-service</loc>
+    <loc>https://www.ambientspace.ai/terms-of-service</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>

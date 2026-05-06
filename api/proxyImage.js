@@ -61,7 +61,7 @@ export default async function handler(req, res) {
       headers: {
         // Some CDNs (Amazon) block requests without a real-looking UA
         'User-Agent':
-          'Mozilla/5.0 (compatible; AmbientSpaceProxy/1.0; +https://ambientspace.ai)',
+          'Mozilla/5.0 (compatible; AmbientSpaceProxy/1.0; +https://www.ambientspace.ai)',
         Accept: 'image/*',
       },
     });
