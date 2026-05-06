@@ -13,7 +13,7 @@
  * For launch on a budget, set LLM_PROVIDER=gemini and only GEMINI_API_KEY.
  * Get a key at https://aistudio.google.com/app/apikey (free, instant).
  *
- * Body shape (Base44-compatible):
+ * Body shape:
  *   {
  *     prompt: string,
  *     response_json_schema?: object,

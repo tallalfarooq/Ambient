@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Loader2, ShoppingBag, Sparkles, ArrowLeft, Recycle, Lock, ShoppingCart, Heart, Share2, Check, Copy, Globe } from "lucide-react";
@@ -110,10 +110,10 @@ export default function Design() {
   const [budgetMax,       setBudgetMax]       = useState(2000); // $ budget filter — applied when shopping
 
   useEffect(() => {
-    base44.auth.me().then(async (u) => {
+    apiClient.auth.me().then(async (u) => {
       setUser(u);
       try {
-        const uc = await base44.entities.UserCredits.filter({ user_email: u.email });
+        const uc = await apiClient.entities.UserCredits.filter({ user_email: u.email });
         if (uc.length > 0 && uc[0].plan_type !== "free") setIsPaidUser(true);
       } catch {}
     }).catch(() => setUser(null));
@@ -121,7 +121,7 @@ export default function Design() {
 
   useEffect(() => {
     if (!user || !designId) return;
-    base44.entities.SavedDesign.filter({ design_id: designId, user_email: user.email })
+    apiClient.entities.SavedDesign.filter({ design_id: designId, user_email: user.email })
       .then((saved) => {
         setIsSaved(saved.length > 0);
         if (saved.length > 0) setSavedDesign(saved[0]);
@@ -137,12 +137,12 @@ export default function Design() {
     setSaving(true);
     try {
       if (isSaved) {
-        const saved = await base44.entities.SavedDesign.filter({ design_id: designId, user_email: user.email });
-        if (saved.length > 0) await base44.entities.SavedDesign.delete(saved[0].id);
+        const saved = await apiClient.entities.SavedDesign.filter({ design_id: designId, user_email: user.email });
+        if (saved.length > 0) await apiClient.entities.SavedDesign.delete(saved[0].id);
         setIsSaved(false);
         setSavedDesign(null);
       } else {
-        const created = await base44.entities.SavedDesign.create({ design_id: designId, user_email: user.email });
+        const created = await apiClient.entities.SavedDesign.create({ design_id: designId, user_email: user.email });
         setIsSaved(true);
         setSavedDesign(created);
       }
@@ -158,10 +158,10 @@ export default function Design() {
     let token = savedDesign.share_token;
     if (!token) {
       token = crypto.randomUUID().replace(/-/g, "");
-      await base44.entities.SavedDesign.update(savedDesign.id, { share_token: token, is_public: true });
+      await apiClient.entities.SavedDesign.update(savedDesign.id, { share_token: token, is_public: true });
       setSavedDesign({ ...savedDesign, share_token: token, is_public: true });
     } else if (!savedDesign.is_public) {
-      await base44.entities.SavedDesign.update(savedDesign.id, { is_public: true });
+      await apiClient.entities.SavedDesign.update(savedDesign.id, { is_public: true });
       setSavedDesign({ ...savedDesign, is_public: true });
     }
     
@@ -179,9 +179,9 @@ export default function Design() {
   const loadDesign = useCallback(async () => {
     if (!designId) return;
     try {
-      const d = await base44.entities.RoomDesign.filter({ id: designId });
+      const d = await apiClient.entities.RoomDesign.filter({ id: designId });
       if (d.length) setDesign(d[0]);
-      const existing = await base44.entities.FurnitureItem.filter({ design_id: designId });
+      const existing = await apiClient.entities.FurnitureItem.filter({ design_id: designId });
       setItems(existing);
     } catch (err) {
       console.error("Failed to load design:", err);
@@ -199,7 +199,7 @@ export default function Design() {
     const timer = setInterval(async () => {
       attempts++;
       try {
-        const d = await base44.entities.RoomDesign.filter({ id: designId });
+        const d = await apiClient.entities.RoomDesign.filter({ id: designId });
         if (d.length) {
           setDesign(d[0]);
           if (d[0].status !== "generating") clearInterval(timer);
@@ -227,7 +227,7 @@ export default function Design() {
       budgetMax <= 4000 ? "premium high-end design" :
                           "luxury exclusive designer";
 
-    const result = await base44.integrations.Core.InvokeLLM({
+    const result = await apiClient.integrations.Core.InvokeLLM({
       prompt: `You are an Amazon product search expert analyzing an AI-generated interior design render in the ${design.style} style.
 Budget: up to $${budgetMax} per item.
 
@@ -281,7 +281,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
       withPositions.map(async (item) => {
         let matches = [];
         try {
-          const res = await base44.functions.invoke("getAmazonProducts", {
+          const res = await apiClient.functions.invoke("getAmazonProducts", {
             query:      item.search_query || item.label,
             limit:      3,
             budget_max: budgetMax,
@@ -302,7 +302,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
 
     const created = await Promise.all(
       itemsWithMatches.map((item) =>
-        base44.entities.FurnitureItem.create({ ...item, design_id: designId })
+        apiClient.entities.FurnitureItem.create({ ...item, design_id: designId })
       )
     );
     setItems(created);
@@ -541,7 +541,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
                       <p className="text-xs text-white/40 mt-1">Create a free account to use AI product matching. Uses credits from your account.</p>
                     </div>
                     <button
-                      onClick={() => base44.auth.redirectToLogin(window.location.href)}
+                      onClick={() => apiClient.auth.redirectToLogin(window.location.href)}
                       className="text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-opacity hover:opacity-90"
                       style={{ background: "#1B8FA0" }}
                     >
@@ -620,7 +620,7 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
         onClose={() => setCartOpen(false)}
         items={items}
         onRemove={async (itemId) => {
-          await base44.entities.FurnitureItem.update(itemId, { selected_match_index: null });
+          await apiClient.entities.FurnitureItem.update(itemId, { selected_match_index: null });
           setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, selected_match_index: null } : i)));
           if (selectedItem?.id === itemId) setSelectedItem((s) => ({ ...s, selected_match_index: null }));
         }}

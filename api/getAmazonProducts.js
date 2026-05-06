@@ -20,7 +20,7 @@
  *   title, source, url, price, image_url, similarity_score, is_preloved, asin
  * }> }
  *
- * The shape matches what Design.jsx already expects from the legacy Base44
+ * The shape matches what Design.jsx already expects from the legacy
  * `getAmazonProducts` function, so no client-side change is required.
  */
 import { allow, getUserFromRequest, json, readJson } from './_lib/auth.js';

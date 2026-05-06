@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Plus, Sparkles, Loader2, Recycle, Trash2, Download, Pencil, ShoppingBag, Clock, Heart, Share2 } from "lucide-react";
@@ -190,16 +190,16 @@ export default function Projects() {
 
   const load = useCallback(async (currentUser) => {
     if (!currentUser) return;
-    const data = await base44.entities.RoomDesign.filter({ created_by: currentUser.email }, "-created_date", 50);
+    const data = await apiClient.entities.RoomDesign.filter({ created_by: currentUser.email }, "-created_date", 50);
     setDesigns(data);
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    base44.auth.me().then(async (currentUser) => {
+    apiClient.auth.me().then(async (currentUser) => {
       setUser(currentUser);
       load(currentUser);
-      const saved = await base44.entities.SavedDesign.filter({ user_email: currentUser.email });
+      const saved = await apiClient.entities.SavedDesign.filter({ user_email: currentUser.email });
       setSavedDesigns(saved);
     }).catch(() => { setUser(null); setLoading(false); });
   }, [load]);
@@ -215,7 +215,7 @@ export default function Projects() {
     if (!window.confirm(t("projects_delete_confirm"))) return;
     setDeleting(id);
     try {
-      await base44.entities.RoomDesign.delete(id);
+      await apiClient.entities.RoomDesign.delete(id);
       setDesigns((prev) => prev.filter((d) => d.id !== id));
     } catch {
       alert(t("projects_delete_fail"));
@@ -228,10 +228,10 @@ export default function Projects() {
     if (!user) return;
     const existing = savedDesigns.find((s) => s.design_id === designId);
     if (existing) {
-      await base44.entities.SavedDesign.delete(existing.id);
+      await apiClient.entities.SavedDesign.delete(existing.id);
       setSavedDesigns((prev) => prev.filter((s) => s.id !== existing.id));
     } else {
-      const created = await base44.entities.SavedDesign.create({ design_id: designId, user_email: user.email });
+      const created = await apiClient.entities.SavedDesign.create({ design_id: designId, user_email: user.email });
       setSavedDesigns((prev) => [...prev, created]);
     }
   };
@@ -242,17 +242,17 @@ export default function Projects() {
       let token = existing.share_token;
       if (!token) {
         token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-        await base44.entities.SavedDesign.update(existing.id, { share_token: token, is_public: true });
+        await apiClient.entities.SavedDesign.update(existing.id, { share_token: token, is_public: true });
         setSavedDesigns((prev) => prev.map((s) => s.id === existing.id ? { ...s, share_token: token, is_public: true } : s));
       } else if (!existing.is_public) {
-        await base44.entities.SavedDesign.update(existing.id, { is_public: true });
+        await apiClient.entities.SavedDesign.update(existing.id, { is_public: true });
         setSavedDesigns((prev) => prev.map((s) => s.id === existing.id ? { ...s, is_public: true } : s));
       }
       setShareLink(`${window.location.origin}/SharedDesign?token=${token}`);
     } else {
       const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       try {
-        const created = await base44.entities.SavedDesign.create({ design_id: designId, user_email: user.email, share_token: token, is_public: true });
+        const created = await apiClient.entities.SavedDesign.create({ design_id: designId, user_email: user.email, share_token: token, is_public: true });
         setSavedDesigns((prev) => [...prev, created]);
         setShareLink(`${window.location.origin}/SharedDesign?token=${token}`);
       } catch {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { Upload, CheckCircle2, AlertCircle, Loader2, Database } from "lucide-react";
 import { AMAZON_TAG } from "@/components/affiliateLinks";
 const FURNITURE_KEYWORDS = [
@@ -105,7 +105,7 @@ export default function CatalogImport() {
           };
         });
 
-        await base44.entities.ProductCatalog.bulkCreate(batch);
+        await apiClient.entities.ProductCatalog.bulkCreate(batch);
         imported += batch.length;
         setProgress(Math.round((imported / filtered.length) * 100));
         setStats(s => ({ ...s, imported }));

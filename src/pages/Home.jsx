@@ -6,7 +6,7 @@ import {
   motion, AnimatePresence, useInView,
   useMotionValue, useTransform, useSpring,
 } from "framer-motion";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import RoomVideoShowcase from "@/components/home/RoomVideoShowcase";
 import HeroSlider from "@/components/home/HeroSlider";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -434,7 +434,7 @@ export default function Home() {
   const navigate = useNavigate();
   const { t } = useLanguage();
 
-  useEffect(() => { base44.auth.me().then(setUser).catch(() => setUser(null)); }, []);
+  useEffect(() => { apiClient.auth.me().then(setUser).catch(() => setUser(null)); }, []);
 
   const handleStart = () => {
     if (user) navigate(createPageUrl("Studio"));
@@ -837,14 +837,14 @@ export default function Home() {
               <p style={{ fontSize:14, color:"rgba(255,255,255,0.38)", marginBottom:28, lineHeight:1.7, fontWeight:300 }}>{t("auth_subtitle")}</p>
               <div className="flex flex-col gap-3">
                 <button
-                  onClick={() => base44.auth.redirectToLogin(window.location.origin + createPageUrl("Studio"))}
+                  onClick={() => apiClient.auth.redirectToLogin(window.location.origin + createPageUrl("Studio"))}
                   className="w-full font-bold py-3.5 rounded-2xl text-sm hover:opacity-90 transition-opacity"
                   style={{ background:"linear-gradient(135deg,#1B8FA0,#C9963A)", color:"#050508" }}
                 >
                   {t("auth_signup")}
                 </button>
                 <button
-                  onClick={() => base44.auth.redirectToLogin(window.location.origin + createPageUrl("Studio"))}
+                  onClick={() => apiClient.auth.redirectToLogin(window.location.origin + createPageUrl("Studio"))}
                   className="w-full font-medium py-3.5 rounded-2xl text-sm transition-all hover:bg-white/5"
                   style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", color:"rgba(255,255,255,0.55)" }}
                 >

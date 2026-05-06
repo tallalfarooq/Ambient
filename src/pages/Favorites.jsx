@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Heart, Sparkles, Loader2, Trash2, Share2, Plus } from "lucide-react";
@@ -18,16 +18,16 @@ export default function Favorites() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const currentUser = await base44.auth.me();
+        const currentUser = await apiClient.auth.me();
         setUser(currentUser);
 
-        const saved = await base44.entities.SavedDesign.filter({ user_email: currentUser.email });
+        const saved = await apiClient.entities.SavedDesign.filter({ user_email: currentUser.email });
         setSavedDesigns(saved);
 
         if (saved.length > 0) {
           const designIds = saved.map((s) => s.design_id);
           const designData = await Promise.all(
-            designIds.map((id) => base44.entities.RoomDesign.filter({ id }).then((d) => d[0]))
+            designIds.map((id) => apiClient.entities.RoomDesign.filter({ id }).then((d) => d[0]))
           );
           setDesigns(designData.filter(Boolean));
         }
@@ -41,7 +41,7 @@ export default function Favorites() {
 
   const handleRemove = async (savedId, designId) => {
     try {
-      await base44.entities.SavedDesign.delete(savedId);
+      await apiClient.entities.SavedDesign.delete(savedId);
       setSavedDesigns((prev) => prev.filter((s) => s.id !== savedId));
       setDesigns((prev) => prev.filter((d) => d.id !== designId));
     } catch (err) {
@@ -56,10 +56,10 @@ export default function Favorites() {
     let token = saved.share_token;
     if (!token) {
       token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      await base44.entities.SavedDesign.update(saved.id, { share_token: token, is_public: true });
+      await apiClient.entities.SavedDesign.update(saved.id, { share_token: token, is_public: true });
       setSavedDesigns((prev) => prev.map((s) => s.id === saved.id ? { ...s, share_token: token, is_public: true } : s));
     } else if (!saved.is_public) {
-      await base44.entities.SavedDesign.update(saved.id, { is_public: true });
+      await apiClient.entities.SavedDesign.update(saved.id, { is_public: true });
       setSavedDesigns((prev) => prev.map((s) => s.id === saved.id ? { ...s, is_public: true } : s));
     }
     
@@ -90,7 +90,7 @@ export default function Favorites() {
           <h2 className="text-xl font-bold mb-2">Sign in to view your favorites</h2>
           <p className="text-white/40 text-sm mb-6">Save and revisit your favorite room designs.</p>
           <button
-            onClick={() => base44.auth.redirectToLogin(window.location.href)}
+            onClick={() => apiClient.auth.redirectToLogin(window.location.href)}
             className="text-white font-semibold px-6 py-3 rounded-2xl transition-opacity hover:opacity-90"
             style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
           >

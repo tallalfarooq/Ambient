@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { Upload, Camera, Search, Loader2, X, ExternalLink, Crown, Sparkles, ShoppingBag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
@@ -42,9 +42,9 @@ export default function StepFindSimilar({ user, credits }) {
     setResults(null);
 
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: image });
+      const { file_url } = await apiClient.integrations.Core.UploadFile({ file: image });
 
-      const result = await base44.integrations.Core.InvokeLLM({
+      const result = await apiClient.integrations.Core.InvokeLLM({
         prompt: `You are a precise furniture and home decor product identification expert.
 
 Analyze this image carefully and identify the MAIN furniture or decor item shown.

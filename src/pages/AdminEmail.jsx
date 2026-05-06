@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { Send, Users, RefreshCw, Loader2, CheckCircle, AlertCircle, Mail } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,7 +24,7 @@ export default function AdminEmail() {
   const [body,      setBody]      = useState("");
 
   useEffect(() => {
-    base44.auth.me().then((u) => {
+    apiClient.auth.me().then((u) => {
       setUser(u);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -34,7 +34,7 @@ export default function AdminEmail() {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const res = await base44.functions.invoke("syncResendContacts", {});
+      const res = await apiClient.functions.invoke("syncResendContacts", {});
       setSyncResult(res.data);
       toast.success(`Synced ${res.data.synced} contacts to Resend`);
     } catch (err) {
@@ -52,7 +52,7 @@ export default function AdminEmail() {
     setSending(true);
     setSendResult(null);
     try {
-      const res = await base44.functions.invoke("sendMarketingNewsletter", { subject, html: body, segment });
+      const res = await apiClient.functions.invoke("sendMarketingNewsletter", { subject, html: body, segment });
       setSendResult(res.data);
       toast.success(`Sent to ${res.data.sent} users!`);
     } catch (err) {

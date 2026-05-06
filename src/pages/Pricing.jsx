@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { Check, Sparkles, Crown, Zap, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -33,9 +33,9 @@ export default function Pricing() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const currentUser = await base44.auth.me();
+        const currentUser = await apiClient.auth.me();
         setUser(currentUser);
-        const userCredits = await base44.entities.UserCredits.filter({ user_email: currentUser.email });
+        const userCredits = await apiClient.entities.UserCredits.filter({ user_email: currentUser.email });
         if (userCredits.length > 0) setCredits(userCredits[0]);
       } catch {
         setUser(null);
@@ -47,14 +47,14 @@ export default function Pricing() {
 
   const handlePurchase = async (planId) => {
     if (!user) {
-      base44.auth.redirectToLogin(window.location.href);
+      apiClient.auth.redirectToLogin(window.location.href);
       return;
     }
     setPurchasing(planId);
     try {
       // Return to /Studio so the ?payment=success handler fires and shows the confirmation toast
       const returnUrl = `${window.location.origin}/Studio`;
-      const response = await base44.functions.invoke("createCheckout", { plan: planId, returnUrl });
+      const response = await apiClient.functions.invoke("createCheckout", { plan: planId, returnUrl });
       const url = response?.data?.url || response?.url;
       if (url) {
         window.location.href = url;

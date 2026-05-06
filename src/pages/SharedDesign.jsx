@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Loader2, ShoppingBag, Sparkles, ExternalLink, Layers } from "lucide-react";
@@ -74,14 +74,14 @@ export default function SharedDesign() {
       }
 
       try {
-        const saved = await base44.entities.SavedDesign.filter({ share_token: token, is_public: true });
+        const saved = await apiClient.entities.SavedDesign.filter({ share_token: token, is_public: true });
         if (saved.length === 0) {
           setError("Design not found or not shared publicly");
           setLoading(false);
           return;
         }
 
-        const designData = await base44.entities.RoomDesign.filter({ id: saved[0].design_id });
+        const designData = await apiClient.entities.RoomDesign.filter({ id: saved[0].design_id });
         if (designData.length === 0) {
           setError("Design not found");
           setLoading(false);
@@ -90,7 +90,7 @@ export default function SharedDesign() {
 
         setDesign(designData[0]);
 
-        const furnitureItems = await base44.entities.FurnitureItem.filter({ design_id: saved[0].design_id });
+        const furnitureItems = await apiClient.entities.FurnitureItem.filter({ design_id: saved[0].design_id });
         setItems(furnitureItems);
       } catch (err) {
         setError("Failed to load design");

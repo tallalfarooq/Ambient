@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock, Globe, Sliders, X, Search, ShoppingBag } from "lucide-react";
 import { AMAZON_TAG } from "@/components/affiliateLinks";
@@ -414,7 +414,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     try {
       localStorage.setItem("ambient_studio_draft", JSON.stringify({ ...data, _step: 3 }));
     } catch {}
-    base44.auth.redirectToLogin(window.location.href);
+    apiClient.auth.redirectToLogin(window.location.href);
   };
 
   useEffect(() => { setPrompt(buildPrompt(data)); }, [data.style, data.color_palette, data.vibes, data.room_mode, data.room_type, data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design, data.custom_note]);
@@ -422,9 +422,9 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   useEffect(() => {
     const fetchCredits = async () => {
       try {
-        const currentUser = await base44.auth.me();
+        const currentUser = await apiClient.auth.me();
         setUser(currentUser);
-        const userCredits = await base44.entities.UserCredits.filter({ user_email: currentUser.email });
+        const userCredits = await apiClient.entities.UserCredits.filter({ user_email: currentUser.email });
         // The signup trigger always creates a user_credits row server-side; we
         // trust it here. RLS prevents client-side INSERT to user_credits, so
         // we don't try to create one if missing — the server-side /api/generate
@@ -546,7 +546,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       : STRUCTURE_NEGATIVE_PROMPT;
 
     try {
-      const result = await base44.integrations.Core.GenerateImage({
+      const result = await apiClient.integrations.Core.GenerateImage({
         prompt: refinedPrompt,
         existing_image_urls: [baseImageUrl],
         // Pass the room mode so the server can pick the right strength range:
@@ -607,7 +607,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       try {
         if (isFineTune) {
           // Each fine-tune iteration = a new record in My Designs so user sees full history
-          const record = await base44.entities.RoomDesign.create({
+          const record = await apiClient.entities.RoomDesign.create({
             ...designPayload,
             // Keep original upload as room_image_url so before/after always makes sense
             room_image_url: data.room_image_url,
@@ -616,10 +616,10 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           update({ design_id: record.id });
         } else if (designId) {
           // Full re-generation: update existing draft (same design, new render)
-          await base44.entities.RoomDesign.update(designId, designPayload);
+          await apiClient.entities.RoomDesign.update(designId, designPayload);
         } else {
           // First-ever generation: create fresh draft
-          const record = await base44.entities.RoomDesign.create(designPayload);
+          const record = await apiClient.entities.RoomDesign.create(designPayload);
           setDesignId(record.id);
           update({ design_id: record.id });
         }
@@ -629,7 +629,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     } catch (err) {
       clearInterval(timerRef.current);
       const raw = err?.message || "";
-      // If Base44 LLM intercepted the prompt and returned a text response, show a friendly error
+      // If the LLM intercepted the prompt and returned a text response, show a friendly error
       const isLlmResponse = raw.toLowerCase().startsWith("sure") || raw.toLowerCase().startsWith("here") || raw.length > 120;
       setError(isLlmResponse
         ? "Image generation failed. Please try a different style or simpler description and try again."
@@ -650,10 +650,10 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       let id = designId;
       if (id) {
         // Upgrade the existing draft to "ready" so product matching becomes available
-        await base44.entities.RoomDesign.update(id, { status: "ready", generated_render_url: generated });
+        await apiClient.entities.RoomDesign.update(id, { status: "ready", generated_render_url: generated });
       } else {
         // Fallback: no draft yet (shouldn't normally happen), create fresh
-        const record = await base44.entities.RoomDesign.create({
+        const record = await apiClient.entities.RoomDesign.create({
           name:                 data.name || "My Room Design",
           style:                data.style,
           room_type:            data.room_type,

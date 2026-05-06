@@ -1,7 +1,7 @@
 /**
  * /api/syncResendContacts — admin-only, currently a stub.
  *
- * Called by src/pages/AdminEmail.jsx. The original Base44 implementation
+ * Called by src/pages/AdminEmail.jsx. The original implementation
  * walked the user list and pushed contacts into a Resend audience. We've
  * dropped that for launch (the audience is small enough to manage manually
  * in the Resend dashboard), but the route exists so the admin page doesn't

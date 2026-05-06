@@ -2,7 +2,7 @@
  * /api/sendMarketingNewsletter — admin-only, currently a stub.
  *
  * Called by src/pages/AdminEmail.jsx with { subject, html, segment }. The
- * original Base44 implementation iterated the user list and sent emails via
+ * original implementation iterated the user list and sent emails via
  * Resend. We've dropped that for launch — at MVP scale, sending campaign
  * emails directly from the Resend dashboard is faster and safer.
  *

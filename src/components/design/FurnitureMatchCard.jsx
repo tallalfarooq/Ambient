@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { CheckCircle2, Recycle, Star, ExternalLink } from "lucide-react";
 import { buildAffiliateUrl, getSourceCTA } from "@/components/affiliateLinks";
 
@@ -39,7 +39,7 @@ export default function FurnitureMatchCard({ item, onItemUpdate }) {
   const handleSelect = async (idx) => {
     setSaving(true);
     setSelected(idx);
-    await base44.entities.FurnitureItem.update(item.id, { selected_match_index: idx });
+    await apiClient.entities.FurnitureItem.update(item.id, { selected_match_index: idx });
     onItemUpdate({ ...item, selected_match_index: idx });
     setSaving(false);
   };

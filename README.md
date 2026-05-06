@@ -1,39 +1,39 @@
-**Welcome to your Base44 project** 
+# Ambient Space
 
-**About**
+AI-powered interior design. Upload your room photo, choose a style, and shop real
+furniture from the render.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+## Stack
 
-This project contains everything you need to run your app locally.
+- **Frontend** — Vite + React + Tailwind, deployed on Vercel
+- **Auth & DB** — Supabase (Postgres + Storage + Auth)
+- **AI** — Provider-agnostic via env var:
+  - `LLM_PROVIDER` = `gemini` (default, free) | `groq` | `anthropic`
+  - `IMAGE_PROVIDER` = `huggingface` (free) | `fal` | `together`
+- **Payments** — Stripe Checkout (one-off credit packs)
+- **Email** — Resend (transactional + marketing)
+- **Rate limiting** — Upstash Redis (free tier)
+- **Error tracking** — Sentry (free tier, optional)
 
-**Edit the code in your local development environment**
+## Local development
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
-
-**Prerequisites:** 
-
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
+1. Clone the repository.
+2. `cd` into the project directory.
 3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
+4. Copy `.env.local.example` → `.env.local` and fill in real values.
+5. Run the app: `npm run dev`
 
-```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
+## Database
 
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
-```
+Migrations live in `supabase/migrations/`. Run them in order via the Supabase
+SQL Editor:
 
-Run the app: `npm run dev`
+- `0001_initial_schema.sql` — base tables, RLS policies, triggers
+- `0002_add_missing_design_fields.sql` — color_palette, vibes, status
+  constraint, default created_by
+- `0003_furniture_items_ltrb_bbox.sql` — bounding-box columns
 
-**Publish your changes**
+## Deployment
 
-Open [Base44.com](http://Base44.com) and click on Publish.
-
-**Docs & Support**
-
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
-
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+Pushes to `main` auto-deploy via Vercel. Required env vars are documented in
+`.env.local.example`.

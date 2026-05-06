@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 
 export default function Unsubscribe() {
@@ -17,7 +17,7 @@ export default function Unsubscribe() {
       return;
     }
 
-    base44.functions
+    apiClient.functions
       .invoke("unsubscribeEmail", { email })
       .then(() => setStatus("success"))
       .catch(() => setStatus("error"));

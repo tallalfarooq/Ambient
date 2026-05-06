@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useTransition } from "react";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Palette, Sparkles, Check, ScanSearch, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -87,9 +87,9 @@ export default function Studio() {
   }, []);
 
   useEffect(() => {
-    base44.auth.me().then(async (u) => {
+    apiClient.auth.me().then(async (u) => {
       setUser(u);
-      const uc = await base44.entities.UserCredits.filter({ user_email: u.email });
+      const uc = await apiClient.entities.UserCredits.filter({ user_email: u.email });
       if (uc.length > 0) setCredits(uc[0]);
     }).catch(() => {});
   }, []);
@@ -99,8 +99,8 @@ export default function Studio() {
     if (params.get("payment") === "success") {
       toast.success(t("studio_payment_success"));
       window.history.replaceState({}, "", "/Studio");
-      base44.auth.me().then(async (u) => {
-        const uc = await base44.entities.UserCredits.filter({ user_email: u.email });
+      apiClient.auth.me().then(async (u) => {
+        const uc = await apiClient.entities.UserCredits.filter({ user_email: u.email });
         if (uc.length > 0) setCredits(uc[0]);
       }).catch(() => {});
     } else if (params.get("payment") === "cancelled") {
@@ -111,7 +111,7 @@ export default function Studio() {
     const redesignId = params.get("redesign_id");
     if (redesignId) {
       window.history.replaceState({}, "", "/Studio");
-      base44.entities.RoomDesign.filter({ id: redesignId })
+      apiClient.entities.RoomDesign.filter({ id: redesignId })
         .then((results) => {
           if (!results.length) return;
           const d = results[0];

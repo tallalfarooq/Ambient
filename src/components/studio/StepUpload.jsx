@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { Upload, Image as ImageIcon, Box, Loader2, Camera, Sparkles, X, CheckCircle2, Armchair, Wand2 } from "lucide-react";
 import heic2any from "heic2any";
 
@@ -43,7 +43,7 @@ export default function StepUpload({ data, update, onNext }) {
     try {
       const processedFile = await convertToJpeg(file);
       const isImage = processedFile.type.startsWith("image/");
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: processedFile });
+      const { file_url } = await apiClient.integrations.Core.UploadFile({ file: processedFile });
       if (isImage) { update({ room_image_url: file_url }); setPreview(file_url); }
       else          { update({ room_file_url: file_url }); }
     } catch (err) {

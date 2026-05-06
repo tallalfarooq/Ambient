@@ -2,7 +2,7 @@ import { useState, useEffect, createContext } from "react";
 import { useLanguage } from "@/lib/LanguageContext";
 import { useAuth } from "@/lib/AuthContext";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { createPageUrl } from "@/utils";
 import { Layers, Home, BookImage, LogIn, LogOut, User, Sparkles, Heart } from "lucide-react";
 import CookieBanner from "@/components/consent/CookieBanner";
@@ -24,7 +24,7 @@ export default function Layout({ children, currentPageName }) {
   const [planType, setPlanType] = useState(null);
   const { lang, setLanguage, t } = useLanguage();
   // Single source of auth truth — AuthContext handles the session lifecycle.
-  // No more independent base44.auth.me() call here (was causing lock contention).
+  // No more independent apiClient.auth.me() call here (was causing lock contention).
   const { user, logout: authLogout } = useAuth();
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function Layout({ children, currentPageName }) {
       setPlanType(null);
       return;
     }
-    base44.entities.UserCredits.filter({ user_email: user.email })
+    apiClient.entities.UserCredits.filter({ user_email: user.email })
       .then((uc) => { if (uc.length > 0) setPlanType(uc[0].plan_type); })
       .catch(() => {});
     // Welcome email — wired up in Phase 2D when /api/sendWelcomeEmail exists.
@@ -132,7 +132,7 @@ export default function Layout({ children, currentPageName }) {
                 </div>
               ) : (
                 <button
-                  onClick={() => base44.auth.redirectToLogin(window.location.href)}
+                  onClick={() => apiClient.auth.redirectToLogin(window.location.href)}
                   className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-white transition-all hover:opacity-90"
                   style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
                 >
@@ -205,7 +205,7 @@ export default function Layout({ children, currentPageName }) {
               </button>
             ) : (
               <button
-                onClick={() => base44.auth.redirectToLogin(window.location.href)}
+                onClick={() => apiClient.auth.redirectToLogin(window.location.href)}
                 className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl"
                 style={{ color: "#1B8FA0" }}
               >

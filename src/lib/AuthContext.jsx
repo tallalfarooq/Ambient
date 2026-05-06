@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { apiClient } from '@/api/apiClient';
 import { supabase } from '@/api/supabase';
 
 const AuthContext = createContext();
@@ -96,7 +96,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = async () => {
-    await base44.auth.logout();
+    await apiClient.auth.logout();
     // Optimistic clear for instant UI feedback; auth listener also fires SIGNED_OUT.
     setUser(null);
     setIsAuthenticated(false);
@@ -107,7 +107,7 @@ export const AuthProvider = ({ children }) => {
     // absolute redirect target itself. Avoids "localhost:5173/http://localhost:5173/" loops.
     const path =
       returnUrl ?? (window.location.pathname + window.location.search + window.location.hash);
-    base44.auth.redirectToLogin(path);
+    apiClient.auth.redirectToLogin(path);
   };
 
   return (

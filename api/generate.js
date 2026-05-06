@@ -172,7 +172,7 @@ export default async function handler(req, res) {
   const isFurnish = mode === 'furnish';
 
   // === Prompt rewrite for FLUX in furnish mode =============================
-  // The frontend's buildPrompt was tuned for SDXL on Base44 — heavy on
+  // The frontend's buildPrompt was tuned for SDXL — heavy on
   // "DO NOT change" instructions, all-caps "EXACTLY", "Zero structural
   // changes". FLUX is more literal than SDXL and follows the dominant tone,
   // so it preserves the empty room. We rewrite the prompt to lead with the

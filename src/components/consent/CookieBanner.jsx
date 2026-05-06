@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { apiClient } from "@/api/apiClient";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, ChevronDown, ChevronUp } from "lucide-react";
@@ -9,7 +9,7 @@ function generateSessionId() {
 }
 
 async function logConsent(action, prefs) {
-  await base44.entities.ConsentLog.create({
+  await apiClient.entities.ConsentLog.create({
     session_id: generateSessionId(),
     necessary: true,
     functional: prefs.functional,
