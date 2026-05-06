@@ -18,6 +18,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let mounted = true;
 
+    // Generic timeout helper — bounded waits for both getSession() and the
+    // profile lookup. Hanging promises inside applySession() were the cause
+    // of the "page loads forever until refresh" bug.
+    const withTimeout = (promise, ms, fallback) =>
+      Promise.race([
+        promise,
+        new Promise((resolve) => setTimeout(() => resolve(fallback), ms)),
+      ]);
+
     const applySession = async (session) => {
       if (!session?.user) {
         if (!mounted) return;
@@ -26,15 +35,25 @@ export const AuthProvider = ({ children }) => {
         return;
       }
       const sessionUser = session.user;
-      // Best-effort profile hydration; don't block UI on RLS or transient errors.
+      // Best-effort profile hydration. Cap at 3s — if Supabase is slow,
+      // we'd rather show defaults than block the UI forever.
       let profileData = null;
       try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('full_name, role')
-          .eq('id', sessionUser.id)
-          .maybeSingle();
-        profileData = data;
+        const result = await withTimeout(
+          supabase
+            .from('profiles')
+            .select('full_name, role')
+            .eq('id', sessionUser.id)
+            .maybeSingle(),
+          3000,
+          { data: null, _timedOut: true }
+        );
+        if (result?._timedOut) {
+          // eslint-disable-next-line no-console
+          console.warn('[AuthContext] profile lookup timed out — using defaults');
+        } else {
+          profileData = result?.data ?? null;
+        }
       } catch {
         /* swallow — fall back to defaults */
       }
@@ -54,10 +73,19 @@ export const AuthProvider = ({ children }) => {
 
     // Belt-and-suspenders: kick off an explicit getSession() so we still
     // resolve isLoadingAuth even if INITIAL_SESSION is delayed for any reason.
+    // Bounded by 1.5s — the rest of the app already assumes this can fail.
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        await applySession(session);
+        const result = await withTimeout(
+          supabase.auth.getSession(),
+          1500,
+          { data: { session: null }, _timedOut: true }
+        );
+        if (result?._timedOut) {
+          // eslint-disable-next-line no-console
+          console.warn('[AuthContext] initial getSession timed out — proceeding as unauthenticated');
+        }
+        await applySession(result?.data?.session ?? null);
       } catch {
         /* ignore — onAuthStateChange will recover */
       } finally {

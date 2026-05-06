@@ -27,6 +27,55 @@
 import { supabase } from './supabase';
 
 // =============================================================================
+// TIMEOUT HELPER
+//
+// supabase.auth.getSession() occasionally hangs indefinitely when the auth
+// client is mid-token-refresh or in an inconsistent state. Every code path
+// that awaits it would then hang forever, taking the whole page down with
+// it (Studio, Projects, Home all became unusable until refresh).
+//
+// `withTimeout` races any promise against a timer and returns a fallback if
+// the original doesn't resolve in time. We use it everywhere we call
+// getSession() so that worst-case latency on a page load is bounded.
+// =============================================================================
+
+const SESSION_TIMEOUT_MS = 1500;
+
+async function withTimeout(promise, timeoutMs, fallback) {
+  let timer;
+  const timeoutPromise = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(fallback), timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Reads the current Supabase session with a hard timeout. Returns the session
+ * object or null. Never throws, never hangs.
+ */
+async function getSessionSafe() {
+  try {
+    const result = await withTimeout(
+      supabase.auth.getSession(),
+      SESSION_TIMEOUT_MS,
+      { data: { session: null }, _timedOut: true }
+    );
+    if (result?._timedOut) {
+      // eslint-disable-next-line no-console
+      console.warn('[apiClient] supabase.auth.getSession() timed out — proceeding as unauthenticated');
+      return null;
+    }
+    return result?.data?.session ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// =============================================================================
 // AUTH
 // =============================================================================
 
@@ -40,7 +89,7 @@ const auth = {
    * Token refresh is handled in the background by supabase-js itself.
    */
   me: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const session = await getSessionSafe();
     if (!session?.user) {
       const err = new Error('auth_required');
       err.type = 'auth_required';
@@ -156,12 +205,8 @@ function stripEmailIdentityFields(payload) {
  * (room_designs, saved_designs.user_id, furniture_items via design ownership).
  */
 async function getCurrentUserId() {
-  try {
-    const { data } = await supabase.auth.getSession();
-    return data?.session?.user?.id ?? null;
-  } catch {
-    return null;
-  }
+  const session = await getSessionSafe();
+  return session?.user?.id ?? null;
 }
 
 /**
@@ -222,9 +267,9 @@ function applyFilters(query, where) {
 let cachedEmailPromise = null;
 async function getCurrentEmail() {
   if (cachedEmailPromise) return cachedEmailPromise;
-  cachedEmailPromise = supabase.auth
-    .getSession()
-    .then(({ data }) => data?.session?.user?.email ?? null)
+  // getSessionSafe never hangs — bounded by SESSION_TIMEOUT_MS.
+  cachedEmailPromise = getSessionSafe()
+    .then((session) => session?.user?.email ?? null)
     .catch(() => null);
   setTimeout(() => {
     cachedEmailPromise = null;
@@ -391,8 +436,8 @@ async function UploadFile({ file, bucket = 'rooms' }) {
     size: file?.size,
   });
 
-  // Read from session (no network, no lock).
-  const { data: { session } } = await supabase.auth.getSession();
+  // Read from session with timeout — never hangs.
+  const session = await getSessionSafe();
   if (!session?.user) {
     throw new Error('Not authenticated. Please sign in and try again.');
   }
@@ -533,25 +578,10 @@ const functions = {
    * returning to their callers.
    */
   invoke: async (name, body = {}) => {
-    // supabase.auth.getSession() is normally a fast localStorage read, but
-    // can hang indefinitely if the auth client is mid-refresh or stuck in
-    // an inconsistent state — that's what causes "click Generate, nothing
-    // happens, must refresh." Race it against a short timeout and proceed
-    // unauthenticated if it fails; the server returns 401 cleanly which we
-    // already surface as a real error instead of a silent hang.
-    let token;
-    try {
-      const sessionResult = await Promise.race([
-        supabase.auth.getSession(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('getSession timeout')), 1500)
-        ),
-      ]);
-      token = sessionResult?.data?.session?.access_token;
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn(`[functions.invoke ${name}] getSession failed:`, err?.message);
-    }
+    // Read session with shared timeout helper. If it hangs, the server
+    // returns 401 cleanly which we surface as a real error.
+    const session = await getSessionSafe();
+    const token = session?.access_token;
 
     const response = await fetch(`/api/${name}`, {
       method: 'POST',
