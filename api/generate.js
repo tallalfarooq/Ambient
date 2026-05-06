@@ -171,13 +171,27 @@ export default async function handler(req, res) {
   // working range — AI swaps furniture without altering the architecture.
   const isFurnish = mode === 'furnish';
 
-  // === Prompt rewrite for FLUX in furnish mode =============================
-  // The frontend's buildPrompt was tuned for SDXL — heavy on
-  // "DO NOT change" instructions, all-caps "EXACTLY", "Zero structural
-  // changes". FLUX is more literal than SDXL and follows the dominant tone,
-  // so it preserves the empty room. We rewrite the prompt to lead with the
-  // furnishing task (descriptive) and only briefly mention preservation.
-  const finalPrompt = isFurnish ? rewritePromptForFurnish(prompt) : prompt;
+  // === Prompt rewrite for FLUX (both modes) ================================
+  // The frontend's buildPrompt was tuned for SDXL — heavy on "DO NOT change"
+  // instructions, all-caps "EXACTLY", "CRITICAL ARCHITECTURE LOCK", etc.
+  // FLUX Kontext doesn't need any of that — it preserves architecture by
+  // default and works best with short descriptive prompts (~30-50 words).
+  //
+  // The 250+ word imperative prompt was making fal Kontext run for 180+
+  // seconds per generation, which Vercel killed at the 120s timeout. After
+  // simplification, generations complete in 15-30s typical.
+  //
+  // We use Kontext model? Apply the rewrite. Otherwise (HF/SDXL) the long
+  // preservation prompt actually helps SDXL stay close to the source.
+  const isKontext = /kontext/i.test(model || DEFAULT_MODELS[PROVIDER] || '');
+  let finalPrompt;
+  if (isKontext) {
+    finalPrompt = isFurnish
+      ? rewritePromptForFurnish(prompt)
+      : rewritePromptForRedesign(prompt);
+  } else {
+    finalPrompt = isFurnish ? rewritePromptForFurnish(prompt) : prompt;
+  }
 
   const minStrength = isFurnish ? 0.85 : 0.4;
   const maxStrength = isFurnish ? 0.95 : 0.85;
@@ -572,6 +586,66 @@ function rewritePromptForFurnish(originalPrompt) {
     mood ? `${mood.toLowerCase()} atmosphere` : null,
     `same camera angle, same perspective, same wall positions, same windows and doors as the reference photo`,
     `photorealistic, magazine-quality interior design photograph, soft natural daylight, hyperdetailed, 8K`,
+  ].filter(Boolean);
+
+  return parts.join('. ') + '.';
+}
+
+/**
+ * Rewrites a verbose redesign prompt into a FLUX Kontext-friendly short prompt.
+ *
+ * The frontend produces something like:
+ *   "Photorealistic interior design photograph. CRITICAL ARCHITECTURE LOCK —
+ *    copy exact camera angle, exact perspective... DO NOT ADD any new windows.
+ *    DO NOT ADD any new doors... Apply Art Deco interior design style to this
+ *    Living Room: deep jewel-tone velvet upholstery... Color palette: Black,
+ *    gold, emerald."
+ *
+ * That's 250+ words and ~40% of the tokens are "DO NOT" / "EXACTLY" rules
+ * that Kontext doesn't need (it preserves architecture by default — that's
+ * literally its job). On fal we measured 180s execution time with this prompt;
+ * after simplification, ~20-30s.
+ *
+ * The output preserves the meaningful directives (style + descriptors +
+ * furniture list + palette) and trusts Kontext to keep the architecture.
+ */
+function rewritePromptForRedesign(originalPrompt) {
+  const p = originalPrompt;
+
+  // Pull the style. Order: explicit "Apply <Style>" form, then known styles.
+  const styleMatch =
+    p.match(/Apply\s+([\w\s-]+?)\s+interior design style/i) ||
+    p.match(/\b(Japandi|Scandinavian|Mid-century|Modern|Industrial|Bohemian|Minimalist|Coastal|Farmhouse|Art Deco|Cottagecore|Contemporary|Maximalist)\b/i);
+  const style = styleMatch?.[1]?.trim() || 'modern';
+
+  // Pull the room type ("to this Living Room", "to this Bedroom" etc.)
+  const roomMatch = p.match(/to this\s+([\w\s]+?)(?:[:.]|$)/i);
+  const room = roomMatch?.[1]?.trim().toLowerCase() || 'room';
+
+  // Pull style-specific descriptors that come right after the colon.
+  // E.g. "deep jewel-tone velvet upholstery in emerald or navy, polished gold..."
+  const descriptorsMatch = p.match(
+    /interior design style to this[\s\w]+?:\s*([^.]+?)(?:\.\s*Include:|$|\.[A-Z])/i
+  );
+  const descriptors = descriptorsMatch?.[1]?.trim();
+
+  // Pull the furniture list after "Include: "
+  const includeMatch = p.match(/Include:\s*([^.]+)\./i);
+  const furnitureList = includeMatch?.[1]?.trim();
+
+  // Pull the color palette after "Color palette: "
+  const paletteMatch = p.match(/Color palette:\s*([^.]+?)(?:\.|$)/i);
+  const palette = paletteMatch?.[1]?.trim();
+
+  // Build a short, descriptive Kontext-style prompt. Verbs lead — we tell
+  // Kontext WHAT to do, then describe the desired aesthetic. We do NOT tell
+  // it what NOT to do; Kontext preserves the source structure by default.
+  const parts = [
+    `Apply ${style} interior design style to this ${room}`,
+    descriptors,
+    furnitureList ? `Include: ${furnitureList}` : null,
+    palette ? `${palette} color palette` : null,
+    'photorealistic, magazine-quality interior design photograph, natural light',
   ].filter(Boolean);
 
   return parts.join('. ') + '.';
