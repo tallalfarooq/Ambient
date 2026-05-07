@@ -551,11 +551,20 @@ function clamp(n, min, max) {
 }
 
 /**
- * Rewrites a verbose SDXL-style prompt into a FLUX-friendly descriptive prompt
- * for "furnish empty room" generations. FLUX interprets prompts more literally
- * than SDXL — wall-of-DO-NOTs causes it to preserve the empty room. We extract
- * the meaningful bits (style, furniture list, palette, mood) and present them
- * as a description of the desired output instead of preservation rules.
+ * Rewrites a verbose SDXL-style prompt into a FLUX-Kontext-friendly edit prompt
+ * for "furnish empty room" generations.
+ *
+ * Day 5.7 update: matched the rewritePromptForRedesign edit-style framing
+ * after users reported that empty rooms were being regenerated as different
+ * rooms (different walls, different windows, different floor). Kontext does
+ * not preserve architecture by default — it needs an explicit "edit this
+ * exact photo, keep walls/windows/floor unchanged, only ADD furniture"
+ * instruction. With a declarative "A fully furnished room..." prompt it
+ * routinely treats the input as inspiration rather than canvas.
+ *
+ * Style descriptors / furniture list / palette / mood from the original
+ * verbose prompt are preserved; we just lead with preservation + change
+ * clauses so Kontext stays anchored to the source.
  */
 function rewritePromptForFurnish(originalPrompt) {
   const p = originalPrompt;
@@ -565,6 +574,10 @@ function rewritePromptForFurnish(originalPrompt) {
     p.match(/(?:add realistic |Apply )([\w-]+)(?:-style| interior| style)/i) ||
     p.match(/\b(Japandi|Scandinavian|Mid-century|Modern|Industrial|Bohemian|Minimalist|Coastal|Farmhouse|Art Deco|Cottagecore|Contemporary)\b/i);
   const style = styleMatch?.[1] || 'modern';
+
+  // Pull the room type ("to this Living Room", "to this Bedroom" etc.)
+  const roomMatch = p.match(/to this\s+([\w\s]+?)(?:[:.]|$)/i);
+  const room = roomMatch?.[1]?.trim().toLowerCase() || 'room';
 
   // Pull the furniture list after "Include: "
   const includeMatch = p.match(/Include:\s*([^.]+)\./i);
@@ -583,15 +596,18 @@ function rewritePromptForFurnish(originalPrompt) {
   const detailMatch = p.match(/-style furniture and decor only\.\s*([^.]+)\./i);
   const styleDetail = detailMatch?.[1]?.trim();
 
-  // Build the new descriptive prompt — declarative, not imperative.
+  // Edit-style prompt: preservation clause first, then ADD furniture clause.
+  // This is the same shape as rewritePromptForRedesign, except the change
+  // clause says "add furniture" (not "replace") since the source is empty.
   const parts = [
-    `A fully furnished and beautifully decorated ${style} interior room`,
-    furnitureList ? `featuring ${furnitureList}` : null,
-    styleDetail ? styleDetail : null,
+    `Edit this exact empty ${room} photo`,
+    `Keep the same walls, wall colors, windows, doors, floor material, ceiling, camera angle, and perspective unchanged`,
+    `Only add furniture and decor: place ${style} interior design furniture and decor objects in the empty space`,
+    furnitureList ? `Add: ${furnitureList}` : null,
+    styleDetail || null,
     palette ? `${palette} color palette` : null,
     mood ? `${mood.toLowerCase()} atmosphere` : null,
-    `same camera angle, same perspective, same wall positions, same windows and doors as the reference photo`,
-    `photorealistic, magazine-quality interior design photograph, soft natural daylight, hyperdetailed, 8K`,
+    'photorealistic interior photograph, natural light, magazine quality',
   ].filter(Boolean);
 
   return parts.join('. ') + '.';

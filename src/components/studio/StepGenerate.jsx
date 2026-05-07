@@ -420,27 +420,47 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   useEffect(() => { setPrompt(buildPrompt(data)); }, [data.style, data.color_palette, data.vibes, data.room_mode, data.room_type, data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design, data.custom_note]);
 
   useEffect(() => {
-    const fetchCredits = async () => {
+    // Two independent concerns: (1) whether the user is authed, (2) their
+    // credit balance. Bundling them in one try/catch caused a brutal bug —
+    // a transient credits-fetch failure would set user=null and trigger the
+    // sign-in wall even though auth.me() had succeeded. Now they're split:
+    // a credits failure leaves the user authenticated, just without a
+    // displayed balance (the server-side route is the source of truth
+    // anyway; a missing row gets healed on first /api/generate call).
+    const fetchAuthAndCredits = async () => {
+      let currentUser;
       try {
-        const currentUser = await apiClient.auth.me();
+        currentUser = await apiClient.auth.me();
         setUser(currentUser);
-        const userCredits = await apiClient.entities.UserCredits.filter({ user_email: currentUser.email });
-        // The signup trigger always creates a user_credits row server-side; we
-        // trust it here. RLS prevents client-side INSERT to user_credits, so
-        // we don't try to create one if missing — the server-side /api/generate
-        // route will heal a missing row on first call.
+      } catch (err) {
+        // ONLY auth-required errors flip user to null. Anything else
+        // (network blip, etc.) we surface as a transient error but keep
+        // user undefined so the spinner shows; a focus retry will recover.
+        if (err?.type === 'auth_required') {
+          setUser(null);
+        } else {
+          console.error('Auth check failed (transient):', err);
+        }
+        return;
+      }
+
+      try {
+        const userCredits = await apiClient.entities.UserCredits.filter({
+          user_email: currentUser.email,
+        });
         if (userCredits.length > 0) {
           setCredits(userCredits[0]);
         }
       } catch (err) {
-        console.error('Failed to fetch credits:', err);
-        setUser(null);
+        // Credits fetch failure is non-fatal — user stays logged in.
+        // Server-side /api/generate will heal a missing row on first call.
+        console.error('Credits fetch failed (non-fatal):', err);
       }
     };
-    fetchCredits();
+    fetchAuthAndCredits();
 
     // Refresh credits when returning from payment
-    const handleFocus = () => fetchCredits();
+    const handleFocus = () => fetchAuthAndCredits();
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
