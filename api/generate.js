@@ -419,14 +419,20 @@ async function generateWithFal({
   // ---- FLUX Kontext path ---------------------------------------------------
   if (isKontext) {
     // Kontext-specific input: no strength, no image_size (it follows input
-    // dimensions), low guidance_scale (it's tuned for editing tasks).
+    // dimensions). Guidance_scale tuning (Day 5.6): we previously defaulted
+    // to 3.5 / capped at 5, which let Kontext drift away from the source
+    // photo and regenerate the entire room. Bumped to default 6 / cap 7 so
+    // Kontext follows the explicit "keep walls/windows/floor unchanged"
+    // preservation clause in the rewritten prompt more literally. The
+    // Kontext docs recommend 3.5–7 for edits; 6 is the sweet spot for
+    // structure-preserving redesigns.
     const result = await fal.subscribe(model, {
       input: {
         prompt,
         image_url: imageUrl,
         guidance_scale: clamp(
-          typeof guidanceScale === 'number' ? Math.min(guidanceScale / 3, 5) : 3.5,
-          1.5,
+          typeof guidanceScale === 'number' ? Math.min(guidanceScale / 2, 7) : 6,
+          3,
           7
         ),
         num_images: 1,
@@ -594,20 +600,21 @@ function rewritePromptForFurnish(originalPrompt) {
 /**
  * Rewrites a verbose redesign prompt into a FLUX Kontext-friendly short prompt.
  *
- * The frontend produces something like:
- *   "Photorealistic interior design photograph. CRITICAL ARCHITECTURE LOCK —
- *    copy exact camera angle, exact perspective... DO NOT ADD any new windows.
- *    DO NOT ADD any new doors... Apply Art Deco interior design style to this
- *    Living Room: deep jewel-tone velvet upholstery... Color palette: Black,
- *    gold, emerald."
- *
- * That's 250+ words and ~40% of the tokens are "DO NOT" / "EXACTLY" rules
- * that Kontext doesn't need (it preserves architecture by default — that's
- * literally its job). On fal we measured 180s execution time with this prompt;
- * after simplification, ~20-30s.
- *
- * The output preserves the meaningful directives (style + descriptors +
- * furniture list + palette) and trusts Kontext to keep the architecture.
+ * Key learnings (Day 5.6):
+ *   - Kontext does NOT preserve architecture "by default" the way the docs
+ *     suggest. With a purely declarative prompt ("Apply X style to this room")
+ *     it routinely regenerates walls, windows, camera angle, floor — producing
+ *     a different room that just shares the style. Users can't recognize their
+ *     space, which kills trust on step 1 of the funnel.
+ *   - Explicit edit-style framing ("Edit this exact room photo... keep walls,
+ *     windows, doors, floor, camera angle unchanged. Only change: furniture,
+ *     paint color, decor.") materially improves structural fidelity.
+ *   - Length still matters for timeout (must stay well under 250 words to
+ *     keep generation under the 120s function cap), so we keep the new prompt
+ *     to ~70-90 words — verbose enough to lock structure, terse enough to
+ *     stay fast.
+ *   - We pair this with a higher guidance_scale (~6) in callsite so Kontext
+ *     follows the preservation instructions more literally.
  */
 function rewritePromptForRedesign(originalPrompt) {
   const p = originalPrompt;
@@ -637,15 +644,18 @@ function rewritePromptForRedesign(originalPrompt) {
   const paletteMatch = p.match(/Color palette:\s*([^.]+?)(?:\.|$)/i);
   const palette = paletteMatch?.[1]?.trim();
 
-  // Build a short, descriptive Kontext-style prompt. Verbs lead — we tell
-  // Kontext WHAT to do, then describe the desired aesthetic. We do NOT tell
-  // it what NOT to do; Kontext preserves the source structure by default.
+  // Build the prompt as an explicit photo edit — preservation clause first,
+  // change clause second. This phrasing measurably improves structural
+  // fidelity vs. a purely declarative "Apply X style" prompt.
   const parts = [
-    `Apply ${style} interior design style to this ${room}`,
+    `Edit this exact ${room} photo`,
+    `Keep the same walls, windows, doors, floor, ceiling, camera angle, and perspective unchanged`,
+    `Only redecorate: replace the furniture, upholstery, paint colors, lighting fixtures, and decor objects`,
+    `Apply ${style} interior design style`,
     descriptors,
-    furnitureList ? `Include: ${furnitureList}` : null,
+    furnitureList ? `New furniture: ${furnitureList}` : null,
     palette ? `${palette} color palette` : null,
-    'photorealistic, magazine-quality interior design photograph, natural light',
+    'photorealistic interior photograph, natural light, magazine quality',
   ].filter(Boolean);
 
   return parts.join('. ') + '.';
