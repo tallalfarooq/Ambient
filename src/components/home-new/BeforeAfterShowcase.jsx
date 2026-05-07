@@ -90,14 +90,15 @@ export default function BeforeAfterShowcase() {
   return (
     <section className="relative py-24 sm:py-section-mobile lg:py-section">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <MotionSection className="max-w-3xl mb-12 sm:mb-16">
+        <MotionSection className="max-w-2xl mb-12 sm:mb-16">
           <EyebrowText color="gold">See it in action</EyebrowText>
           <div className="mt-5">
             <DisplayHeading size="lg" as="h2">
-              From bland to magazine-cover in 30 seconds.
+              Bland to magazine-cover.{" "}
+              <span className="block text-white/40">In 30 seconds.</span>
             </DisplayHeading>
           </div>
-          <p className="mt-6 text-body-lg text-white/55 max-w-2xl leading-relaxed">
+          <p className="mt-6 text-body-lg text-white/55 max-w-xl leading-relaxed">
             Drag the slider, or just watch. Real renders. Real furniture you can actually buy.
           </p>
         </MotionSection>

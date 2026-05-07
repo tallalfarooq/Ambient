@@ -8,16 +8,19 @@
  * Sizes shrink at smaller breakpoints automatically — `xl` becomes `display`
  * on mobile so it never overflows.
  */
+// Sizes capped to be legible. The previous 96px hero size produced ugly line
+// breaks at common laptop widths — 72px keeps the headline 1-2 lines max.
 const SIZE = {
-  // Hero headline — fills 90% of the viewport width on desktop, then
-  // gracefully steps down on tablet and mobile.
-  xl: "text-4xl sm:text-6xl md:text-display md:!leading-[1.05] lg:text-display-xl lg:!leading-[1.0]",
+  // Hero headline — uses `text-balance` so the browser distributes the
+  // line break intelligently instead of orphaning a single word on its own
+  // line. Caps at 72px desktop, scales down cleanly for smaller screens.
+  xl: "text-[44px] leading-[1.05] sm:text-[56px] sm:leading-[1.05] lg:text-[72px] lg:leading-[1.02] [text-wrap:balance]",
   // Section headline.
-  lg: "text-3xl sm:text-5xl md:text-display md:!leading-[1.05]",
+  lg: "text-[36px] leading-[1.1] sm:text-[44px] sm:leading-[1.08] lg:text-[56px] lg:leading-[1.05] [text-wrap:balance]",
   // Subsection headline.
-  md: "text-2xl sm:text-4xl md:text-headline",
+  md: "text-[28px] leading-[1.15] sm:text-[36px] sm:leading-[1.12] lg:text-headline [text-wrap:balance]",
   // Card / sub-block headline.
-  sm: "text-xl sm:text-2xl md:text-title",
+  sm: "text-[22px] leading-[1.2] sm:text-[26px] lg:text-title [text-wrap:balance]",
 };
 
 export default function DisplayHeading({

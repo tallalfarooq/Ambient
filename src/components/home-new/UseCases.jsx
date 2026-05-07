@@ -92,16 +92,16 @@ export default function UseCases() {
       className="relative py-24 sm:py-section-mobile lg:py-section"
     >
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <MotionSection className="max-w-3xl mb-16 sm:mb-20">
+        <MotionSection className="max-w-2xl mb-16 sm:mb-20">
           <EyebrowText>Use cases</EyebrowText>
           <div className="mt-5">
             <DisplayHeading size="lg" as="h2">
               Built for everyone who lives in a space.
             </DisplayHeading>
           </div>
-          <p className="mt-6 text-body-lg text-white/55 max-w-2xl leading-relaxed">
-            Whether you own, rent, or design for a living — the workflow takes 30 seconds
-            and the output is the same: photoreal, shoppable, yours.
+          <p className="mt-6 text-body-lg text-white/55 max-w-xl leading-relaxed">
+            Whether you own, rent, or design for a living — the workflow takes 30 seconds.
+            The output is the same: photoreal, shoppable, yours.
           </p>
         </MotionSection>
 
