@@ -94,8 +94,8 @@ export default function BeforeAfterShowcase() {
           <EyebrowText color="gold">See it in action</EyebrowText>
           <div className="mt-5">
             <DisplayHeading size="lg" as="h2">
-              Bland to magazine-cover.{" "}
-              <span className="block text-white/40">In 30 seconds.</span>
+              Watch any room transform.{" "}
+              <span className="block text-white/40">In real time.</span>
             </DisplayHeading>
           </div>
           <p className="mt-6 text-body-lg text-white/55 max-w-xl leading-relaxed">

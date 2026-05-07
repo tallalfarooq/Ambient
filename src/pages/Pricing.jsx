@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiClient } from "@/api/apiClient";
-import { Check, Sparkles, Crown, Zap, Loader2 } from "lucide-react";
+import { Check, Sparkles, Crown, Zap, Loader2, Building2, ShoppingBag, ArrowUpRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -264,20 +264,129 @@ export default function Pricing() {
         </div>
 
         {/* Bottom note */}
-        <div className="text-center text-sm text-white/35 max-w-2xl mx-auto mb-6">
+        <div className="text-center text-sm text-white/35 max-w-2xl mx-auto mb-16">
           <p>{t("pricing_note")}</p>
         </div>
 
-        <div className="rounded-2xl border border-white/8 px-8 py-6 text-center max-w-xl mx-auto" style={{ background: "rgba(255,255,255,0.02)" }}>
-          <p className="text-sm font-semibold text-white mb-1">{t("pricing_business_title")}</p>
-          <p className="text-sm text-white/40 mb-4">{t("pricing_business_sub")}</p>
-          <a
-            href="mailto:support@ambientspace.ai"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
-            style={{ background: "rgba(27,143,160,0.12)", border: "1px solid rgba(27,143,160,0.3)", color: "#1B8FA0" }}
+        {/*
+          For Businesses — section header above two B2B vertical cards.
+          The cards use mailto: for now; real API/integration is roadmap.
+          Personal pricing above is self-serve via Stripe; this is contact-led.
+        */}
+        <div className="text-center mb-10">
+          <div
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-5"
+            style={{
+              background: "rgba(201,150,58,0.08)",
+              border: "1px solid rgba(201,150,58,0.25)",
+            }}
           >
-            support@ambientspace.ai
+            <span className="text-eyebrow uppercase text-[#D4A857]">For Businesses</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
+            Stage thousands of listings.
+            <span className="block text-white/45">Or embed Ambient Space in your store.</span>
+          </h2>
+          <p className="text-white/55 text-base sm:text-lg max-w-2xl mx-auto mt-5 leading-relaxed">
+            For real-estate platforms, e-commerce retailers, and home-decor brands.
+            Volume pricing, API access, and white-label embeds available.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
+          {/* Real Estate vertical */}
+          <a
+            href="mailto:support@ambientspace.ai?subject=Real%20Estate%20Partnership%20-%20Ambient%20Space"
+            className="group relative rounded-3xl p-8 border transition-all duration-500 ease-apple hover:-translate-y-1 hover:border-white/20 hover:shadow-2xl"
+            style={{
+              borderColor: "rgba(27,143,160,0.35)",
+              background: "rgba(27,143,160,0.05)",
+            }}
+          >
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
+              style={{ background: "rgba(27,143,160,0.18)" }}
+            >
+              <Building2 className="w-6 h-6 text-accent-teal-light" strokeWidth={2} />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Real Estate Platforms</h3>
+            <p className="text-sm text-white/55 leading-relaxed mb-5">
+              Stage every listing automatically. Show buyers what their future home
+              could look like — not just empty walls.
+            </p>
+            <ul className="space-y-2 mb-6">
+              {[
+                "Bulk staging — 100s of listings/month",
+                "Multiple style variations per property",
+                "Commercial license, no watermark",
+                "API & CSV bulk upload",
+              ].map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm text-white/65">
+                  <Check className="w-4 h-4 text-accent-teal-light mt-0.5 flex-shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] uppercase tracking-wider text-white/30 mb-4">
+              Immowelt · ImmoScout · Zillow · Rightmove
+            </p>
+            <div className="flex items-center gap-2 text-sm font-semibold text-accent-teal-light group-hover:gap-3 transition-all">
+              <span>Talk to sales</span>
+              <ArrowUpRight className="w-4 h-4" strokeWidth={2.5} />
+            </div>
           </a>
+
+          {/* E-commerce vertical */}
+          <a
+            href="mailto:support@ambientspace.ai?subject=E-commerce%20Integration%20-%20Ambient%20Space"
+            className="group relative rounded-3xl p-8 border transition-all duration-500 ease-apple hover:-translate-y-1 hover:border-white/20 hover:shadow-2xl"
+            style={{
+              borderColor: "rgba(201,150,58,0.35)",
+              background: "rgba(201,150,58,0.05)",
+            }}
+          >
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
+              style={{ background: "rgba(201,150,58,0.18)" }}
+            >
+              <ShoppingBag className="w-6 h-6 text-[#D4A857]" strokeWidth={2} />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Retailers & E-commerce</h3>
+            <p className="text-sm text-white/55 leading-relaxed mb-5">
+              Embed Ambient Space on your product pages. Let shoppers see your sofa,
+              lamp, or rug in their actual room before they buy.
+            </p>
+            <ul className="space-y-2 mb-6">
+              {[
+                "JavaScript SDK / iframe embed",
+                "Branded with your logo + colors",
+                "Volume-based per-render pricing",
+                "Conversion analytics dashboard",
+              ].map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm text-white/65">
+                  <Check className="w-4 h-4 text-[#D4A857] mt-0.5 flex-shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] uppercase tracking-wider text-white/30 mb-4">
+              Amazon · IKEA · Wayfair · Article
+            </p>
+            <div className="flex items-center gap-2 text-sm font-semibold text-[#D4A857] group-hover:gap-3 transition-all">
+              <span>Talk to sales</span>
+              <ArrowUpRight className="w-4 h-4" strokeWidth={2.5} />
+            </div>
+          </a>
+        </div>
+
+        {/* Generic contact fallback */}
+        <div className="text-center text-sm text-white/35 max-w-xl mx-auto">
+          <p>
+            Different use case in mind?{" "}
+            <a href="mailto:support@ambientspace.ai" className="text-accent-teal-light hover:text-white transition-colors">
+              support@ambientspace.ai
+            </a>
+          </p>
         </div>
       </div>
     </div>

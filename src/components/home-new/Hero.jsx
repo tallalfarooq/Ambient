@@ -66,22 +66,20 @@ export default function Hero() {
 
             <MotionSection.Item>
               {/*
-                Manual line break for tighter visual control. Mobile lets it
-                wrap naturally; on lg+ the headline reads:
-                  "Redesign your space.
-                   In minutes."
-                Two strong lines, no orphaned words.
+                Plain-English headline. Reads in two strong lines on desktop:
+                  "See your room transformed by AI."
+                  "In seconds."
               */}
               <DisplayHeading gradient>
-                Redesign your space.{" "}
-                <span className="block">In minutes.</span>
+                See your room transformed by AI.{" "}
+                <span className="block">In seconds.</span>
               </DisplayHeading>
             </MotionSection.Item>
 
             <MotionSection.Item>
               <p className="text-body-lg text-white/55 leading-relaxed max-w-lg">
-                Upload a photo. Pick a style. Watch AI transform your room — and
-                shop every piece of furniture you see.
+                Upload a photo. Pick a style. Get a photoreal render of your room
+                — with every piece of furniture ready to shop.
               </p>
             </MotionSection.Item>
 
