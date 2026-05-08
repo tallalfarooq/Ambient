@@ -27,7 +27,7 @@ export default function Pricing() {
       credits: 20,
       icon: Zap,
       tagline: "Perfect for trying it out",
-      popular: true, // visual highlight: smaller commitment, most-bought
+      popular: false, // Day 6.7 — removed "Most popular" from Basic. The MOST POPULAR + BEST VALUE pair on adjacent cards was reading as competing badges; "Best value" on Pro is the stronger anchor and Basic doesn't need a competing badge.
       features: [t("plan_basic_f1"), t("plan_basic_f2"), t("plan_basic_f3"), t("plan_basic_f4"), t("plan_basic_f5"), t("plan_basic_f6")],
     },
     {
@@ -128,8 +128,8 @@ export default function Pricing() {
                 <Sparkles className="w-5 h-5" style={{ color: "#1B8FA0" }} />
               </div>
               <div className="text-left">
-                <p className="text-sm font-semibold text-white">2 free credits on signup</p>
-                <p className="text-xs text-white/45">No credit card required — try one full render free.</p>
+                <p className="text-sm font-semibold text-white">Your first design is free</p>
+                <p className="text-xs text-white/45">No credit card required — try one full render on us.</p>
               </div>
             </div>
             <button

@@ -280,6 +280,31 @@ export default function Projects() {
 
   const designCountLabel = designs.length === 1 ? t("projects_design_count_one") : t("projects_design_count_other");
 
+  // Day 6.3 — auth wall. Logged-out users previously saw an empty list with
+  // a "Start designing" CTA which (a) misleadingly suggested they had no
+  // designs, and (b) didn't tell them what they needed to do (sign in) to
+  // see anything. Mirrors the Favorites.jsx pattern for consistency. We
+  // wait until loading=false so the spinner shows during the initial auth
+  // hydration; only then do we know whether to show the wall or the list.
+  if (!loading && !user) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center text-white text-center px-4">
+        <div className="max-w-sm">
+          <Sparkles className="w-12 h-12 text-white/20 mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Sign in to view your designs</h2>
+          <p className="text-white/40 text-sm mb-6">Your saved AI room designs and shopping lists will live here.</p>
+          <button
+            onClick={() => apiClient.auth.redirectToLogin(window.location.href)}
+            className="text-white font-semibold px-6 py-3 rounded-2xl transition-opacity hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
+          >
+            Sign in
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0A0A0B] text-white px-4 py-12">
       <div className="max-w-6xl mx-auto">

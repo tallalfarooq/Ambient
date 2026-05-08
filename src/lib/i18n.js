@@ -92,7 +92,7 @@ export const translations = {
     studio_payment_cancelled: "Payment cancelled. Your design is still here — ready when you are.",
 
     // Projects
-    projects_title: "My Projects",
+    projects_title: "My Designs",
     projects_new: "New design",
     projects_empty: "No designs yet. Create your first one.",
     projects_empty_filtered: "No designs match your filters.",
@@ -254,7 +254,7 @@ export const translations = {
     studio_payment_cancelled: "Zahlung abgebrochen. Dein Design ist noch hier — bereit wenn du es bist.",
 
     // Projects
-    projects_title: "Meine Projekte",
+    projects_title: "Meine Designs",
     projects_new: "Neues Design",
     projects_empty: "Noch keine Designs. Erstelle jetzt dein erstes.",
     projects_empty_filtered: "Keine Designs entsprechen deinen Filtern.",

@@ -60,8 +60,8 @@ export default function PricingTeaser() {
             </DisplayHeading>
 
             <p className="text-body-lg text-white/55 max-w-2xl leading-relaxed">
-              Start with 2 free credits — no credit card required. Top up for $5 when
-              you're ready to do more.
+              Your first design is on us — no credit card required. Top up for $5
+              when you're ready to do more.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2">

@@ -72,22 +72,30 @@ export default function Layout({ children, currentPageName }) {
             </Link>
 
             <div className="flex items-center gap-0.5">
-              {/* Language switcher */}
-              <div className="flex items-center mr-1 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
-                {["en", "de"].map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => setLanguage(l)}
-                    className="px-2.5 py-1 text-[10px] font-bold uppercase transition-all"
-                    style={lang === l
-                      ? { background: "rgba(27,143,160,0.25)", color: "#6EC6C6" }
-                      : { background: "transparent", color: "rgba(255,255,255,0.3)" }
-                    }
-                  >
-                    {l}
-                  </button>
-                ))}
-              </div>
+              {/* Day 6.6 — language switcher hidden until DE marketing copy
+                  exists. The home Hero / UseCases / HowItWorks / Testimonials /
+                  PricingTeaser sections are English-only after the Day 5
+                  redesign, so a visible DE toggle does nothing meaningful for
+                  those pages and creates dead UI. We still ship German
+                  translations for the in-app strings (i18n.js), so re-enabling
+                  is a single-line change once marketing copy lands. */}
+              {false && (
+                <div className="flex items-center mr-1 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)" }}>
+                  {["en", "de"].map((l) => (
+                    <button
+                      key={l}
+                      onClick={() => setLanguage(l)}
+                      className="px-2.5 py-1 text-[10px] font-bold uppercase transition-all"
+                      style={lang === l
+                        ? { background: "rgba(27,143,160,0.25)", color: "#6EC6C6" }
+                        : { background: "transparent", color: "rgba(255,255,255,0.3)" }
+                      }
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              )}
               {NAV.map(({ labelKey, page, icon: Icon }) => (
                 <Link
                   key={page}
@@ -180,7 +188,11 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </footer>
 
-        {/* Mobile bottom nav */}
+        {/* Mobile bottom nav.
+            Day 6.6 — dropped the Sign-in / Logout button from this bar to
+            kill the duplicate-Sign-in-button issue (top nav already shows
+            Sign in / user-badge-with-Logout at all widths). Five tabs is
+            also visually cleaner than six at ~380px. */}
         <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0A0A0B]/95 backdrop-blur-xl">
           <div className="flex items-center justify-around px-2 py-2">
             {NAV.map(({ page, icon: Icon, mobileLabel }) => (
@@ -195,24 +207,6 @@ export default function Layout({ children, currentPageName }) {
                 <span className="text-[9px] font-semibold">{mobileLabel}</span>
               </Link>
             ))}
-            {user ? (
-              <button
-                onClick={() => authLogout()}
-                className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-white/35"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="text-[9px] font-semibold tracking-wide">Logout</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => apiClient.auth.redirectToLogin(window.location.href)}
-                className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl"
-                style={{ color: "#1B8FA0" }}
-              >
-                <LogIn className="w-5 h-5" />
-                <span className="text-[9px] font-semibold tracking-wide">{t("sign_in")}</span>
-              </button>
-            )}
           </div>
         </nav>
 

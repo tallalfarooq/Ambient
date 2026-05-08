@@ -133,10 +133,15 @@ export default function HeroVisual({ className = "" }) {
         {/* Floating overlays */}
         <StyleBadge />
 
+        {/* Day 6.4: chips were positioned with negative percentages (-8%, -10%)
+            to "float" outside the card. At <1440px viewport widths the right
+            chip overflowed the page and got clipped. Pulled both chips inside
+            the card boundary while keeping the floating shadow + bob animation
+            so they still feel airy. */}
         <ProductChip
           delay={0.7}
           top="35%"
-          left="-8%"
+          left="3%"
           title="Walnut Floor Lamp"
           price="$249"
           accent="teal"
@@ -144,7 +149,7 @@ export default function HeroVisual({ className = "" }) {
         <ProductChip
           delay={0.95}
           bottom="14%"
-          right="-10%"
+          right="3%"
           title="Linen Sofa"
           price="$1,299"
           accent="gold"

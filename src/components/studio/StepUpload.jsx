@@ -325,8 +325,8 @@ function SignInPromptModal({ onClose }) {
         </div>
         <h3 className="text-xl font-bold text-white mb-2">Sign in to start designing</h3>
         <p className="text-white/55 text-sm mb-6 leading-relaxed">
-          Free to start — get <strong className="text-white/80">2 free credits</strong> the
-          moment you sign up. Save your designs and shop the furniture from any render.
+          Free to start — your <strong className="text-white/80">first design is on us</strong>.
+          Save your designs and shop the furniture from any render.
         </p>
         <button
           onClick={handleSignIn}

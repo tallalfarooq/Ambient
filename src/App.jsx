@@ -93,7 +93,11 @@ const AuthenticatedApp = () => {
         <Route path="/AdminEmail" element={<LayoutWrapper currentPageName="AdminEmail"><AdminEmail /></LayoutWrapper>} />
         <Route path="/terms-of-service" element={<LayoutWrapper currentPageName="TermsOfService"><TermsOfService /></LayoutWrapper>} />
         <Route path="/unsubscribe" element={<Unsubscribe />} />
-        <Route path="*" element={<PageNotFound />} />
+        <Route path="*" element={
+          <LayoutWrapper currentPageName="NotFound">
+            <PageNotFound />
+          </LayoutWrapper>
+        } />
       </Routes>
     </Suspense>
   );
