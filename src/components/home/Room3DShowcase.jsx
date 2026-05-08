@@ -42,9 +42,9 @@ export default function Room3DShowcase() {
       `}</style>
       
       {/* Animated gradient background.
-          Day 9.4 — moved the 2000ms duration into inline style; Tailwind
-          v3.4 flags `duration-[2000ms]` as ambiguous (build warning). The
-          inline `transitionDuration` is functionally identical. */}
+          Day 9.4 — moved the 2000ms duration into inline transitionDuration
+          to silence a Tailwind ambiguous-class build warning. The inline
+          style is functionally identical. */}
       <div
         className="absolute inset-0 transition-all ease-in-out"
         style={{
