@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { apiClient } from "@/api/apiClient";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Plus, Sparkles, Loader2, Recycle, Trash2, Download, Pencil, ShoppingBag, Clock, Heart, Share2 } from "lucide-react";
+import { Plus, Sparkles, Loader2, Recycle, Trash2, Download, Pencil, ShoppingBag, Clock, Heart, Share2, RefreshCcw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
@@ -95,6 +95,17 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
               className="flex items-center gap-1.5 bg-white/15 border border-white/20 text-white font-medium px-4 py-2 rounded-xl text-xs hover:bg-white/25 transition-colors"
             >
               <Pencil className="w-3.5 h-3.5" /> {t("projects_redesign")}
+            </Link>
+            {/* Day 8.1 — "Try this on another room" — opens Studio with the
+                full recipe pre-filled but NO photo, ready for a fresh
+                upload. Powerful for B2C movers who want to apply a saved
+                aesthetic to a new place. */}
+            <Link
+              to={createPageUrl("Studio") + `?recipe_id=${design.id}`}
+              className="flex items-center gap-1.5 bg-white/10 border border-white/20 text-white/85 font-medium px-3 py-2 rounded-xl text-xs hover:bg-white/20 transition-colors"
+              title="Apply this design recipe to a new room photo"
+            >
+              <RefreshCcw className="w-3.5 h-3.5" /> Another room
             </Link>
           </div>
         )}

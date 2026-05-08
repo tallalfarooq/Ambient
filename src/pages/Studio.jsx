@@ -163,6 +163,56 @@ export default function Studio() {
         })
         .catch(() => {});
     }
+
+    // Day 8.1 — "Try this on another room" — pre-fill the wizard from a
+    // saved design's recipe, but leave room_image_url EMPTY so the user
+    // is dropped on Step 0 to upload a new photo. Result: all the user's
+    // style/palette/vibes/fine-tune choices reapply to the new room without
+    // any retyping.
+    const recipeId = params.get("recipe_id");
+    if (recipeId) {
+      window.history.replaceState({}, "", "/Studio");
+      apiClient.entities.RoomDesign.filter({ id: recipeId })
+        .then((results) => {
+          if (!results.length) return;
+          const d = results[0];
+          const r = d.design_recipe || {};
+          setData((prev) => ({
+            ...prev,
+            // Copy structured recipe fields if present, else fall back to
+            // the legacy top-level columns for designs created before
+            // Day 8.1 shipped (no recipe column).
+            name:                 d.name || "My Room Design",
+            room_type:            r.room_type || d.room_type || prev.room_type,
+            room_mode:            r.room_mode || "redesign",
+            style:                r.style || d.style || prev.style,
+            secondary_style:      r.secondary_style || null,
+            style_blend_pct:      r.style_blend_pct ?? null,
+            color_palette:        r.color_palette || d.color_palette || "",
+            vibes:                r.vibes || d.vibes || [],
+            sustainability_mode:  r.sustainability_mode ?? d.sustainability_mode ?? false,
+            wall_color:           r.wall_color || null,
+            sofa_color:           r.sofa_color || null,
+            floor_type:           r.floor_type || null,
+            ceiling_design:       r.ceiling_design || null,
+            custom_note:          r.custom_note || "",
+            override_pins:        r.override_pins || [],
+            budget_min:           r.budget_min ?? d.budget_min ?? null,
+            budget_max:           r.budget_max ?? d.budget_max ?? null,
+            budget_tier:          r.budget_tier || d.budget_tier || null,
+            intensity:            r.intensity ?? 35,
+            // Critical: blank out the photo-related fields so the user
+            // arrives on Step 0 ready to upload a NEW source.
+            room_image_url:       null,
+            room_file_url:        null,
+            generated_render_url: null,
+            design_id:            null,
+          }));
+          setStep(0);
+          toast.success("Recipe loaded — upload a new room photo to apply it.");
+        })
+        .catch(() => {});
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, Blend } from "lucide-react";
 
 const STYLES = [
   {
@@ -144,11 +144,97 @@ export default function StepStyle({ data, update, onNext, onBack }) {
       {/* Selected palette preview */}
       {data.style && (
         <div
-          className="flex items-center gap-3 px-4 py-3 rounded-2xl mb-6"
+          className="flex items-center gap-3 px-4 py-3 rounded-2xl mb-4"
           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
         >
           <span className="text-white/35 text-xs font-medium flex-shrink-0">Active palette:</span>
           <span className="text-white/65 text-xs">{STYLES.find((s) => s.name === data.style)?.palette}</span>
+        </div>
+      )}
+
+      {/* Day 8.3 — Style mixing. Lets the user blend two styles in any ratio.
+          Off by default to keep the wizard simple; opens via a toggle once a
+          primary style is selected. The blend ratio is encoded in the prompt
+          via the buildPrompt helper in StepGenerate.jsx. */}
+      {data.style && (
+        <div className="mb-6 rounded-2xl px-4 py-4"
+          style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${data.secondary_style ? "rgba(167,139,250,0.35)" : "rgba(255,255,255,0.08)"}` }}>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: data.secondary_style ? "rgba(167,139,250,0.18)" : "rgba(255,255,255,0.05)" }}>
+              <Blend className="w-3.5 h-3.5" style={{ color: data.secondary_style ? "#a78bfa" : "rgba(255,255,255,0.45)" }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white">Mix two styles</p>
+              <p className="text-[11px] text-white/40">Blend {data.style} with a second style for a unique look</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (data.secondary_style) {
+                  update({ secondary_style: null, style_blend_pct: null });
+                } else {
+                  // Default to next style in the list, 50/50 blend
+                  const next = STYLES.find((s) => s.name !== data.style)?.name;
+                  update({ secondary_style: next, style_blend_pct: 50 });
+                }
+              }}
+              className="w-10 h-5 rounded-full relative transition-all"
+              style={{ background: data.secondary_style ? "#a78bfa" : "rgba(255,255,255,0.12)" }}
+              aria-label="Toggle style mixing"
+            >
+              <span
+                className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
+                style={{ left: data.secondary_style ? "calc(100% - 18px)" : "2px" }}
+              />
+            </button>
+          </div>
+
+          {data.secondary_style && (
+            <div className="mt-4 space-y-3">
+              {/* Secondary style picker — compact chip list */}
+              <div className="flex flex-wrap gap-2">
+                {STYLES.filter((s) => s.name !== data.style).map((s) => {
+                  const active = data.secondary_style === s.name;
+                  return (
+                    <button
+                      key={s.name}
+                      onClick={() => update({ secondary_style: s.name })}
+                      className="text-xs px-3 py-1.5 rounded-full border transition-all"
+                      style={
+                        active
+                          ? { borderColor: s.accent, background: `${s.accent}26`, color: "white" }
+                          : { borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.55)" }
+                      }
+                    >
+                      {s.name}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Blend slider */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] text-white/55 font-semibold">{data.style}</span>
+                  <span className="text-[11px] font-bold" style={{ color: "#a78bfa" }}>
+                    {100 - (data.style_blend_pct ?? 50)}% / {data.style_blend_pct ?? 50}%
+                  </span>
+                  <span className="text-[11px] text-white/55 font-semibold">{data.secondary_style}</span>
+                </div>
+                <input
+                  type="range"
+                  min={10}
+                  max={90}
+                  step={5}
+                  value={data.style_blend_pct ?? 50}
+                  onChange={(e) => update({ style_blend_pct: parseInt(e.target.value) })}
+                  className="w-full"
+                  style={{ accentColor: "#a78bfa" }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 

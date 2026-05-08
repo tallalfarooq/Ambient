@@ -23,11 +23,14 @@ export default function Hero() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
+  // Day 8.2 — logged-out users go to /Try (email-gated, no signup).
+  // Logged-in users go straight to Studio. This drops the upfront sign-in
+  // wall and lets prospects see the wow before committing.
   const handlePrimaryClick = () => {
     if (isAuthenticated) {
       navigate(createPageUrl("Studio"));
     } else {
-      apiClient.auth.redirectToLogin("/Studio");
+      navigate("/Try");
     }
   };
 
@@ -92,7 +95,7 @@ export default function Hero() {
                   icon={<Sparkles className="w-5 h-5" />}
                   iconPosition="left"
                 >
-                  {isAuthenticated ? "Open Studio" : "Start designing — free"}
+                  {isAuthenticated ? "Open Studio" : "Try free — no signup"}
                 </GradientButton>
                 <GradientButton
                   size="lg"

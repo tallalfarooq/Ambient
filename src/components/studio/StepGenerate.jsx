@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock, Globe, Sliders, X, Search, ShoppingBag, MapPin } from "lucide-react";
 import { AMAZON_TAG } from "@/components/affiliateLinks";
 import SourceOverridePins, { pinsToCustomNote } from "./SourceOverridePins";
+import VariantGrid from "./VariantGrid";
 
 // Burns watermark into the image using Canvas and returns a data URL
 async function applyWatermarkToImage(imageUrl) {
@@ -147,6 +148,13 @@ const STRUCTURE_NEGATIVE_PROMPT =
 const buildPrompt = (data) => {
   const style = data.style || "modern";
   const styleDetail = STYLE_MAP[style] || style;
+  // Day 8.3 — style mixing. The primary style stays as the "Apply X" anchor
+  // (so the server-side rewriter regex still finds it), and the secondary
+  // style + blend ratio is appended as a follow-up sentence Kontext can
+  // honor: "With elements from <secondary>: 70% / 30% blend".
+  const blendStr = data.secondary_style
+    ? ` With elements from ${data.secondary_style}: ${100 - (data.style_blend_pct ?? 50)}% ${style} / ${data.style_blend_pct ?? 50}% ${data.secondary_style} blend.`
+    : "";
   const roomType = data.room_type || "room";
   const roomFurniture = ROOM_FURNITURE_CONTEXT[data.room_type] || "";
   const vibeStr = data.vibes?.length ? ` Mood: ${data.vibes.join(", ")}.` : "";
@@ -178,7 +186,7 @@ const buildPrompt = (data) => {
       windowStr +
       doorStr +
       `Same ceiling height. Same wall positions. Same floor plan. Zero structural changes. ` +
-      `Task: add realistic ${style}-style furniture and decor only. ${styleDetail}.${furnitureStr}` +
+      `Task: add realistic ${style}-style furniture and decor only. ${styleDetail}.${blendStr}${furnitureStr}` +
       ` Real purchasable furniture — crisp edges, accurate fabric/wood/metal textures, proper floor contact shadows.` +
       `${palette}${customStr}${vibeStr}` +
       ` Canon EOS R5, 24mm wide-angle lens, soft natural daylight. Photorealistic, 8K, hyperdetailed.`
@@ -192,7 +200,7 @@ const buildPrompt = (data) => {
     windowStr +
     doorStr +
     `Same ceiling height. Same wall positions. Same floor plan. Zero structural changes. ` +
-    `Apply ${style} interior design style to this ${roomType}: ${styleDetail}.${furnitureStr}` +
+    `Apply ${style} interior design style to this ${roomType}: ${styleDetail}.${blendStr}${furnitureStr}` +
     ` Change ONLY: furniture pieces, upholstery fabrics, soft furnishings, decorative objects, paint finish, surface materials.` +
     ` Do NOT change: wall structure, window count/position, door count/position, ceiling shape, floor area, room footprint.` +
     `${palette}${customStr}${vibeStr}` +
@@ -415,6 +423,13 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   // the user iterates via the chat input instead.
   const [overridePins, setOverridePins] = useState(data.override_pins || []);
   const [showPins, setShowPins] = useState(false);
+  // Day 8.4 — Compare 4 styles. variantsLoading is the in-flight state;
+  // variants is the rendered list (up to 4). When the user picks one, we
+  // promote it to `generated` so the rest of the flow (Save & Shop, Tweak,
+  // Detect & Shop) works unchanged.
+  const [variants, setVariants] = useState([]);
+  const [variantsLoading, setVariantsLoading] = useState(false);
+  const [variantsError, setVariantsError] = useState(null);
 
   // Track pending fine-tune changes so we can highlight "Apply changes"
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
@@ -671,6 +686,33 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       prevFineTuneRef.current = [data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design, data.custom_note].join("|");
       update({ generated_render_url: url, generation_prompt: refinedPrompt, intensity });
 
+      // Day 8.1 — capture the full "recipe" alongside the rendered image.
+      // The recipe stores every field the user touched in the wizard so we
+      // can re-apply it to a NEW source photo via "Try this on another room"
+      // without making the user retype anything. JSONB column lets us add
+      // fields later without migrations.
+      const designRecipe = {
+        style:                data.style,
+        secondary_style:      data.secondary_style || null,
+        style_blend_pct:      data.style_blend_pct ?? null,
+        room_type:            data.room_type,
+        room_mode:            data.room_mode,
+        color_palette:        data.color_palette || null,
+        vibes:                data.vibes || [],
+        budget_min:           data.budget_min ?? null,
+        budget_max:           data.budget_max ?? null,
+        budget_tier:          data.budget_tier || null,
+        sustainability_mode:  !!data.sustainability_mode,
+        wall_color:           data.wall_color || null,
+        sofa_color:           data.sofa_color || null,
+        floor_type:           data.floor_type || null,
+        ceiling_design:       data.ceiling_design || null,
+        custom_note:          data.custom_note || null,
+        override_pins:        overridePins || [],
+        intensity,
+        recipe_version:       1,
+      };
+
       // ── Auto-save draft so the design is never lost ──────────────────────
       // If we already have a draft record from a previous generation, update it.
       // Otherwise create a new draft. Status stays "draft" until user clicks Save & Shop.
@@ -690,6 +732,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         generated_render_url: url,
         generation_prompt:    refinedPrompt,
         intensity,
+        design_recipe:        designRecipe,
         status: "draft",
       };
       try {
@@ -727,6 +770,53 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       clearInterval(timerRef.current);
       setLoading(false);
     }
+  };
+
+  // Day 8.4 — Compare 4 styles. Fans out 4 parallel Kontext calls via
+  // /api/generateVariants. 8 credits up-front, refunded per failed variant.
+  // On success we show the 2x2 grid; the user picks one and it becomes the
+  // primary `generated` so the rest of the flow continues normally.
+  const generateVariants = async () => {
+    if (!data.room_image_url) {
+      setVariantsError("Please upload a room photo first.");
+      return;
+    }
+    if (!credits || credits.credits_remaining < 8) {
+      setVariantsError(`You need 8 credits to compare 4 styles. You have ${credits?.credits_remaining ?? 0}.`);
+      return;
+    }
+    setVariantsError(null);
+    setVariantsLoading(true);
+    setVariants([]);
+    try {
+      const resp = await apiClient.functions.invoke("generateVariants", {
+        image_url: data.room_image_url,
+        room_type: data.room_type,
+        mode: data.room_mode,
+        // Let the server pick a curated quartet by default; client can
+        // override with a `styles: [...]` array later.
+      });
+      const payload = resp?.data ?? resp;
+      if (payload?.variants?.length > 0) {
+        setVariants(payload.variants);
+        if (typeof payload.credits_remaining === "number") {
+          setCredits((c) => c ? { ...c, credits_remaining: payload.credits_remaining } : c);
+        }
+      } else {
+        setVariantsError(payload?.error || "All variants failed. Credits refunded.");
+      }
+    } catch (err) {
+      setVariantsError(err?.message || "Variant generation failed.");
+    } finally {
+      setVariantsLoading(false);
+    }
+  };
+
+  const selectVariant = (variant) => {
+    if (!variant?.url) return;
+    setGenerated(variant.url);
+    setDesignId(variant.id || null);
+    update({ generated_render_url: variant.url, design_id: variant.id || null, style: variant.style });
   };
 
   // Day 7.4 — submit a free-text edit. Sets the user's instruction as
@@ -1108,6 +1198,52 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           </div>
         )}
       </div>
+
+      {/* Day 8.4 — Compare 4 styles CTA + grid. CTA shown only when no
+          variants exist yet AND user hasn't generated a single result.
+          Once they have variants OR a single render, the grid replaces
+          the CTA. */}
+      {!generated && !loading && variants.length === 0 && !variantsLoading && data.room_image_url && (
+        <div className="mb-5 rounded-2xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3"
+          style={{ background: "rgba(201,150,58,0.06)", border: "1px solid rgba(201,150,58,0.18)" }}>
+          <div className="flex items-center gap-3 flex-1">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: "rgba(201,150,58,0.18)" }}>
+              <Sparkles className="w-4 h-4" style={{ color: "#D4A857" }} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Can't decide on a style?</p>
+              <p className="text-[11px] text-white/45 leading-relaxed mt-0.5">
+                Render 4 styles side-by-side and compare. 8 credits.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={generateVariants}
+            disabled={variantsLoading || (credits && credits.credits_remaining < 8)}
+            className="text-xs font-bold px-4 py-2.5 rounded-xl text-white transition-opacity hover:opacity-90 disabled:opacity-40 whitespace-nowrap"
+            style={{ background: "linear-gradient(135deg, #C9963A, #D4A857)" }}
+          >
+            Try 4 styles
+          </button>
+        </div>
+      )}
+
+      {variantsError && (
+        <div className="mb-4 px-4 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+          {variantsError}
+        </div>
+      )}
+
+      {(variants.length > 0 || variantsLoading) && (
+        <VariantGrid
+          variants={variants}
+          loading={variantsLoading}
+          onSelect={selectVariant}
+          onClose={() => { setVariants([]); setVariantsLoading(false); setVariantsError(null); }}
+          selectedUrl={generated}
+        />
+      )}
 
       {/* Preview area */}
       <div className="relative rounded-3xl overflow-hidden border border-white/10 mb-6 min-h-[220px] flex items-center justify-center bg-white/3">
