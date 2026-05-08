@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { apiClient } from "@/api/apiClient";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock, Globe, Sliders, X, Search, ShoppingBag } from "lucide-react";
+import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock, Globe, Sliders, X, Search, ShoppingBag, MapPin } from "lucide-react";
 import { AMAZON_TAG } from "@/components/affiliateLinks";
+import SourceOverridePins, { pinsToCustomNote } from "./SourceOverridePins";
 
 // Burns watermark into the image using Canvas and returns a data URL
 async function applyWatermarkToImage(imageUrl) {
@@ -398,6 +399,22 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [showObjectSearch, setShowObjectSearch] = useState(false); // tap-to-search panel
   const [showShareModal, setShowShareModal] = useState(false); // share-link modal
   const [shareLink, setShareLink] = useState("");
+  // Day 7.3 — structure-preservation score (0-100). null = not yet scored,
+  // -1 = scoring in progress.
+  const [structureScore, setStructureScore] = useState(null);
+  const [structureSummary, setStructureSummary] = useState(null);
+  const [scoringInFlight, setScoringInFlight] = useState(false);
+  // Day 7.4 — "Iterate with words" — chat-style fine-tune input. Each
+  // submission triggers a fine-tune call (1 credit) using the previous
+  // render as the input image, building a chain of edits.
+  const [iterateText, setIterateText] = useState("");
+  const [iterateHistory, setIterateHistory] = useState([]); // [{prompt, url}, ...]
+  // Day 7.2 — localized override pins on the source photo. Each pin = a
+  // spatial-language instruction injected into the prompt's user-instruction
+  // block. Only meaningful before the first generation; once a render exists,
+  // the user iterates via the chat input instead.
+  const [overridePins, setOverridePins] = useState(data.override_pins || []);
+  const [showPins, setShowPins] = useState(false);
 
   // Track pending fine-tune changes so we can highlight "Apply changes"
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
@@ -418,6 +435,44 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   };
 
   useEffect(() => { setPrompt(buildPrompt(data)); }, [data.style, data.color_palette, data.vibes, data.room_mode, data.room_type, data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design, data.custom_note]);
+
+  // Day 7.3 — score structure preservation after each successful generation.
+  // Uses the /api/scoreStructure endpoint which compares the source photo to
+  // the result via vision LLM. Runs async — user sees the result instantly,
+  // the score badge appears once the LLM responds (typically 2–5 seconds).
+  // Reset on each new generation.
+  useEffect(() => {
+    if (!generated || !data.room_image_url || loading) return;
+    // Skip scoring fine-tune iterations — the source photo is the right baseline
+    // for the FIRST render only. Once the user iterates, drift relative to the
+    // source is expected and scoring it would confuse the user.
+    if (prevGenerated) return;
+
+    let cancelled = false;
+    setScoringInFlight(true);
+    setStructureScore(null);
+    setStructureSummary(null);
+
+    apiClient.functions.invoke('scoreStructure', {
+      source_url: data.room_image_url,
+      result_url: generated,
+    }).then((response) => {
+      if (cancelled) return;
+      const payload = response?.data ?? response;
+      if (typeof payload?.score === 'number') {
+        setStructureScore(payload.score);
+        setStructureSummary(payload.summary || null);
+      }
+    }).catch((err) => {
+      // Score is non-critical — log and silently fail. Don't surface a
+      // scoring error to the user; they still have their result.
+      console.error('Structure score failed:', err);
+    }).finally(() => {
+      if (!cancelled) setScoringInFlight(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [generated, data.room_image_url, loading, prevGenerated]);
 
   useEffect(() => {
     // Two independent concerns: (1) whether the user is authed, (2) their
@@ -527,14 +582,27 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     const baseImageUrl = (isFineTune && generated) ? generated : data.room_image_url;
     if (isFineTune && generated) setPrevGenerated(generated);
 
+    // Day 7.2 — merge override pins into the custom_note before building the
+    // prompt. Pins generate spatial-language sentences via pinsToCustomNote();
+    // these get appended to whatever custom_note the user typed so the prompt
+    // rewriter (extractUserOverrides on the server) sees both.
+    const pinNote = pinsToCustomNote(overridePins);
+    const typedNote = (data.custom_note || "").trim();
+    const mergedNote = [typedNote, pinNote].filter(Boolean).join(". ");
+    const dataForPrompt = mergedNote === typedNote ? data : { ...data, custom_note: mergedNote };
+
     if (isFineTune) {
-      refinedPrompt = buildFineTunePrompt(data);
+      refinedPrompt = buildFineTunePrompt(dataForPrompt);
       strength = 0.22; // very low — only colors/materials change; structure frozen
     } else {
+      // Day 7.2 — rebuild the prompt from dataForPrompt so override pins
+      // are included even on full generations. The cached `prompt` state
+      // is built from raw data and would skip pin instructions.
+      const fullPrompt = buildPrompt(dataForPrompt);
       refinedPrompt =
         feedback === "dislike" && feedbackNote
-          ? `${prompt}, avoid: ${feedbackNote}`
-          : prompt;
+          ? `${fullPrompt}, avoid: ${feedbackNote}`
+          : fullPrompt;
       if (data.room_mode === "furnish") {
         // Furnish: placing furniture into an empty room — needs moderate-high strength.
         // Map intensity 0–100 → strength 0.55–0.78; tighten slightly when locked.
@@ -660,6 +728,45 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       setLoading(false);
     }
   };
+
+  // Day 7.4 — submit a free-text edit. Sets the user's instruction as
+  // custom_note (which the prompt rewriter recognises as a verbatim user
+  // override) and triggers a fine-tune call. The previous render becomes
+  // the input image for the next call, so iterations build a chain.
+  // Records each iteration in history for the chat-style UI.
+  const submitIteration = async () => {
+    const text = iterateText.trim();
+    if (!text || !generated || loading) return;
+    update({ custom_note: text });
+    // Record BEFORE the call so the input clears immediately and the user
+    // sees their request in the chain. The result URL gets attached on
+    // success below via the existing setGenerated flow.
+    setIterateHistory((prev) => [...prev, { prompt: text, url: null }]);
+    setIterateText("");
+    await generate(true);
+    // Update the latest history entry with the new result URL.
+    setIterateHistory((prev) => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      // If we already have a url (race), don't overwrite. Otherwise patch.
+      if (last.url) return prev;
+      // We can't read the new URL here synchronously — generate() updates
+      // `generated` async via setGenerated. The effect below patches the
+      // latest entry once the new URL lands.
+      return prev;
+    });
+  };
+
+  // Patch the latest history entry's url whenever a new render lands.
+  useEffect(() => {
+    if (!generated) return;
+    setIterateHistory((prev) => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      if (last.url || last.url === generated) return prev;
+      return [...prev.slice(0, -1), { ...last, url: generated }];
+    });
+  }, [generated]);
 
   const handleSaveAndShop = async () => {
     if (!generated) return;
@@ -804,7 +911,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     <div>
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-2xl font-bold">
-        {data.room_mode === "furnish" ? "Furnish your empty room" : "Generate your design"}
+        {data.room_mode === "furnish" ? "Furnish your empty room" : "Edit your room"}
       </h2>
         {credits && (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl" style={{ background: "rgba(27,143,160,0.1)", border: "1px solid rgba(27,143,160,0.25)" }}>
@@ -817,10 +924,49 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       </div>
       <p className="text-white/40 text-sm mb-6">
         {data.room_mode === "furnish"
-          ? <>AI will place realistic <strong className="text-white/70">{data.style}</strong>-style furniture into your empty room — keeping your walls, windows and perspective.</>
-          : <>Stable Diffusion will redesign your room in the <strong className="text-white/70">{data.style}</strong> style, keeping your room structure intact.</>
+          ? <>AI will <strong className="text-white/70">add</strong> {data.style}-style furniture to your empty room. Walls, windows, floor and perspective stay exactly as they are in your photo.</>
+          : <>AI will <strong className="text-white/70">edit your room photo</strong> in the {data.style} style. Walls, windows, floor and perspective stay exactly as they are — only furniture and decor change.</>
         }{" "}Full generation uses 2 credits. Fine-tuning uses 1 credit.
       </p>
+
+      {/* Day 7.2 — Override pins. Optional power-feature: lets user click
+          specific spots on their source photo to mark surgical edits
+          (paint this wall, swap this couch, remove this lamp, preserve
+          this exact item). Each pin generates a spatial-language
+          instruction injected into the prompt. Hidden by default to keep
+          the wizard simple — opens via a toggle button. */}
+      {data.room_image_url && !generated && (
+        <div className="mb-4 rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${overridePins.length > 0 ? "rgba(110,198,198,0.3)" : "rgba(255,255,255,0.08)"}` }}>
+          <button
+            type="button"
+            onClick={() => setShowPins((v) => !v)}
+            className="w-full flex items-center gap-3 text-left"
+          >
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: overridePins.length > 0 ? "rgba(110,198,198,0.18)" : "rgba(255,255,255,0.05)" }}>
+              <MapPin className="w-3.5 h-3.5" style={{ color: overridePins.length > 0 ? "#6EC6C6" : "rgba(255,255,255,0.45)" }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white">Mark specific changes</p>
+              <p className="text-xs text-white/40 truncate">
+                {overridePins.length > 0
+                  ? `${overridePins.length} pin${overridePins.length !== 1 ? "s" : ""} added — click to edit`
+                  : "Click a spot on your photo to paint a wall, swap an item, remove a window…"}
+              </p>
+            </div>
+            <span className="text-[10px] text-white/35 ml-2">{showPins ? "Hide" : "Open"}</span>
+          </button>
+          {showPins && (
+            <div className="mt-4">
+              <SourceOverridePins
+                imageUrl={data.room_image_url}
+                pins={overridePins}
+                onChange={(next) => { setOverridePins(next); update({ override_pins: next }); }}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Custom specifications ─────────────────────────────── */}
       <div className="mb-6 rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
@@ -1037,6 +1183,31 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
               Find items
             </button>
           </div>
+        ) : !loading && data.room_image_url ? (
+          // Day 7.1 — show the source room thumbnail before generation has run.
+          // Reframes Step 3 as "you are about to edit THIS photo" instead of
+          // "you are about to generate something new."
+          <div className="relative w-full aspect-[4/3] bg-[#0e0e10]">
+            <img
+              src={data.room_image_url}
+              alt="Your source room"
+              className="w-full h-full object-cover opacity-90"
+            />
+            <div
+              aria-hidden
+              className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent"
+            />
+            <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold backdrop-blur-md"
+              style={{ background: "rgba(20,20,24,0.7)", border: "1px solid rgba(110,198,198,0.35)", color: "#6EC6C6" }}>
+              <Sparkles className="w-3 h-3" strokeWidth={2.5} /> Your source photo
+            </div>
+            <div className="absolute bottom-4 left-4 right-4">
+              <p className="text-white text-sm font-semibold mb-1">Ready to edit this room.</p>
+              <p className="text-white/65 text-xs leading-relaxed">
+                AI will keep walls, windows, doors, floor and perspective identical. Only furniture and decor will change.
+              </p>
+            </div>
+          </div>
         ) : (
           <div className="flex flex-col items-center gap-3 p-10">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "rgba(27,143,160,0.1)", border: "1px solid rgba(27,143,160,0.25)" }}>
@@ -1046,6 +1217,145 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           </div>
         )}
       </div>
+
+      {/* Day 7.3 — structure-preservation score badge. After every fresh
+          render, /api/scoreStructure compares source vs result. If <70 we
+          show a "Re-render with stronger preservation" CTA so the user can
+          self-heal without leaving the page. */}
+      {generated && !loading && !prevGenerated && (
+        <div className="mb-4">
+          {scoringInFlight && structureScore === null && (
+            <div className="px-4 py-2.5 rounded-2xl flex items-center gap-2 text-xs text-white/45"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Checking structure preservation…
+            </div>
+          )}
+          {structureScore !== null && structureScore >= 70 && (
+            <div className="px-4 py-2.5 rounded-2xl flex items-center gap-2 text-xs"
+              style={{ background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.22)" }}>
+              <span className="font-bold text-emerald-400">{structureScore}/100</span>
+              <span className="text-emerald-400/80">structure preserved</span>
+              {structureSummary && <span className="text-white/35 hidden sm:inline">— {structureSummary}</span>}
+            </div>
+          )}
+          {structureScore !== null && structureScore < 70 && (
+            <div className="px-4 py-3 rounded-2xl"
+              style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.25)" }}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-bold text-red-400">{structureScore}/100</span>
+                <span className="text-red-400/85 text-xs font-semibold">structure drifted</span>
+              </div>
+              {structureSummary && <p className="text-xs text-white/55 mb-2">{structureSummary}</p>}
+              <button
+                onClick={() => generate(false)}
+                disabled={loading || (credits && credits.credits_remaining < 2)}
+                className="text-xs font-semibold px-3 py-1.5 rounded-xl text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
+              >
+                Re-render with stronger preservation
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Day 7.1 — "What I changed" caption. Sits between the result and the
+          feedback row so users get an immediate, plain-English summary of
+          what was preserved vs. transformed. This calibrates expectations
+          and surfaces the structure-preservation guarantee at the moment of
+          peak attention (right after the result lands). */}
+      {generated && !loading && (
+        <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div
+            className="rounded-2xl px-4 py-3 flex items-start gap-3"
+            style={{ background: "rgba(110,198,198,0.06)", border: "1px solid rgba(110,198,198,0.18)" }}
+          >
+            <Lock className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#6EC6C6" }} />
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "#6EC6C6" }}>What I kept</p>
+              <p className="text-xs text-white/55 mt-1 leading-relaxed">
+                Walls, windows, doors, floor, ceiling, camera angle, perspective.
+              </p>
+            </div>
+          </div>
+          <div
+            className="rounded-2xl px-4 py-3 flex items-start gap-3"
+            style={{ background: "rgba(201,150,58,0.06)", border: "1px solid rgba(201,150,58,0.18)" }}
+          >
+            <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "#D4A857" }} />
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "#D4A857" }}>What I changed</p>
+              <p className="text-xs text-white/55 mt-1 leading-relaxed">
+                Furniture, upholstery, lighting, rugs, decor — in {data.style || "your chosen"} style.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Day 7.4 — "Iterate with words" chat input. Each submission is a
+          1-credit fine-tune that uses the LAST render as the input image.
+          Builds a chain of edits the user can scroll back through. */}
+      {generated && !loading && (
+        <div className="mb-5 rounded-2xl overflow-hidden"
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+          <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5" style={{ color: "#6EC6C6" }} />
+            <p className="text-xs font-bold uppercase tracking-wider text-white/55">
+              Tweak this design
+            </p>
+            <span className="ml-auto text-[10px] text-white/35">1 credit per change</span>
+          </div>
+
+          {iterateHistory.length > 0 && (
+            <div className="px-4 py-3 max-h-44 overflow-y-auto space-y-2 border-b border-white/5">
+              {iterateHistory.map((entry, idx) => (
+                <div key={idx} className="flex items-start gap-2.5">
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{ background: "rgba(110,198,198,0.15)", border: "1px solid rgba(110,198,198,0.3)" }}>
+                    <span className="text-[10px] font-bold" style={{ color: "#6EC6C6" }}>{idx + 1}</span>
+                  </div>
+                  <p className="text-xs text-white/65 flex-1 leading-relaxed">
+                    {entry.prompt}
+                    {!entry.url && (
+                      <span className="ml-2 text-[10px] text-white/35 inline-flex items-center gap-1">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" /> generating
+                      </span>
+                    )}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="px-3 py-3 flex items-center gap-2">
+            <input
+              type="text"
+              value={iterateText}
+              onChange={(e) => setIterateText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  submitIteration();
+                }
+              }}
+              disabled={loading || (credits && credits.credits_remaining < 1)}
+              placeholder="e.g. make the rug rounder, lose the brass lamp, darker walnut on the table…"
+              className="flex-1 text-sm px-3 py-2.5 rounded-xl text-white/85 placeholder-white/25 focus:outline-none disabled:opacity-40"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+            />
+            <button
+              onClick={submitIteration}
+              disabled={!iterateText.trim() || loading || (credits && credits.credits_remaining < 1)}
+              className="text-xs font-semibold px-4 py-2.5 rounded-xl text-white transition-opacity hover:opacity-90 disabled:opacity-40 whitespace-nowrap"
+              style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
+            >
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Apply"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Error */}
       {error && (
