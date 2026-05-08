@@ -41,12 +41,16 @@ export default function Room3DShowcase() {
         }
       `}</style>
       
-      {/* Animated gradient background */}
-      <div 
-        className="absolute inset-0 transition-all duration-[2000ms] ease-in-out"
-        style={{ 
+      {/* Animated gradient background.
+          Day 9.4 — moved the 2000ms duration into inline style; Tailwind
+          v3.4 flags `duration-[2000ms]` as ambiguous (build warning). The
+          inline `transitionDuration` is functionally identical. */}
+      <div
+        className="absolute inset-0 transition-all ease-in-out"
+        style={{
           background: style.gradient,
-          animation: "fadeGradient 6s ease-in-out infinite"
+          animation: "fadeGradient 6s ease-in-out infinite",
+          transitionDuration: "2000ms"
         }}
       />
       
