@@ -452,7 +452,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   useEffect(() => { setPrompt(buildPrompt(data)); }, [data.style, data.color_palette, data.vibes, data.room_mode, data.room_type, data.wall_color, data.sofa_color, data.floor_type, data.ceiling_design, data.custom_note]);
 
   // Day 7.3 — score structure preservation after each successful generation.
-  // Uses the /api/scoreStructure endpoint which compares the source photo to
+  // Uses /api/llm with action='score-structure' (Day 9.5 consolidation —
   // the result via vision LLM. Runs async — user sees the result instantly,
   // the score badge appears once the LLM responds (typically 2–5 seconds).
   // Reset on each new generation.
@@ -468,7 +468,8 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     setStructureScore(null);
     setStructureSummary(null);
 
-    apiClient.functions.invoke('scoreStructure', {
+    apiClient.functions.invoke('llm', {
+      action: 'score-structure',
       source_url: data.room_image_url,
       result_url: generated,
     }).then((response) => {
@@ -1355,7 +1356,7 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       </div>
 
       {/* Day 7.3 — structure-preservation score badge. After every fresh
-          render, /api/scoreStructure compares source vs result. If <70 we
+          render, /api/llm action=score-structure compares source vs result. If <70 we
           show a "Re-render with stronger preservation" CTA so the user can
           self-heal without leaving the page. */}
       {generated && !loading && !prevGenerated && (

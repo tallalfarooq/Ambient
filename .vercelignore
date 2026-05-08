@@ -1,0 +1,12 @@
+# Day 9.5 — Vercel function-count management.
+#
+# Vercel Hobby caps deployments at 12 serverless functions, where each file
+# in `/api/` is one function. We've consolidated some routes into others
+# (e.g. scoreStructure → llm with action='score-structure') but left the
+# original files in the repo for reference / quick rollback. This file
+# keeps them from being deployed.
+#
+# Re-add a route to deploy by removing its line below.
+
+api/scoreStructure.js
+api/embed/

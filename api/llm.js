@@ -63,13 +63,93 @@ const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY 
 
 export const config = { maxDuration: 30 };
 
+// Day 9.5 — structure-preservation scoring is folded into /api/llm via an
+// action='score-structure' mode. Previously it lived in /api/scoreStructure
+// but Vercel Hobby caps deployments at 12 functions. Both endpoints are
+// vision LLM calls so the consolidation is natural.
+
+const STRUCTURE_SCORE_PROMPT = `You are evaluating whether an AI interior-design tool preserved the source room's structure.
+
+You will see TWO images:
+1. SOURCE — the original empty or furnished room photo the user uploaded.
+2. RESULT — the AI-generated redesign of that same room.
+
+The redesign is EXPECTED to change furniture, upholstery, lighting fixtures, rugs, and decorative objects. Do NOT penalize those changes.
+
+The redesign is EXPECTED to PRESERVE these architectural elements (these MUST match between source and result):
+- Walls and wall paint color (unless the user explicitly asked to repaint walls)
+- Windows: same count, same positions, same sizes
+- Doors: same count, same positions
+- Floor material and floor color (unless the user asked to change flooring)
+- Ceiling shape and height
+- Camera angle and perspective (the photo should look taken from the same vantage)
+- Overall room dimensions and shape
+
+Score from 0 to 100, where:
+- 95–100 = essentially perfect structural match; only furniture/decor changed
+- 70–94  = minor drift (e.g., a window slightly resized, wall color shifted slightly)
+- 40–69  = noticeable structural changes (e.g., a window moved, walls repainted differently, perspective shifted)
+- 0–39   = totally different room; user would not recognize their space
+
+Return ONLY a JSON object:
+{
+  "score": <number 0-100>,
+  "summary": "<one short sentence describing what was preserved vs. drifted>",
+  "drifted_elements": ["element1", "element2", ...]
+}`;
+
+const STRUCTURE_SCORE_SCHEMA = {
+  type: 'object',
+  properties: {
+    score: { type: 'number' },
+    summary: { type: 'string' },
+    drifted_elements: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['score', 'summary', 'drifted_elements'],
+};
+
 export default async function handler(req, res) {
   if (!allow(res, req, ['POST'])) return;
 
   const user = await getUserFromRequest(req);
   if (!user) return json(res, 401, { error: 'Not authenticated' });
 
-  const { prompt, response_json_schema, file_urls, model } = await readJson(req);
+  const body = await readJson(req);
+  const action = body?.action;
+
+  // Day 9.5 — score-structure mode. Compares source photo to AI result and
+  // returns 0-100 preservation score. Self-contained so the frontend just
+  // sends {action:'score-structure', source_url, result_url}.
+  if (action === 'score-structure') {
+    const { source_url, result_url } = body;
+    if (typeof source_url !== 'string' || typeof result_url !== 'string') {
+      return json(res, 400, { error: 'Missing source_url or result_url' });
+    }
+    try {
+      const args = {
+        prompt: STRUCTURE_SCORE_PROMPT,
+        imageUrls: [source_url, result_url],
+        response_json_schema: STRUCTURE_SCORE_SCHEMA,
+        wantsJson: true,
+        model: undefined,
+      };
+      let result;
+      if (PROVIDER === 'gemini')         result = await callGemini(args);
+      else if (PROVIDER === 'groq')      result = await callGroq(args);
+      else if (PROVIDER === 'anthropic') result = await callAnthropic(args);
+      else return json(res, 500, { error: `Unknown LLM_PROVIDER: ${PROVIDER}` });
+      return json(res, 200, result);
+    } catch (err) {
+      // Score failure is non-fatal — frontend treats null score as "skip
+      // the badge" rather than surfacing the error to the user. Don't 500.
+      // eslint-disable-next-line no-console
+      console.error('[api/llm score-structure] error:', err);
+      return json(res, 200, { score: null, summary: null, drifted_elements: [] });
+    }
+  }
+
+  // Default mode — generic vision LLM call with optional JSON schema.
+  const { prompt, response_json_schema, file_urls, model } = body;
   if (!prompt || typeof prompt !== 'string') {
     return json(res, 400, { error: 'Missing or invalid `prompt`' });
   }
