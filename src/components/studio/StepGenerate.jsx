@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { apiClient } from "@/api/apiClient";
+import { useAuth } from "@/lib/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Download, Share2, CreditCard, LogIn, Layers, Lock, Globe, Sliders, X, Search, ShoppingBag, MapPin } from "lucide-react";
 import { AMAZON_TAG } from "@/components/affiliateLinks";
@@ -384,6 +385,14 @@ function BeforeAfterSlider({ before, after }) {
 
 export default function StepGenerate({ data, update, onBack, onComplete }) {
   const navigate = useNavigate();
+  // Day 9.7 — single source of truth for auth. Layout already uses
+  // useAuth() and the AuthProvider hydrates once via Supabase's
+  // onAuthStateChange. Previously StepGenerate was making its own
+  // apiClient.auth.me() call which raced against AuthContext and failed
+  // when getSessionSafe hit its 1.5s timeout — flipping local user state
+  // to null and showing "Sign in to generate" even though Layout had a
+  // perfectly valid session. Now we just consume the same context.
+  const { user: authUser, isLoadingAuth } = useAuth();
 
   const [loading,      setLoading]      = useState(false);
   const [saving,       setSaving]       = useState(false);
@@ -401,7 +410,11 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [copied,       setCopied]      = useState(false);
   const [watermarkedUrl, setWatermarkedUrl] = useState(null);
   const [credits,      setCredits]      = useState(null);
-  const [user,         setUser]         = useState(undefined); // undefined = loading, null = not logged in
+  // Day 9.7 — local `user` state is now derived from useAuth() via authUser.
+  // We keep `user` as a name-shadow (undefined while loading, the user obj
+  // when authed, null when logged out) so the rest of the component reads
+  // unchanged.
+  const user = isLoadingAuth ? undefined : authUser;
   const [checkingOut,  setCheckingOut]  = useState(false);
   const [showFineTune, setShowFineTune] = useState(false); // fine-tune modal
   const [showObjectSearch, setShowObjectSearch] = useState(false); // tap-to-search panel
@@ -490,51 +503,39 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     return () => { cancelled = true; };
   }, [generated, data.room_image_url, loading, prevGenerated]);
 
+  // Day 9.7 — auth comes from useAuth() context now. This effect only
+  // fetches credits, and only when the user is logged in. If the credits
+  // fetch fails (transient network blip), it's non-fatal — the server-side
+  // /api/generate route is the source of truth and self-heals a missing row.
   useEffect(() => {
-    // Two independent concerns: (1) whether the user is authed, (2) their
-    // credit balance. Bundling them in one try/catch caused a brutal bug —
-    // a transient credits-fetch failure would set user=null and trigger the
-    // sign-in wall even though auth.me() had succeeded. Now they're split:
-    // a credits failure leaves the user authenticated, just without a
-    // displayed balance (the server-side route is the source of truth
-    // anyway; a missing row gets healed on first /api/generate call).
-    const fetchAuthAndCredits = async () => {
-      let currentUser;
-      try {
-        currentUser = await apiClient.auth.me();
-        setUser(currentUser);
-      } catch (err) {
-        // ONLY auth-required errors flip user to null. Anything else
-        // (network blip, etc.) we surface as a transient error but keep
-        // user undefined so the spinner shows; a focus retry will recover.
-        if (err?.type === 'auth_required') {
-          setUser(null);
-        } else {
-          console.error('Auth check failed (transient):', err);
-        }
-        return;
-      }
-
+    if (!authUser?.email) {
+      setCredits(null);
+      return;
+    }
+    let cancelled = false;
+    const fetchCredits = async () => {
       try {
         const userCredits = await apiClient.entities.UserCredits.filter({
-          user_email: currentUser.email,
+          user_email: authUser.email,
         });
-        if (userCredits.length > 0) {
+        if (!cancelled && userCredits.length > 0) {
           setCredits(userCredits[0]);
         }
       } catch (err) {
-        // Credits fetch failure is non-fatal — user stays logged in.
-        // Server-side /api/generate will heal a missing row on first call.
+        // eslint-disable-next-line no-console
         console.error('Credits fetch failed (non-fatal):', err);
       }
     };
-    fetchAuthAndCredits();
+    fetchCredits();
 
-    // Refresh credits when returning from payment
-    const handleFocus = () => fetchAuthAndCredits();
+    // Refresh credits when returning from payment.
+    const handleFocus = () => fetchCredits();
     window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, []);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [authUser?.email]);
 
   useEffect(() => {
     if (!loading) { setProgress(0); return; }
