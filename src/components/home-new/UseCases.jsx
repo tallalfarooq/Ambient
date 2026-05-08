@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { ArrowUpRight, Building2, ShoppingBag, Truck, GraduationCap } from "lucide-react";
 import { DisplayHeading, EyebrowText, MotionSection } from "@/components/ds";
+import ContactSalesModal from "@/components/ContactSalesModal";
 
 /**
  * UseCases — 4-segment grid demonstrating where Ambient Space delivers value.
@@ -16,6 +18,10 @@ import { DisplayHeading, EyebrowText, MotionSection } from "@/components/ds";
  * shipped this week. The cards capture leads while we validate demand.
  */
 
+// Day 9.1 — `salesSource` keys identify which card the lead came from for
+// analytics (and for routing replies). When set, clicking the card opens the
+// ContactSalesModal instead of navigating. Consumer cards keep `href` for
+// direct navigation to /Studio.
 const SEGMENTS = [
   {
     icon: Building2,
@@ -26,7 +32,9 @@ const SEGMENTS = [
       "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80",
     examples: "Immowelt · ImmoScout · Zillow · Rightmove",
     cta: "Talk to sales",
-    href: "mailto:support@ambientspace.ai?subject=Real%20Estate%20Partnership%20-%20Ambient%20Space",
+    salesSource: "home_real_estate",
+    salesTitle: "Talk to our real estate team",
+    salesSubtitle: "Tell us about your platform and listing volume — we'll get back within one business day.",
     accent: "teal",
   },
   {
@@ -38,7 +46,9 @@ const SEGMENTS = [
       "https://images.unsplash.com/photo-1567016432779-094069958ea5?auto=format&fit=crop&w=1200&q=80",
     examples: "Amazon · IKEA · Wayfair · Article",
     cta: "Talk to sales",
-    href: "mailto:support@ambientspace.ai?subject=E-commerce%20Integration%20-%20Ambient%20Space",
+    salesSource: "home_retailer",
+    salesTitle: "Talk to our retail team",
+    salesSubtitle: "Tell us about your store and what you'd like to embed — we'll be in touch within one business day.",
     accent: "gold",
   },
   {
@@ -67,8 +77,7 @@ const SEGMENTS = [
   },
 ];
 
-function SegmentCard({ icon: Icon, eyebrow, title, body, image, examples, cta, href, accent }) {
-  const isExternal = href.startsWith("mailto:") || href.startsWith("http");
+function SegmentCard({ icon: Icon, eyebrow, title, body, image, examples, cta, href, salesSource, onOpenSales, accent }) {
   const accentBg =
     accent === "gold"
       ? "bg-[rgba(201,150,58,0.15)] text-[#D4A857]"
@@ -78,20 +87,26 @@ function SegmentCard({ icon: Icon, eyebrow, title, body, image, examples, cta, h
       ? "group-hover:ring-[#C9963A]/40"
       : "group-hover:ring-[#1B8FA0]/40";
 
-  const linkProps = isExternal ? { href, target: "_blank", rel: "noopener" } : { href };
+  const cardClass = [
+    "group relative flex flex-col rounded-3xl overflow-hidden text-left w-full",
+    "bg-[rgba(20,20,24,0.6)] backdrop-blur-2xl border border-white/8",
+    "transition-all duration-500 ease-apple",
+    "hover:-translate-y-1 hover:border-white/20 hover:shadow-2xl",
+    "ring-1 ring-transparent",
+    accentRing,
+  ].join(" ");
+
+  // Day 9.1 — B2B cards (with salesSource) render as a <button> that opens
+  // the contact modal. Consumer cards keep their <a href="/Studio">.
+  // Previously both used <a href="mailto:..."> which silently failed in
+  // browsers without a configured mail client.
+  const Wrapper = salesSource ? "button" : "a";
+  const wrapperProps = salesSource
+    ? { type: "button", onClick: () => onOpenSales(salesSource) }
+    : { href };
 
   return (
-    <a
-      {...linkProps}
-      className={[
-        "group relative flex flex-col rounded-3xl overflow-hidden",
-        "bg-[rgba(20,20,24,0.6)] backdrop-blur-2xl border border-white/8",
-        "transition-all duration-500 ease-apple",
-        "hover:-translate-y-1 hover:border-white/20 hover:shadow-2xl",
-        "ring-1 ring-transparent",
-        accentRing,
-      ].join(" ")}
-    >
+    <Wrapper {...wrapperProps} className={cardClass}>
       {/* Image */}
       <div className="relative aspect-[16/10] overflow-hidden bg-white/5">
         <img
@@ -135,13 +150,21 @@ function SegmentCard({ icon: Icon, eyebrow, title, body, image, examples, cta, h
           />
         </div>
       </div>
-    </a>
+    </Wrapper>
   );
 }
 
 export default function UseCases() {
-  const businessSegments = SEGMENTS.filter((s) => s.examples);
-  const consumerSegments = SEGMENTS.filter((s) => !s.examples);
+  const businessSegments = SEGMENTS.filter((s) => s.salesSource);
+  const consumerSegments = SEGMENTS.filter((s) => !s.salesSource);
+
+  // Day 9.1 — modal state for the B2B "Talk to sales" form. Shared by both
+  // B2B cards; we pass through which one was clicked so the lead is
+  // attributed correctly + we render a tailored title/subtitle.
+  const [salesModal, setSalesModal] = useState({ open: false, source: null });
+  const openSales = (source) => setSalesModal({ open: true, source });
+  const closeSales = () => setSalesModal({ open: false, source: salesModal.source });
+  const activeSegment = SEGMENTS.find((s) => s.salesSource === salesModal.source);
 
   return (
     <section
@@ -176,7 +199,7 @@ export default function UseCases() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             {businessSegments.map((s) => (
               <MotionSection.Item key={s.eyebrow}>
-                <SegmentCard {...s} />
+                <SegmentCard {...s} onOpenSales={openSales} />
               </MotionSection.Item>
             ))}
           </div>
@@ -194,12 +217,24 @@ export default function UseCases() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             {consumerSegments.map((s) => (
               <MotionSection.Item key={s.eyebrow}>
-                <SegmentCard {...s} />
+                <SegmentCard {...s} onOpenSales={openSales} />
               </MotionSection.Item>
             ))}
           </div>
         </MotionSection>
       </div>
+
+      {/* Day 9.1 — Talk to sales modal. Shared by both B2B cards; the source
+          attribution + tailored copy are derived from whichever card the
+          user clicked. */}
+      <ContactSalesModal
+        open={salesModal.open}
+        onClose={closeSales}
+        source={salesModal.source || "other"}
+        title={activeSegment?.salesTitle || "Talk to sales"}
+        subtitle={activeSegment?.salesSubtitle || "Tell us about your use case — we'll get back within one business day."}
+        accentColor={activeSegment?.accent === "gold" ? "#C9963A" : "#1B8FA0"}
+      />
     </section>
   );
 }

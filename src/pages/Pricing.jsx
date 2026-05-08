@@ -4,6 +4,7 @@ import { Check, Sparkles, Crown, Zap, Loader2, Building2, ShoppingBag, ArrowUpRi
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/LanguageContext";
+import ContactSalesModal from "@/components/ContactSalesModal";
 
 export default function Pricing() {
   const { t } = useLanguage();
@@ -11,6 +12,12 @@ export default function Pricing() {
   const [credits,    setCredits]    = useState(null);
   const [loading,    setLoading]    = useState(true);
   const [purchasing, setPurchasing] = useState(null);
+  // Day 9.1 — Talk to sales modal. Replaces mailto: hrefs that were
+  // wrapping the entire B2B card and silently failing in browsers without
+  // a configured mail client.
+  const [salesModal, setSalesModal] = useState({ open: false, source: null });
+  const openSales = (source) => setSalesModal({ open: true, source });
+  const closeSales = () => setSalesModal({ open: false, source: salesModal.source });
 
   // Paid plans only — Starter ($0) is granted automatically on signup and
   // shown as a banner above instead of a third card. This makes the page
@@ -295,9 +302,10 @@ export default function Pricing() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
           {/* Real Estate vertical */}
-          <a
-            href="mailto:support@ambientspace.ai?subject=Real%20Estate%20Partnership%20-%20Ambient%20Space"
-            className="group relative rounded-3xl p-8 border transition-all duration-500 ease-apple hover:-translate-y-1 hover:border-white/20 hover:shadow-2xl"
+          <button
+            type="button"
+            onClick={() => openSales("pricing_real_estate")}
+            className="group relative rounded-3xl p-8 border transition-all duration-500 ease-apple hover:-translate-y-1 hover:border-white/20 hover:shadow-2xl text-left"
             style={{
               borderColor: "rgba(27,143,160,0.35)",
               background: "rgba(27,143,160,0.05)",
@@ -334,12 +342,13 @@ export default function Pricing() {
               <span>Talk to sales</span>
               <ArrowUpRight className="w-4 h-4" strokeWidth={2.5} />
             </div>
-          </a>
+          </button>
 
           {/* E-commerce vertical */}
-          <a
-            href="mailto:support@ambientspace.ai?subject=E-commerce%20Integration%20-%20Ambient%20Space"
-            className="group relative rounded-3xl p-8 border transition-all duration-500 ease-apple hover:-translate-y-1 hover:border-white/20 hover:shadow-2xl"
+          <button
+            type="button"
+            onClick={() => openSales("pricing_retailer")}
+            className="group relative rounded-3xl p-8 border transition-all duration-500 ease-apple hover:-translate-y-1 hover:border-white/20 hover:shadow-2xl text-left"
             style={{
               borderColor: "rgba(201,150,58,0.35)",
               background: "rgba(201,150,58,0.05)",
@@ -376,19 +385,41 @@ export default function Pricing() {
               <span>Talk to sales</span>
               <ArrowUpRight className="w-4 h-4" strokeWidth={2.5} />
             </div>
-          </a>
+          </button>
         </div>
 
         {/* Generic contact fallback */}
         <div className="text-center text-sm text-white/35 max-w-xl mx-auto">
           <p>
             Different use case in mind?{" "}
-            <a href="mailto:support@ambientspace.ai" className="text-accent-teal-light hover:text-white transition-colors">
-              support@ambientspace.ai
-            </a>
+            <button
+              type="button"
+              onClick={() => openSales("other")}
+              className="text-accent-teal-light hover:text-white transition-colors underline-offset-2 hover:underline"
+            >
+              Talk to us
+            </button>
           </p>
         </div>
       </div>
+
+      {/* Day 9.1 — Talk to sales modal. Tailored title/subtitle per source. */}
+      <ContactSalesModal
+        open={salesModal.open}
+        onClose={closeSales}
+        source={salesModal.source || "other"}
+        title={
+          salesModal.source === "pricing_real_estate" ? "Talk to our real estate team" :
+          salesModal.source === "pricing_retailer"    ? "Talk to our retail team" :
+          "Talk to sales"
+        }
+        subtitle={
+          salesModal.source === "pricing_real_estate" ? "Tell us about your platform and listing volume — we'll get back within one business day." :
+          salesModal.source === "pricing_retailer"    ? "Tell us about your store and what you'd like to embed — we'll be in touch within one business day." :
+          "Tell us about your use case — we'll get back within one business day."
+        }
+        accentColor={salesModal.source === "pricing_retailer" ? "#C9963A" : "#1B8FA0"}
+      />
     </div>
   );
 }
