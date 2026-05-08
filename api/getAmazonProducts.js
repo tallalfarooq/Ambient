@@ -17,7 +17,7 @@
  *
  * Body: { query: string, limit?: number, budget_max?: number }
  * Returns: { matches: Array<{
- *   title, source, url, price, image_url, similarity_score, is_preloved, asin
+ *   title, source, url, price, image_url, is_preloved, asin
  * }> }
  *
  * The shape matches what Design.jsx already expects from the legacy
@@ -60,6 +60,10 @@ export default async function handler(req, res) {
   const priceQuery =
     budgetMax > 0 ? `&low-price=1&high-price=${budgetMax}` : '';
 
+  // Day 9.6 — removed `similarity_score` from each match. These deep-links
+  // route to the retailer's keyword search results, NOT to specific product
+  // matches, so any similarity score we returned was hardcoded fluff. Re-add
+  // when we ship a real image-embedding match pipeline.
   const allMatches = [
     {
       title: rawQuery,
@@ -67,7 +71,6 @@ export default async function handler(req, res) {
       url: `https://www.amazon.com/s?k=${encQ}&tag=${AMAZON_TAG}&linkCode=ur2${priceQuery}`,
       price: null,
       image_url: null,
-      similarity_score: 0.7,
       is_preloved: false,
       asin: null,
     },
@@ -77,7 +80,6 @@ export default async function handler(req, res) {
       url: `https://www.ikea.com/us/en/search/?q=${encQ}`,
       price: null,
       image_url: null,
-      similarity_score: 0.6,
       is_preloved: false,
       asin: null,
     },
@@ -87,7 +89,6 @@ export default async function handler(req, res) {
       url: `https://www.wayfair.com/keyword.php?keyword=${encQ}`,
       price: null,
       image_url: null,
-      similarity_score: 0.55,
       is_preloved: false,
       asin: null,
     },
@@ -97,7 +98,6 @@ export default async function handler(req, res) {
       url: `https://www.ebay.com/sch/i.html?_nkw=${encQ}&LH_BIN=1`,
       price: null,
       image_url: null,
-      similarity_score: 0.45,
       // Mark eBay results as potentially preloved so the UI can highlight
       // sustainable options when sustainability_mode is on for the design.
       is_preloved: true,

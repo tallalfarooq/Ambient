@@ -317,10 +317,13 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
         } catch (_) {}
 
         if (matches.length === 0) {
+          // Fallback when the API call fails — synthesize the same deep-link
+          // shape we'd have gotten from /api/getAmazonProducts. Day 9.6
+          // dropped similarity_score from the schema since it was hardcoded.
           const query = encodeURIComponent(item.search_query || item.label);
           matches = [
-            { title: item.label, price: null, image_url: null, source: "Amazon", url: `https://www.amazon.com/s?k=${query}&tag=${AMAZON_TAG}&linkCode=ur2&low-price=1&high-price=${budgetMax}`, is_preloved: false, similarity_score: 0.5 },
-            { title: item.label, price: null, image_url: null, source: "IKEA",   url: `https://www.ikea.com/us/en/search/?q=${query}`, is_preloved: false, similarity_score: 0.4 },
+            { title: item.label, price: null, image_url: null, source: "Amazon", url: `https://www.amazon.com/s?k=${query}&tag=${AMAZON_TAG}&linkCode=ur2&low-price=1&high-price=${budgetMax}`, is_preloved: false },
+            { title: item.label, price: null, image_url: null, source: "IKEA",   url: `https://www.ikea.com/us/en/search/?q=${query}`, is_preloved: false },
           ];
         }
         return { ...item, matches };

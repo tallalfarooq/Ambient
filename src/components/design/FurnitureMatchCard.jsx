@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { apiClient } from "@/api/apiClient";
-import { CheckCircle2, Recycle, Star, ExternalLink } from "lucide-react";
+import { CheckCircle2, Recycle, ExternalLink } from "lucide-react";
 import { buildAffiliateUrl, getSourceCTA } from "@/components/affiliateLinks";
 
 function AmazonImage({ src, alt }) {
@@ -77,7 +77,12 @@ export default function FurnitureMatchCard({ item, onItemUpdate }) {
                   : "border-white/8 bg-white/2 hover:border-white/15 hover:bg-white/4"
               }`}
             >
-              {/* Badges row */}
+              {/* Badges row.
+                  Day 9.6 — removed the "X% match" badge. Detect & Shop
+                  returns Amazon Associates / IKEA / Wayfair search-result
+                  deep links, not exact-product matches, so we have no real
+                  similarity score to display. The previous values (70/60/55%)
+                  were hardcoded per-retailer slot and read as deceptive. */}
               <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${SOURCE_BADGE[match.source] || "text-white/40 bg-white/5 border-white/10"}`}>
                   {match.source}
@@ -85,11 +90,6 @@ export default function FurnitureMatchCard({ item, onItemUpdate }) {
                 {match.is_preloved && (
                   <span className="text-xs flex items-center gap-1 text-emerald-400 bg-emerald-400/8 border border-emerald-400/15 px-2 py-0.5 rounded-full">
                     <Recycle className="w-2.5 h-2.5" /> Pre-loved
-                  </span>
-                )}
-                {match.similarity_score != null && (
-                  <span className="text-xs flex items-center gap-1 text-amber-400/70 ml-auto">
-                    <Star className="w-2.5 h-2.5" /> {Math.round(match.similarity_score * 100)}% match
                   </span>
                 )}
               </div>
