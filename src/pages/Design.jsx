@@ -233,15 +233,17 @@ Budget: up to $${budgetMax} per item.
 
 TASK: Identify 8-12 distinct furniture or decor items clearly visible in this room render.
 
-For each item provide:
+For each item ALL FIELDS BELOW ARE REQUIRED — do not skip any. Items missing bounding-box numbers will be rejected.
+
 - label: descriptive English name including COLOR + MATERIAL + TYPE (e.g. "Beige Linen Low-Profile Sofa", "Walnut Wood Coffee Table", "Rattan Pendant Light")
 - style_tags: 2-3 English style tags (e.g. ["japandi", "natural oak", "minimalist"])
-- bbox_left: left edge of the item as % of image width (0=left edge, 100=right edge)
-- bbox_right: right edge of the item as % of image width
-- bbox_top: top edge of the item as % of image height (0=top, 100=bottom)
-- bbox_bottom: bottom edge of the item as % of image height
+- bbox_left: REQUIRED. Left edge of the item's bounding box, as % of image width (0=left edge, 100=right edge). MUST be a number 0-100.
+- bbox_right: REQUIRED. Right edge as % of image width. MUST be > bbox_left.
+- bbox_top: REQUIRED. Top edge as % of image height (0=top, 100=bottom). MUST be a number 0-100.
+- bbox_bottom: REQUIRED. Bottom edge as % of image height. MUST be > bbox_top.
   Example: a sofa that fills the bottom-center of the image → bbox_left:15, bbox_right:70, bbox_top:60, bbox_bottom:90
   Example: a pendant light in the upper-right quarter → bbox_left:60, bbox_right:80, bbox_top:5, bbox_bottom:25
+  IMPORTANT: Look at the image carefully and report the ACTUAL screen position of each item. Do NOT use 50/50 defaults.
 - search_query: precise English Amazon search query (5-7 words): COLOR + MATERIAL + STYLE + PRODUCT TYPE.
   Examples: "beige linen low-profile sofa Japandi", "walnut mid-century coffee table tapered legs", "rattan pendant light boho natural"
 
@@ -270,12 +272,37 @@ ${design.sustainability_mode ? "IMPORTANT: Prioritise pre-loved/second-hand opti
       },
     });
 
-    // Compute pin center from bounding box — much more accurate than a single point estimate
-    const withPositions = (result.items || []).map((item) => ({
-      ...item,
-      position_x: Math.round(((item.bbox_left ?? 10) + (item.bbox_right ?? 90)) / 2 * 10) / 10,
-      position_y: Math.round(((item.bbox_top  ?? 10) + (item.bbox_bottom ?? 90)) / 2 * 10) / 10,
-    }));
+    // Compute pin center from bounding box. Day 5.8 — vision LLMs (esp. Llama
+    // 4 Scout in JSON mode) sometimes omit bbox numbers, which previously
+    // caused every pin to default to (50,50) and pile on top of each other.
+    // Now: items WITH valid bbox keep their detected position; items missing
+    // bbox get distributed across a 4-column grid so users still see clickable
+    // pins for every detected product.
+    const hasValidBbox = (item) => {
+      const fields = ['bbox_left', 'bbox_right', 'bbox_top', 'bbox_bottom'];
+      return fields.every((f) => typeof item[f] === 'number' && item[f] >= 0 && item[f] <= 100)
+        && item.bbox_right > item.bbox_left
+        && item.bbox_bottom > item.bbox_top;
+    };
+
+    const rawItems = result.items || [];
+    const withPositions = rawItems.map((item, idx) => {
+      if (hasValidBbox(item)) {
+        return {
+          ...item,
+          position_x: Math.round(((item.bbox_left + item.bbox_right) / 2) * 10) / 10,
+          position_y: Math.round(((item.bbox_top + item.bbox_bottom) / 2) * 10) / 10,
+        };
+      }
+      // Grid fallback — 4 cols × N rows, centered with 15% padding from edges
+      const col = idx % 4;
+      const row = Math.floor(idx / 4);
+      return {
+        ...item,
+        position_x: 17 + col * 22, // 17, 39, 61, 83
+        position_y: 25 + row * 22, // 25, 47, 69, 91
+      };
+    });
 
     const itemsWithMatches = await Promise.all(
       withPositions.map(async (item) => {

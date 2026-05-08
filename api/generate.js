@@ -599,13 +599,16 @@ function rewritePromptForFurnish(originalPrompt) {
   // Edit-style prompt: preservation clause first, then ADD furniture clause.
   // This is the same shape as rewritePromptForRedesign, except the change
   // clause says "add furniture" (not "replace") since the source is empty.
+  // Day 5.8: scope palette to furniture/decor only — Kontext was repainting
+  // walls with palette colors. Wall paint is in the preservation clause.
   const parts = [
     `Edit this exact empty ${room} photo`,
-    `Keep the same walls, wall colors, windows, doors, floor material, ceiling, camera angle, and perspective unchanged`,
+    `Keep the walls, wall paint color, windows, doors, floor material, floor color, ceiling, camera angle, and perspective EXACTLY as in the source photo`,
+    `Do not repaint walls. Do not change floor color. Do not change window count or position`,
     `Only add furniture and decor: place ${style} interior design furniture and decor objects in the empty space`,
     furnitureList ? `Add: ${furnitureList}` : null,
     styleDetail || null,
-    palette ? `${palette} color palette` : null,
+    palette ? `Apply ${palette} colors to furniture, upholstery and decor only` : null,
     mood ? `${mood.toLowerCase()} atmosphere` : null,
     'photorealistic interior photograph, natural light, magazine quality',
   ].filter(Boolean);
@@ -663,14 +666,18 @@ function rewritePromptForRedesign(originalPrompt) {
   // Build the prompt as an explicit photo edit — preservation clause first,
   // change clause second. This phrasing measurably improves structural
   // fidelity vs. a purely declarative "Apply X style" prompt.
+  // Day 5.8: scope palette to furniture/decor only and explicitly call out
+  // wall paint + floor color in preservation. Kontext was repainting walls
+  // with palette colors when palette was generic ("teal, gold, ivory").
   const parts = [
     `Edit this exact ${room} photo`,
-    `Keep the same walls, windows, doors, floor, ceiling, camera angle, and perspective unchanged`,
-    `Only redecorate: replace the furniture, upholstery, paint colors, lighting fixtures, and decor objects`,
-    `Apply ${style} interior design style`,
+    `Keep the walls, wall paint color, windows, doors, floor, floor color, ceiling, camera angle, and perspective EXACTLY as in the source photo`,
+    `Do not repaint walls. Do not change floor color. Do not change window count or position`,
+    `Only redecorate: replace the furniture, upholstery, lighting fixtures, and decor objects`,
+    `Apply ${style} interior design style to the furniture and decor`,
     descriptors,
     furnitureList ? `New furniture: ${furnitureList}` : null,
-    palette ? `${palette} color palette` : null,
+    palette ? `Apply ${palette} colors to furniture, upholstery and decor only` : null,
     'photorealistic interior photograph, natural light, magazine quality',
   ].filter(Boolean);
 
