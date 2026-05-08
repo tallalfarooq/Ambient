@@ -551,6 +551,104 @@ function clamp(n, min, max) {
 }
 
 /**
+ * Day 6.8 — Extract user override fields from the verbose frontend prompt.
+ *
+ * The Studio wizard's StepGenerate.buildPrompt() bakes user fine-tune fields
+ * into the verbose prompt as labeled phrases:
+ *   "Wall color: Sage Green"
+ *   "Sofa/seating upholstery: Charcoal"
+ *   "Flooring: Light Oak"
+ *   "Ceiling: Exposed Wooden Beams"
+ *   ...plus a free-text custom_note appended without a label.
+ *
+ * Earlier Kontext rewriters threw all of this away when simplifying for the
+ * 120s timeout, which meant a user typing "change back wall to grey" got
+ * silently ignored. This helper recovers the structured overrides so the
+ * downstream rewriter can:
+ *   (a) REMOVE the corresponding item from the preservation list, and
+ *   (b) ADD it to the change list with a specific instruction.
+ *
+ * The override semantics are critical to the product's value prop: by default
+ * preserve everything that's not furniture/decor, but honor explicit user
+ * overrides verbatim.
+ */
+function extractUserOverrides(originalPrompt) {
+  const p = originalPrompt;
+
+  const wallColor =
+    p.match(/Wall color:\s*([^.]+?)(?:\.|$)/i)?.[1]?.trim() || null;
+  const sofaColor =
+    p.match(/Sofa\/seating upholstery:\s*([^.]+?)(?:\.|$)/i)?.[1]?.trim() || null;
+  const floorType =
+    p.match(/Flooring:\s*([^.]+?)(?:\.|$)/i)?.[1]?.trim() || null;
+  const ceilingDesign =
+    p.match(/Ceiling:\s*([^.]+?)(?:\.|$)/i)?.[1]?.trim() || null;
+
+  // The custom_note is appended last, after all the structured fields.
+  // Heuristic: anything between the last labeled field and the camera/lens
+  // boilerplate that doesn't look like a label or palette/mood phrase.
+  // Falls back to the lookbehind "Mood: ..." and trailing camera string.
+  let customNote = null;
+  const customMatch = p.match(
+    /(?:Ceiling:[^.]+\.|Flooring:[^.]+\.|Sofa\/seating upholstery:[^.]+\.|Wall color:[^.]+\.|Color palette:[^.]+\.)\s*([^.]+?)\.\s*(?:Mood:|Canon EOS|Photorealistic, 8K|Hyperrealistic, 8K|$)/i
+  );
+  if (customMatch) {
+    const candidate = customMatch[1]?.trim();
+    // Reject if it looks like another labeled field we already extracted, or
+    // boilerplate descriptors. Heuristic: must not contain "color palette",
+    // "interior design", or be a single recognized style word.
+    if (
+      candidate &&
+      candidate.length > 3 &&
+      !/^(color palette|interior design|wall color|flooring|ceiling|sofa)/i.test(candidate)
+    ) {
+      customNote = candidate;
+    }
+  }
+
+  return { wallColor, sofaColor, floorType, ceilingDesign, customNote };
+}
+
+/**
+ * Build the structured preservation + change clause for Kontext, honoring
+ * any explicit user overrides. This is the heart of the structure-preservation
+ * spec: by default preserve all non-furniture elements, but if the user has
+ * set an override field, MOVE that element from the preserve list to the
+ * change list with the user's specific value.
+ */
+function buildPreservationAndChangeClauses(overrides, mode = 'redesign') {
+  const { wallColor, sofaColor, floorType, ceilingDesign, customNote } = overrides;
+
+  // Preservation list — items only included when no override is set for them.
+  const preserveItems = ['windows (count, positions, sizes)', 'doors (count, positions)', 'camera angle', 'perspective', 'room dimensions'];
+  if (!wallColor) preserveItems.unshift('walls and wall paint color');
+  else preserveItems.unshift('walls');
+  if (!floorType) preserveItems.push('floor material and floor color');
+  if (!ceilingDesign) preserveItems.push('ceiling');
+
+  const preservationClause =
+    `PRESERVE — keep these IDENTICAL to the source photo: ${preserveItems.join(', ')}. ` +
+    `Do not add, remove, or relocate any window or door. Do not change room shape.`;
+
+  // Change list — what the AI is allowed/expected to change.
+  const changeItems = [];
+  if (mode === 'furnish') {
+    changeItems.push('Add furniture, upholstery, lighting fixtures, rugs, and decor objects to the empty room');
+  } else {
+    changeItems.push('Replace furniture, upholstery, lighting fixtures, rugs, and decor objects');
+  }
+  if (wallColor) changeItems.push(`Repaint walls in ${wallColor}`);
+  if (floorType) changeItems.push(`Replace flooring with ${floorType}`);
+  if (ceilingDesign) changeItems.push(`Update ceiling: ${ceilingDesign}`);
+  if (sofaColor) changeItems.push(`Sofa upholstery in ${sofaColor}`);
+  if (customNote) changeItems.push(`User instruction: ${customNote}`);
+
+  const changeClause = `CHANGE: ${changeItems.join('. ')}.`;
+
+  return { preservationClause, changeClause };
+}
+
+/**
  * Rewrites a verbose SDXL-style prompt into a FLUX-Kontext-friendly edit prompt
  * for "furnish empty room" generations.
  *
@@ -596,24 +694,27 @@ function rewritePromptForFurnish(originalPrompt) {
   const detailMatch = p.match(/-style furniture and decor only\.\s*([^.]+)\./i);
   const styleDetail = detailMatch?.[1]?.trim();
 
-  // Edit-style prompt: preservation clause first, then ADD furniture clause.
-  // This is the same shape as rewritePromptForRedesign, except the change
-  // clause says "add furniture" (not "replace") since the source is empty.
-  // Day 5.8: scope palette to furniture/decor only — Kontext was repainting
-  // walls with palette colors. Wall paint is in the preservation clause.
+  // Day 6.8 — extract user override fields from the verbose prompt and
+  // build structured preserve/change clauses that honor them.
+  const overrides = extractUserOverrides(p);
+  const { preservationClause, changeClause } = buildPreservationAndChangeClauses(
+    overrides,
+    'furnish'
+  );
+
   const parts = [
-    `Edit this exact empty ${room} photo`,
-    `Keep the walls, wall paint color, windows, doors, floor material, floor color, ceiling, camera angle, and perspective EXACTLY as in the source photo`,
-    `Do not repaint walls. Do not change floor color. Do not change window count or position`,
-    `Only add furniture and decor: place ${style} interior design furniture and decor objects in the empty space`,
-    furnitureList ? `Add: ${furnitureList}` : null,
+    `Edit this exact empty ${room} photo.`,
+    preservationClause,
+    changeClause,
+    `Apply ${style} interior design style to the new furniture and decor.`,
     styleDetail || null,
-    palette ? `Apply ${palette} colors to furniture, upholstery and decor only` : null,
-    mood ? `${mood.toLowerCase()} atmosphere` : null,
-    'photorealistic interior photograph, natural light, magazine quality',
+    furnitureList ? `Suggested pieces: ${furnitureList}.` : null,
+    palette ? `Use ${palette} as accent colors on furniture, upholstery, and decor only — never on walls or floor.` : null,
+    mood ? `Mood: ${mood.toLowerCase()}.` : null,
+    'photorealistic interior photograph, natural light, magazine quality.',
   ].filter(Boolean);
 
-  return parts.join('. ') + '.';
+  return parts.join(' ');
 }
 
 /**
@@ -663,23 +764,29 @@ function rewritePromptForRedesign(originalPrompt) {
   const paletteMatch = p.match(/Color palette:\s*([^.]+?)(?:\.|$)/i);
   const palette = paletteMatch?.[1]?.trim();
 
-  // Build the prompt as an explicit photo edit — preservation clause first,
-  // change clause second. This phrasing measurably improves structural
-  // fidelity vs. a purely declarative "Apply X style" prompt.
-  // Day 5.8: scope palette to furniture/decor only and explicitly call out
-  // wall paint + floor color in preservation. Kontext was repainting walls
-  // with palette colors when palette was generic ("teal, gold, ivory").
+  // Day 6.8 — extract user override fields from the verbose prompt and
+  // build structured preserve/change clauses that honor them. This is the
+  // core of the structure-preservation spec: every architectural element
+  // not explicitly overridden by the user (wall_color, floor_type,
+  // ceiling_design, custom_note) MUST stay identical to the source photo.
+  const overrides = extractUserOverrides(p);
+  const { preservationClause, changeClause } = buildPreservationAndChangeClauses(
+    overrides,
+    'redesign'
+  );
+
   const parts = [
-    `Edit this exact ${room} photo`,
-    `Keep the walls, wall paint color, windows, doors, floor, floor color, ceiling, camera angle, and perspective EXACTLY as in the source photo`,
-    `Do not repaint walls. Do not change floor color. Do not change window count or position`,
-    `Only redecorate: replace the furniture, upholstery, lighting fixtures, and decor objects`,
-    `Apply ${style} interior design style to the furniture and decor`,
-    descriptors,
-    furnitureList ? `New furniture: ${furnitureList}` : null,
-    palette ? `Apply ${palette} colors to furniture, upholstery and decor only` : null,
-    'photorealistic interior photograph, natural light, magazine quality',
+    `Edit this exact ${room} photo.`,
+    preservationClause,
+    changeClause,
+    `Apply ${style} interior design style to the new furniture and decor.`,
+    descriptors ? `${descriptors}.` : null,
+    furnitureList ? `Suggested pieces: ${furnitureList}.` : null,
+    palette ? `Use ${palette} as accent colors on furniture, upholstery, and decor only — never on walls, floor, or ceiling unless the user instructed otherwise.` : null,
+    'photorealistic interior photograph, natural light, magazine quality.',
   ].filter(Boolean);
 
-  return parts.join('. ') + '.';
+  // Each part already ends in '.' so we join with a single space — avoids
+  // the double-period sloppiness that ".".join would produce.
+  return parts.join(' ');
 }
