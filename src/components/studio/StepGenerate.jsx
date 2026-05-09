@@ -497,24 +497,12 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       if (typeof payload?.score === 'number') {
         setStructureScore(payload.score);
         setStructureSummary(payload.summary || null);
-        // Day 10.3 — auto-retry on low score. If the score comes back below
-        // 70 and we haven't already retried this design once, transparently
-        // re-run the generation. The retry is at our cost (no extra credits
-        // charged) and capped at 1 attempt to avoid loops.
-        if (payload.score < 70 && !autoRetried && !loading) {
-          setAutoRetried(true);
-          setAutoRetrying(true);
-          // Defer slightly so the user sees the score badge briefly before
-          // we kick off the retry — softens the "wait, it's loading again" feel.
-          setTimeout(() => {
-            // generate(false, true) — fresh full-strength generation, but
-            // is_free_retry=true tells the server to skip the credit debit
-            // (the original generation already charged the user). The
-            // tightened preservation prompt + guidance=7 from Day 10.1
-            // should produce a better result on the second attempt.
-            generate(false, true).finally(() => setAutoRetrying(false));
-          }, 1200);
-        }
+        // Day 10.5 — auto-retry was kicking off without warning, which the
+        // user found jarring (page seemed to load again right after the
+        // result landed). Now it's OPT-IN — we just show a "Retry at no
+        // cost" button when score < 70 and the user clicks it explicitly.
+        // The free-retry credit-skip mechanic (Day 10.3) is preserved on
+        // the server; we just don't fire it automatically anymore.
       }
     }).catch((err) => {
       // Score is non-critical — log and silently fail. Don't surface a
@@ -1466,32 +1454,44 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                 <span className="font-bold text-red-400">{structureScore}/100</span>
                 <span className="text-red-400/85 text-xs font-semibold">structure drifted</span>
               </div>
-              {structureSummary && <p className="text-xs text-white/55 mb-2">{structureSummary}</p>}
-              {/* Day 10.3 — auto-retry status. When score &lt; 70 fires the
-                  effect, we set autoRetrying=true and trigger generate(false, true).
-                  Show a friendly banner instead of the manual button. */}
-              {autoRetrying ? (
-                <div className="flex items-center gap-2 text-xs text-white/65">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Auto-rendering an improved version (free, on us)…
-                </div>
-              ) : autoRetried ? (
-                <p className="text-xs text-white/55">
-                  We already tried once. If this still doesn&apos;t look right, click below to retry — uses 2 credits.
-                </p>
-              ) : null}
-              {/* Manual retry button — only shown when we've already used
-                  the auto-retry. Keeps the user in control after the free try. */}
-              {autoRetried && !autoRetrying && (
-                <button
-                  onClick={() => generate(false)}
-                  disabled={loading || (credits && credits.credits_remaining < 2)}
-                  className="mt-2 text-xs font-semibold px-3 py-1.5 rounded-xl text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-                  style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
-                >
-                  Re-render with stronger preservation
-                </button>
-              )}
+              {structureSummary && <p className="text-xs text-white/55 mb-3">{structureSummary}</p>}
+              {/* Day 10.5 — OPT-IN retry. Auto-retry was firing without
+                  warning which felt like the page was reloading on its own.
+                  Now the user explicitly chooses to retry. First retry is
+                  free (server-side is_free_retry skips credit debit);
+                  subsequent retries use 2 credits as normal. */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {!autoRetried && !autoRetrying && (
+                  <button
+                    onClick={() => {
+                      setAutoRetried(true);
+                      setAutoRetrying(true);
+                      generate(false, true).finally(() => setAutoRetrying(false));
+                    }}
+                    disabled={loading}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-xl text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                    style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
+                  >
+                    Retry at no cost
+                  </button>
+                )}
+                {autoRetrying && (
+                  <div className="flex items-center gap-2 text-xs text-white/65">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Re-rendering at no cost…
+                  </div>
+                )}
+                {autoRetried && !autoRetrying && (
+                  <button
+                    onClick={() => generate(false)}
+                    disabled={loading || (credits && credits.credits_remaining < 2)}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-xl text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                    style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
+                  >
+                    Try again — uses 2 credits
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>

@@ -26,7 +26,8 @@ export const config = { maxDuration: 120 };
 const FAL_KEY = process.env.FAL_KEY;
 if (FAL_KEY) fal.config({ credentials: FAL_KEY });
 
-const KONTEXT_MODEL = 'fal-ai/flux-pro/kontext';
+// Day 10.5 — kontext-max for better preservation on /Try renders too.
+const KONTEXT_MODEL = 'fal-ai/flux-pro/kontext-max';
 
 const redis =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN

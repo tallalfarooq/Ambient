@@ -55,11 +55,13 @@ if (FAL_KEY) fal.config({ credentials: FAL_KEY });
 
 const DEFAULT_MODELS = {
   huggingface: 'stabilityai/stable-diffusion-xl-refiner-1.0', // free, SDXL img2img
-  // FLUX Kontext — purpose-built image-EDITING model. Unlike vanilla img2img
-  // which preserves the input image (and so preserves emptiness), Kontext
-  // actually executes prompts like "add a bed, nightstand, lamp, rug" while
-  // keeping the room's walls, windows, and perspective intact. ~$0.04/image.
-  fal: 'fal-ai/flux-pro/kontext',
+  // FLUX Kontext-MAX — newer, more prompt-faithful variant of Kontext.
+  // Day 10.5: switched from `fal-ai/flux-pro/kontext` after persistent
+  // wall-color drift (e.g. grey → brick under "Industrial" style). Max
+  // costs ~2x per call ($0.08 vs $0.04) but follows preservation
+  // instructions noticeably better. The next escalation if this still
+  // drifts is mask-based inpainting (separate task).
+  fal: 'fal-ai/flux-pro/kontext-max',
   together: 'black-forest-labs/FLUX.1-schnell-Free', // free with $5 trial
 };
 
