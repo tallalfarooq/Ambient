@@ -96,6 +96,7 @@ export default async function handler(req, res) {
     mode,
     model,
     design_id,
+    is_free_retry,
   } = body;
 
   if (!prompt || typeof prompt !== 'string') {
@@ -108,7 +109,13 @@ export default async function handler(req, res) {
     });
   }
 
-  // 1. Atomic credit debit (CAS).
+  // 1. Credit handling.
+  // Day 10.3 — `is_free_retry` is set by the client when a previous render
+  // for the same design scored low and we're auto-retrying. The original
+  // generation already debited credits, and we promised the user the retry
+  // is on us. Server-side trust: rate limiting via Upstash + design_id
+  // requirement gate the abuse vector. We still read credits to surface
+  // the current balance in the response, but skip the debit/refund logic.
   const { data: credits, error: creditsErr } = await supabaseAdmin
     .from('user_credits')
     .select('id, credits_remaining, plan_type')
@@ -129,28 +136,35 @@ export default async function handler(req, res) {
     creditsRow = created;
   }
 
-  if (creditsRow.credits_remaining < CREDITS_PER_GENERATION) {
-    return json(res, 402, {
-      error: 'Out of credits',
-      credits_remaining: creditsRow.credits_remaining,
-      plan_type: creditsRow.plan_type,
-    });
-  }
+  let newBalance = creditsRow.credits_remaining;
+  if (!is_free_retry) {
+    // Standard path — atomic credit debit (CAS).
+    if (creditsRow.credits_remaining < CREDITS_PER_GENERATION) {
+      return json(res, 402, {
+        error: 'Out of credits',
+        credits_remaining: creditsRow.credits_remaining,
+        plan_type: creditsRow.plan_type,
+      });
+    }
 
-  const newBalance = creditsRow.credits_remaining - CREDITS_PER_GENERATION;
-  const { data: debited, error: debitErr } = await supabaseAdmin
-    .from('user_credits')
-    .update({ credits_remaining: newBalance })
-    .eq('id', creditsRow.id)
-    .eq('credits_remaining', creditsRow.credits_remaining)
-    .select()
-    .maybeSingle();
+    newBalance = creditsRow.credits_remaining - CREDITS_PER_GENERATION;
+    const { data: debited, error: debitErr } = await supabaseAdmin
+      .from('user_credits')
+      .update({ credits_remaining: newBalance })
+      .eq('id', creditsRow.id)
+      .eq('credits_remaining', creditsRow.credits_remaining)
+      .select()
+      .maybeSingle();
 
-  if (debitErr || !debited) {
-    return json(res, 409, { error: 'Could not debit credit, please retry' });
+    if (debitErr || !debited) {
+      return json(res, 409, { error: 'Could not debit credit, please retry' });
+    }
   }
+  // For is_free_retry path, newBalance == current balance (no debit).
 
   const refund = async (reason) => {
+    // No-op when this was a free retry — we never debited.
+    if (is_free_retry) return;
     // eslint-disable-next-line no-console
     console.warn('[api/generate] refunding credit:', reason);
     await supabaseAdmin
@@ -419,19 +433,20 @@ async function generateWithFal({
   // ---- FLUX Kontext path ---------------------------------------------------
   if (isKontext) {
     // Kontext-specific input: no strength, no image_size (it follows input
-    // dimensions). Guidance_scale tuning (Day 5.6): we previously defaulted
-    // to 3.5 / capped at 5, which let Kontext drift away from the source
-    // photo and regenerate the entire room. Bumped to default 6 / cap 7 so
-    // Kontext follows the explicit "keep walls/windows/floor unchanged"
-    // preservation clause in the rewritten prompt more literally. The
-    // Kontext docs recommend 3.5–7 for edits; 6 is the sweet spot for
-    // structure-preserving redesigns.
+    // dimensions). Guidance_scale tuning history:
+    //   Day 5.6: 3.5 default / 5 cap → walls and windows still drifting.
+    //   Day 6.8: 6 default / 7 cap → mostly stable but wall paint drifted.
+    //   Day 10.1: 7 default / 7 cap → maximum prompt adherence so the
+    //   "DO NOT REPAINT WALLS" negative phrasing in our rewrite gets
+    //   followed literally. Tradeoff: slightly less creative furniture
+    //   placement, but the user's #1 complaint was wall-color drift, so
+    //   prompt fidelity wins.
     const result = await fal.subscribe(model, {
       input: {
         prompt,
         image_url: imageUrl,
         guidance_scale: clamp(
-          typeof guidanceScale === 'number' ? Math.min(guidanceScale / 2, 7) : 6,
+          typeof guidanceScale === 'number' ? Math.min(guidanceScale / 2, 7) : 7,
           3,
           7
         ),
@@ -626,9 +641,24 @@ function buildPreservationAndChangeClauses(overrides, mode = 'redesign') {
   if (!floorType) preserveItems.push('floor material and floor color');
   if (!ceilingDesign) preserveItems.push('ceiling');
 
+  // Day 10.1 — hard negative phrasing. Kontext was still drifting wall
+  // paint to warm/orange tones at guidance_scale=6, especially when style
+  // descriptors mentioned warm colors. Adding explicit "wall paint MUST
+  // be the SAME color" + worked counter-examples ("if grey, output grey")
+  // measurably reduces drift in our testing. Combined with guidance=7,
+  // this is our strongest preservation signal short of mask-based inpainting.
+  const wallColorLock = wallColor
+    ? `Repaint walls in ${wallColor} ONLY — match this color exactly.`
+    : `Wall paint color MUST be EXACTLY THE SAME as the source photo. If source walls are grey, output walls are grey. If source walls are white, output walls are white. DO NOT introduce orange, warm, accent, or any new wall color.`;
+
+  const floorColorLock = floorType
+    ? `Replace flooring with ${floorType}.`
+    : `Floor material and color MUST be EXACTLY THE SAME as the source photo. Do not change wood tone, tile color, or floor finish.`;
+
   const preservationClause =
     `PRESERVE — keep these IDENTICAL to the source photo: ${preserveItems.join(', ')}. ` +
-    `Do not add, remove, or relocate any window or door. Do not change room shape.`;
+    `${wallColorLock} ${floorColorLock} ` +
+    `Do not add, remove, or relocate any window or door. Do not change room shape, room dimensions, or perspective.`;
 
   // Change list — what the AI is allowed/expected to change.
   const changeItems = [];
@@ -637,8 +667,6 @@ function buildPreservationAndChangeClauses(overrides, mode = 'redesign') {
   } else {
     changeItems.push('Replace furniture, upholstery, lighting fixtures, rugs, and decor objects');
   }
-  if (wallColor) changeItems.push(`Repaint walls in ${wallColor}`);
-  if (floorType) changeItems.push(`Replace flooring with ${floorType}`);
   if (ceilingDesign) changeItems.push(`Update ceiling: ${ceilingDesign}`);
   if (sofaColor) changeItems.push(`Sofa upholstery in ${sofaColor}`);
   if (customNote) changeItems.push(`User instruction: ${customNote}`);

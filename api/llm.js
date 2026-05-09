@@ -68,34 +68,50 @@ export const config = { maxDuration: 30 };
 // but Vercel Hobby caps deployments at 12 functions. Both endpoints are
 // vision LLM calls so the consolidation is natural.
 
-const STRUCTURE_SCORE_PROMPT = `You are evaluating whether an AI interior-design tool preserved the source room's structure.
+// Day 10.1 — STRICT scoring. The previous version routinely returned 95/100
+// even when wall paint had drifted from grey to orange. This rewrite forces
+// the LLM to inspect each architectural element individually, anchors with
+// worked examples for color drift, and pulls scores down hard for paint
+// changes — wall color is the #1 thing users notice and the #1 thing
+// Kontext drifts on.
+const STRUCTURE_SCORE_PROMPT = `You are a STRICT QA reviewer evaluating whether an AI interior-design tool preserved the source room's structure. Be harsh — drift hurts users.
 
 You will see TWO images:
-1. SOURCE — the original empty or furnished room photo the user uploaded.
+1. SOURCE — the original room photo the user uploaded (may be empty or furnished).
 2. RESULT — the AI-generated redesign of that same room.
 
-The redesign is EXPECTED to change furniture, upholstery, lighting fixtures, rugs, and decorative objects. Do NOT penalize those changes.
+EXPECTED CHANGES (do NOT penalize): furniture, upholstery, lighting fixtures, rugs, decorative objects, soft furnishings.
 
-The redesign is EXPECTED to PRESERVE these architectural elements (these MUST match between source and result):
-- Walls and wall paint color (unless the user explicitly asked to repaint walls)
-- Windows: same count, same positions, same sizes
-- Doors: same count, same positions
-- Floor material and floor color (unless the user asked to change flooring)
-- Ceiling shape and height
-- Camera angle and perspective (the photo should look taken from the same vantage)
-- Overall room dimensions and shape
+EXPECTED PRESERVATION (MUST match between source and result, penalize if different):
+A. Wall paint color — exact hue match required. If source wall is grey and result wall is orange/blue/green/warm tones, this is a CRITICAL failure.
+B. Wall structure — same wall positions, same number of walls visible.
+C. Windows — same count, same positions, same sizes, same surrounding frames.
+D. Doors — same count, same positions.
+E. Floor material and color — same wood/tile/concrete, same tone.
+F. Ceiling — same shape, same height, same fixtures (beams, trays, etc.).
+G. Camera angle and perspective — the photo should appear taken from the same vantage point with the same lens.
+H. Room footprint — same overall dimensions and shape.
 
-Score from 0 to 100, where:
-- 95–100 = essentially perfect structural match; only furniture/decor changed
-- 70–94  = minor drift (e.g., a window slightly resized, wall color shifted slightly)
-- 40–69  = noticeable structural changes (e.g., a window moved, walls repainted differently, perspective shifted)
-- 0–39   = totally different room; user would not recognize their space
+WORKED EXAMPLES (anchor your scoring to these):
+• Source has grey accent wall, result has orange accent wall, everything else preserved → score 55/100. Wall paint drift is critical.
+• Source has 2 windows on left wall, result has 1 window on left wall → score 40/100. Window count drift is critical.
+• Source has light hardwood, result has dark walnut, everything else preserved → score 60/100. Floor color drift is critical.
+• Source perspective shifted slightly (camera nudged 15°), but walls/windows/floor preserved → score 75/100. Mild perspective drift.
+• Everything matches except minor lighting tone difference → score 95/100.
+
+SCORING RUBRIC (apply each independently, then take the minimum):
+- 95–100 = perfect: only furniture/decor changed; A-H all match.
+- 80–94  = very minor drift in one of A-H (e.g., paint shade off by 5%, window slightly resized).
+- 60–79  = ONE of A-H clearly drifted (e.g., wall color visibly different, but other elements preserved).
+- 40–59  = TWO+ of A-H drifted, or one major drift (e.g., wall color completely different).
+- 20–39  = Multiple architectural drifts; user struggles to recognize their room.
+- 0–19   = Totally different room.
 
 Return ONLY a JSON object:
 {
   "score": <number 0-100>,
-  "summary": "<one short sentence describing what was preserved vs. drifted>",
-  "drifted_elements": ["element1", "element2", ...]
+  "summary": "<one short sentence describing what was preserved vs. drifted, mention specific colors/elements>",
+  "drifted_elements": ["wall paint color", "left window", ...]
 }`;
 
 const STRUCTURE_SCORE_SCHEMA = {

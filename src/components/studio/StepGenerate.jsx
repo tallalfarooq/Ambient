@@ -8,6 +8,7 @@ import { Sparkles, Loader2, RefreshCw, ThumbsUp, ThumbsDown, BookmarkCheck, Down
 import { AMAZON_TAG } from "@/components/affiliateLinks";
 import SourceOverridePins, { pinsToCustomNote } from "./SourceOverridePins";
 import VariantGrid from "./VariantGrid";
+import RenderProgress from "./RenderProgress";
 
 // Burns watermark into the image using Canvas and returns a data URL
 async function applyWatermarkToImage(imageUrl) {
@@ -425,6 +426,11 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
   const [structureScore, setStructureScore] = useState(null);
   const [structureSummary, setStructureSummary] = useState(null);
   const [scoringInFlight, setScoringInFlight] = useState(false);
+  // Day 10.3 — auto-retry on low score. We retry exactly once per design.
+  // After the retry lands we don't retry again even if it scores low,
+  // to avoid runaway loops or infinite credit burn (the retry is on us).
+  const [autoRetried, setAutoRetried] = useState(false);
+  const [autoRetrying, setAutoRetrying] = useState(false);
   // Day 7.4 — "Iterate with words" — chat-style fine-tune input. Each
   // submission triggers a fine-tune call (1 credit) using the previous
   // render as the input image, building a chain of edits.
@@ -491,6 +497,24 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       if (typeof payload?.score === 'number') {
         setStructureScore(payload.score);
         setStructureSummary(payload.summary || null);
+        // Day 10.3 — auto-retry on low score. If the score comes back below
+        // 70 and we haven't already retried this design once, transparently
+        // re-run the generation. The retry is at our cost (no extra credits
+        // charged) and capped at 1 attempt to avoid loops.
+        if (payload.score < 70 && !autoRetried && !loading) {
+          setAutoRetried(true);
+          setAutoRetrying(true);
+          // Defer slightly so the user sees the score badge briefly before
+          // we kick off the retry — softens the "wait, it's loading again" feel.
+          setTimeout(() => {
+            // generate(false, true) — fresh full-strength generation, but
+            // is_free_retry=true tells the server to skip the credit debit
+            // (the original generation already charged the user). The
+            // tightened preservation prompt + guidance=7 from Day 10.1
+            // should produce a better result on the second attempt.
+            generate(false, true).finally(() => setAutoRetrying(false));
+          }, 1200);
+        }
       }
     }).catch((err) => {
       // Score is non-critical — log and silently fail. Don't surface a
@@ -561,14 +585,17 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     navigate(createPageUrl("Pricing"));
   };
 
-  const generate = async (isFineTune = false) => {
+  // Day 10.3 — `isFreeRetry` is the auto-retry path triggered by structure
+  // score < 70. Skips the client-side credit gate AND tells the server to
+  // skip the credit debit (the original generation already paid for it).
+  const generate = async (isFineTune = false, isFreeRetry = false) => {
     if (!data.room_image_url) {
       setError("Please go back and upload a room photo first.");
       return;
     }
 
     const creditsNeeded = isFineTune ? 1 : 2;
-    if (!credits || credits.credits_remaining < creditsNeeded) {
+    if (!isFreeRetry && (!credits || credits.credits_remaining < creditsNeeded)) {
       setError(isFineTune
         ? "You need at least 1 credit to fine-tune. Purchase more to continue."
         : "You need at least 2 credits to generate a design. Purchase more to continue."
@@ -582,6 +609,14 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     setFeedbackNote("");
     setElapsed(0);
     setProgress(0);
+    // Day 10.3 — reset score + auto-retry state for fresh generations only.
+    // Free-retries (isFreeRetry) reuse the existing autoRetried=true flag
+    // so we don't ping-pong forever.
+    if (!isFreeRetry && !isFineTune) {
+      setStructureScore(null);
+      setStructureSummary(null);
+      setAutoRetried(false);
+    }
     // Start elapsed-time counter so user sees live feedback
     clearInterval(timerRef.current);
     const startTime = Date.now();
@@ -659,6 +694,8 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         // 'redesign' = furnished room → mid strength (change style, keep structure)
         mode: data.room_mode || 'redesign',
         design_id: designId,
+        // Day 10.3 — server-side credit-skip flag for auto-retries on low score.
+        is_free_retry: isFreeRetry,
         options: {
           strength,
           guidance_scale: data.structure_locked ? (isPaid ? 16 : 12) : (isPaid ? 13 : 9),
@@ -1303,19 +1340,11 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
       {/* Preview area */}
       <div className="relative rounded-3xl overflow-hidden border border-white/10 mb-6 min-h-[220px] flex items-center justify-center bg-white/3">
         {loading ? (
-          <div className="flex flex-col items-center gap-4 py-10">
-            <Loader2 className="w-10 h-10 animate-spin" style={{ color: "#1B8FA0" }} />
-            <p className="text-white/60 text-sm font-medium">
-              {elapsed < 5 ? "Starting AI engine…" : elapsed < 15 ? "Rendering your design…" : elapsed < 25 ? "Almost there…" : "Finalising details…"}
-            </p>
-            <div className="w-56 h-1.5 bg-white/10 rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-1000"
-                style={{ width: `${progress}%`, background: "linear-gradient(90deg, #1B8FA0, #C9963A)" }}
-              />
-            </div>
-            <p className="text-white/30 text-xs tabular-nums">{elapsed}s — usually 25–40s</p>
-          </div>
+          // Day 10.2 + 10.4 — replaced the single-spinner loading with the
+          // RenderProgress component: 5-stage timed narrative + ETA
+          // countdown + style reference gallery rotating during the wait.
+          // Multi-step progress feels faster than single spinners.
+          <RenderProgress elapsed={elapsed} style={data.style} />
         ) : generated ? (
           <div
             className="relative w-full"
@@ -1438,14 +1467,31 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
                 <span className="text-red-400/85 text-xs font-semibold">structure drifted</span>
               </div>
               {structureSummary && <p className="text-xs text-white/55 mb-2">{structureSummary}</p>}
-              <button
-                onClick={() => generate(false)}
-                disabled={loading || (credits && credits.credits_remaining < 2)}
-                className="text-xs font-semibold px-3 py-1.5 rounded-xl text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-                style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
-              >
-                Re-render with stronger preservation
-              </button>
+              {/* Day 10.3 — auto-retry status. When score &lt; 70 fires the
+                  effect, we set autoRetrying=true and trigger generate(false, true).
+                  Show a friendly banner instead of the manual button. */}
+              {autoRetrying ? (
+                <div className="flex items-center gap-2 text-xs text-white/65">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Auto-rendering an improved version (free, on us)…
+                </div>
+              ) : autoRetried ? (
+                <p className="text-xs text-white/55">
+                  We already tried once. If this still doesn&apos;t look right, click below to retry — uses 2 credits.
+                </p>
+              ) : null}
+              {/* Manual retry button — only shown when we've already used
+                  the auto-retry. Keeps the user in control after the free try. */}
+              {autoRetried && !autoRetrying && (
+                <button
+                  onClick={() => generate(false)}
+                  disabled={loading || (credits && credits.credits_remaining < 2)}
+                  className="mt-2 text-xs font-semibold px-3 py-1.5 rounded-xl text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                  style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
+                >
+                  Re-render with stronger preservation
+                </button>
+              )}
             </div>
           )}
         </div>
