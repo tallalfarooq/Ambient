@@ -4,24 +4,32 @@ import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Heart, Sparkles, Loader2, Trash2, Share2, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Favorites() {
+  // Day 9.11 — auth via shared useAuth() context (same as Layout). Previously
+  // this page made its own apiClient.auth.me() call which raced against the
+  // 1.5s getSessionSafe timeout and intermittently set user=null even for
+  // logged-in users — surfacing the "Sign in to view your favorites" wall
+  // while the header showed the PRO badge.
+  const { user: authUser, isLoadingAuth } = useAuth();
+  const user = isLoadingAuth ? undefined : authUser;
   const [savedDesigns, setSavedDesigns] = useState([]);
   const [designs, setDesigns] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
   const navigate = useNavigate();
   const [shareLink, setShareLink] = useState("");
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (!authUser?.email) {
+      setLoading(false);
+      return;
+    }
     const loadData = async () => {
       try {
-        const currentUser = await apiClient.auth.me();
-        setUser(currentUser);
-
-        const saved = await apiClient.entities.SavedDesign.filter({ user_email: currentUser.email });
+        const saved = await apiClient.entities.SavedDesign.filter({ user_email: authUser.email });
         setSavedDesigns(saved);
 
         if (saved.length > 0) {
@@ -32,12 +40,13 @@ export default function Favorites() {
           setDesigns(designData.filter(Boolean));
         }
       } catch (err) {
-        setUser(null);
+        // eslint-disable-next-line no-console
+        console.error('Favorites load failed:', err);
       }
       setLoading(false);
     };
     loadData();
-  }, []);
+  }, [authUser?.email]);
 
   const handleRemove = async (savedId, designId) => {
     try {
@@ -74,7 +83,9 @@ export default function Favorites() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (loading) {
+  // Day 9.11 — show spinner while auth resolves OR favorites are loading.
+  // Only show the sign-in wall when auth has resolved AND user is null.
+  if (isLoadingAuth || (user && loading)) {
     return (
       <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />

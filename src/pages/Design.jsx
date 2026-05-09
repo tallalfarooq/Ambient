@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import FurnitureMatchCard from "@/components/design/FurnitureMatchCard";
 import CartDrawer from "@/components/design/CartDrawer";
 import { AMAZON_TAG } from "@/components/affiliateLinks";
+import { useAuth } from "@/lib/AuthContext";
 
 function ImageWatermark() {
   return (
@@ -92,11 +93,16 @@ export default function Design() {
   const designId = params.get("id");
 
   const [design,          setDesign]          = useState(null);
+  // Day 9.11 — auth via shared useAuth() context (same as Layout). The local
+  // apiClient.auth.me() call here was racing with the 1.5s getSessionSafe
+  // timeout and intermittently dropping user to null for logged-in users —
+  // breaking the Save / Detect & Shop flows that gate on the user object.
+  const { user: authUser } = useAuth();
+  const user = authUser;
   const [items,           setItems]           = useState([]);
   const [selectedItem,    setSelectedItem]    = useState(null);
   const [loading,         setLoading]         = useState(true);
   const [detecting,       setDetecting]       = useState(false);
-  const [user,            setUser]            = useState(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [cartOpen,        setCartOpen]        = useState(false);
   const [isSaved,         setIsSaved]         = useState(false);
@@ -110,14 +116,13 @@ export default function Design() {
   const [budgetMax,       setBudgetMax]       = useState(2000); // $ budget filter — applied when shopping
 
   useEffect(() => {
-    apiClient.auth.me().then(async (u) => {
-      setUser(u);
-      try {
-        const uc = await apiClient.entities.UserCredits.filter({ user_email: u.email });
+    if (!authUser?.email) return;
+    apiClient.entities.UserCredits.filter({ user_email: authUser.email })
+      .then((uc) => {
         if (uc.length > 0 && uc[0].plan_type !== "free") setIsPaidUser(true);
-      } catch {}
-    }).catch(() => setUser(null));
-  }, []);
+      })
+      .catch(() => {});
+  }, [authUser?.email]);
 
   useEffect(() => {
     if (!user || !designId) return;

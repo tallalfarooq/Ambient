@@ -4,11 +4,14 @@ import { Check, Sparkles, Crown, Zap, Loader2, Building2, ShoppingBag, ArrowUpRi
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/LanguageContext";
+import { useAuth } from "@/lib/AuthContext";
 import ContactSalesModal from "@/components/ContactSalesModal";
 
 export default function Pricing() {
   const { t } = useLanguage();
-  const [user,       setUser]       = useState(null);
+  // Day 9.11 — auth via shared useAuth() context (same as Layout).
+  const { user: authUser } = useAuth();
+  const user = authUser;
   const [credits,    setCredits]    = useState(null);
   const [loading,    setLoading]    = useState(true);
   const [purchasing, setPurchasing] = useState(null);
@@ -55,20 +58,18 @@ export default function Pricing() {
     return gens > 0 ? plan.priceUsd / gens : 0;
   };
 
+  // Day 9.11 — credits-only fetch driven by authUser. Loading is just for
+  // the credits call; auth state comes from useAuth().
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const currentUser = await apiClient.auth.me();
-        setUser(currentUser);
-        const userCredits = await apiClient.entities.UserCredits.filter({ user_email: currentUser.email });
-        if (userCredits.length > 0) setCredits(userCredits[0]);
-      } catch {
-        setUser(null);
-      }
+    if (!authUser?.email) {
       setLoading(false);
-    };
-    loadData();
-  }, []);
+      return;
+    }
+    apiClient.entities.UserCredits.filter({ user_email: authUser.email })
+      .then((uc) => { if (uc.length > 0) setCredits(uc[0]); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [authUser?.email]);
 
   const handlePurchase = async (planId) => {
     if (!user) {

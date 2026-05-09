@@ -9,6 +9,7 @@ import StepGenerate    from "@/components/studio/StepGenerate";
 import StepFindSimilar from "@/components/studio/StepFindSimilar";
 import StudioPreview   from "@/components/studio/StudioPreview";
 import { useLanguage } from "@/lib/LanguageContext";
+import { useAuth }     from "@/lib/AuthContext";
 import { EyebrowText } from "@/components/ds";
 
 /**
@@ -26,8 +27,12 @@ import { EyebrowText } from "@/components/ds";
  * Old Studio is preserved as Studio.legacy.jsx in this same folder.
  */
 export default function Studio() {
+  // Day 9.11 — auth via shared useAuth() context (Layout uses the same).
+  // Removed local apiClient.auth.me() call that was racing with the 1.5s
+  // getSessionSafe timeout.
+  const { user: authUser } = useAuth();
+  const user = authUser;
   const [mode,    setMode]    = useState("design");
-  const [user,    setUser]    = useState(null);
   const [credits, setCredits] = useState(null);
   const [step,    setStep]    = useState(0);
   const [data,    setData]    = useState({
@@ -115,14 +120,16 @@ export default function Studio() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load user + credits.
+  // Day 9.11 — credits-only fetch driven by authUser from useAuth().
   useEffect(() => {
-    apiClient.auth.me().then(async (u) => {
-      setUser(u);
-      const uc = await apiClient.entities.UserCredits.filter({ user_email: u.email });
-      if (uc.length > 0) setCredits(uc[0]);
-    }).catch(() => {});
-  }, []);
+    if (!authUser?.email) {
+      setCredits(null);
+      return;
+    }
+    apiClient.entities.UserCredits.filter({ user_email: authUser.email })
+      .then((uc) => { if (uc.length > 0) setCredits(uc[0]); })
+      .catch(() => {});
+  }, [authUser?.email]);
 
   // Handle ?payment=success / ?redesign_id=... query params from Stripe + Detect & Shop.
   useEffect(() => {
@@ -130,10 +137,12 @@ export default function Studio() {
     if (params.get("payment") === "success") {
       toast.success(t("studio_payment_success"));
       window.history.replaceState({}, "", "/Studio");
-      apiClient.auth.me().then(async (u) => {
-        const uc = await apiClient.entities.UserCredits.filter({ user_email: u.email });
-        if (uc.length > 0) setCredits(uc[0]);
-      }).catch(() => {});
+      // Day 9.11 — payment success refresh uses authUser from context.
+      if (authUser?.email) {
+        apiClient.entities.UserCredits.filter({ user_email: authUser.email })
+          .then((uc) => { if (uc.length > 0) setCredits(uc[0]); })
+          .catch(() => {});
+      }
     } else if (params.get("payment") === "cancelled") {
       toast.info(t("studio_payment_cancelled"));
       window.history.replaceState({}, "", "/Studio");

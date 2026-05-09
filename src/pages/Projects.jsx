@@ -8,6 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
 import ProjectFilters from "@/components/projects/ProjectFilters";
 import { useLanguage } from "@/lib/LanguageContext";
+import { useAuth } from "@/lib/AuthContext";
 
 const STATUS_CONFIG = {
   draft:      { label: "Saved",      color: "text-white/50 bg-white/5 border-white/10" },
@@ -189,10 +190,16 @@ function DesignCard({ design, onDelete, deleting, user, savedDesigns, onToggleSa
 
 export default function Projects() {
   const { t, lang } = useLanguage();
+  // Day 9.11 — auth via shared useAuth() context (same as Layout). Previously
+  // this page made its own apiClient.auth.me() call which raced against the
+  // 1.5s getSessionSafe timeout and intermittently set user=null even for
+  // logged-in users — surfacing the "Sign in to view your designs" wall
+  // (Day 6.3) while the header showed the PRO badge.
+  const { user: authUser, isLoadingAuth } = useAuth();
+  const user = isLoadingAuth ? undefined : authUser;
   const [designs,        setDesigns]        = useState([]);
   const [loading,        setLoading]        = useState(true);
   const [deleting,       setDeleting]       = useState(null);
-  const [user,           setUser]           = useState(null);
   const [savedDesigns,   setSavedDesigns]   = useState([]);
   const [shareLink,      setShareLink]      = useState("");
   const [showShareModal, setShowShareModal] = useState(false);
@@ -207,13 +214,15 @@ export default function Projects() {
   }, []);
 
   useEffect(() => {
-    apiClient.auth.me().then(async (currentUser) => {
-      setUser(currentUser);
-      load(currentUser);
-      const saved = await apiClient.entities.SavedDesign.filter({ user_email: currentUser.email });
-      setSavedDesigns(saved);
-    }).catch(() => { setUser(null); setLoading(false); });
-  }, [load]);
+    if (!authUser?.email) {
+      setLoading(false);
+      return;
+    }
+    load(authUser);
+    apiClient.entities.SavedDesign.filter({ user_email: authUser.email })
+      .then(setSavedDesigns)
+      .catch(() => {});
+  }, [authUser?.email, load]);
 
   useEffect(() => {
     const hasGenerating = designs.some((d) => d.status === "generating");
@@ -297,7 +306,10 @@ export default function Projects() {
   // see anything. Mirrors the Favorites.jsx pattern for consistency. We
   // wait until loading=false so the spinner shows during the initial auth
   // hydration; only then do we know whether to show the wall or the list.
-  if (!loading && !user) {
+  // Day 9.11 — wait for auth to resolve before deciding wall vs content.
+  // user === undefined while AuthContext hydrates (don't show wall yet);
+  // user === null only when truly logged out.
+  if (!isLoadingAuth && user === null) {
     return (
       <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center text-white text-center px-4">
         <div className="max-w-sm">
