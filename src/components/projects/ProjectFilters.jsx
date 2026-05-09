@@ -1,7 +1,11 @@
 import { X, SlidersHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+// Day 11 — pull from canonical catalog so the filter list matches whatever
+// styles the wizard sends (previously had its own list with "Scandi" instead
+// of "Scandinavian", which silently broke the filter on Scandinavian designs).
+import { STYLE_IDS } from "@/lib/styles";
 
-const STYLES = ["Japandi", "Industrial", "Boho", "Modern Minimal", "Cottagecore", "Scandi", "Art Deco", "Mid-Century Modern"];
+const STYLES = STYLE_IDS;
 const ROOM_TYPES = ["Living Room", "Bedroom", "Kitchen", "Dining Room", "Home Office", "Bathroom", "Hallway", "Kids Room", "Outdoor"];
 const BUDGET_RANGES = [
   { label: "Under $500", min: 0, max: 500 },

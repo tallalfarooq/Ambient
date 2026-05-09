@@ -35,22 +35,47 @@ export const AuthProvider = ({ children }) => {
         return;
       }
       const sessionUser = session.user;
-      // Best-effort profile hydration. Cap at 3s — if Supabase is slow,
-      // we'd rather show defaults than block the UI forever.
-      let profileData = null;
-      try {
-        const result = await withTimeout(
+      // Day 11 — best-effort profile hydration with one retry. The previous
+      // single-shot 3s wait was firing the timeout warning ~18 times across
+      // a typical session in QA-9, suggesting the Supabase REST endpoint is
+      // genuinely slow on first call from cold connections. Approach now:
+      //   1. First attempt: 4s (gives slow connections more breathing room).
+      //   2. If timed out, schedule a non-blocking 6s retry that quietly
+      //      upgrades user.full_name / user.role once it resolves.
+      // The UI never blocks — defaults render instantly, then the row gets
+      // patched in if the retry succeeds.
+      const fetchProfile = (timeoutMs) =>
+        withTimeout(
           supabase
             .from('profiles')
             .select('full_name, role')
             .eq('id', sessionUser.id)
             .maybeSingle(),
-          3000,
+          timeoutMs,
           { data: null, _timedOut: true }
         );
+
+      let profileData = null;
+      try {
+        const result = await fetchProfile(4000);
         if (result?._timedOut) {
           // eslint-disable-next-line no-console
-          console.warn('[AuthContext] profile lookup timed out — using defaults');
+          console.warn('[AuthContext] profile lookup timed out — using defaults, scheduling retry');
+          // Background retry — patches user state once the second attempt lands.
+          fetchProfile(6000).then((retry) => {
+            if (!mounted || retry?._timedOut) return;
+            const retryData = retry?.data;
+            if (!retryData) return;
+            setUser((u) =>
+              u && u.id === sessionUser.id
+                ? {
+                    ...u,
+                    full_name: retryData.full_name ?? u.full_name,
+                    role: retryData.role ?? u.role,
+                  }
+                : u
+            );
+          }).catch(() => { /* swallow — defaults already rendered */ });
         } else {
           profileData = result?.data ?? null;
         }
@@ -73,12 +98,15 @@ export const AuthProvider = ({ children }) => {
 
     // Belt-and-suspenders: kick off an explicit getSession() so we still
     // resolve isLoadingAuth even if INITIAL_SESSION is delayed for any reason.
-    // Bounded by 1.5s — the rest of the app already assumes this can fail.
+    // Day 11 — bumped from 1500ms → 4000ms after QA-9 saw this warning fire
+    // on every page load. The onAuthStateChange listener still runs in the
+    // background and will fix things up if we time out, but giving Supabase
+    // 4s on a cold start prevents the false-logout flash.
     (async () => {
       try {
         const result = await withTimeout(
           supabase.auth.getSession(),
-          1500,
+          4000,
           { data: { session: null }, _timedOut: true }
         );
         if (result?._timedOut) {

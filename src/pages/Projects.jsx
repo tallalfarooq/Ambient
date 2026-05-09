@@ -354,11 +354,15 @@ export default function Projects() {
             <Loader2 className="w-7 h-7 animate-spin" style={{ color: "#1B8FA0" }} />
           </div>
         ) : designs.length === 0 ? (
-          <div className="text-center py-28">
+          <div className="text-center py-28 max-w-md mx-auto">
             <div className="w-16 h-16 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-5">
               <Sparkles className="w-7 h-7 text-white/20" />
             </div>
-            <p className="text-white/40 mb-6">{t("projects_empty")}</p>
+            <p className="text-white/65 mb-2">{t("projects_empty")}</p>
+            {/* Day 11 — explicit explainer about how rows land here, after
+                QA-9 found users were confused by an empty list while they
+                had clearly generated renders. */}
+            <p className="text-white/40 text-xs mb-6 leading-relaxed">{t("projects_empty_explainer")}</p>
             <Link
               to={createPageUrl("Studio")}
               className="inline-flex items-center gap-2 text-white font-semibold px-6 py-3 rounded-2xl transition-opacity hover:opacity-90 text-sm"

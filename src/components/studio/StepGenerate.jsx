@@ -126,7 +126,11 @@ const STYLE_MAP = {
   "Cottagecore":       "floral chintz print soft furnishings, distressed white-painted wood furniture, cream and dusty rose palette, vintage ceramic accessories, dried flower arrangements in glass vases",
   "Mid-Century Modern":"tapered splayed wooden legs in walnut, mustard yellow and teal fabric accents, organic curved forms, Eames-style lounge chairs, retro cone or globe pendant lights",
   "Art Deco":          "deep jewel-tone velvet upholstery in emerald or navy, polished gold and brass metallic accents, bold geometric tile patterns, marble surfaces, oversized statement mirror with gilded frame",
-  "Scandi":            "white walls, pale birch and pine wood furniture, functional Shaker-style pieces, cozy chunky knit wool throws, hygge candle clusters, simple linen Roman blinds",
+  // Day 11 — keyed under canonical id "Scandinavian" instead of "Scandi" so
+  // it matches what /api/generateVariants validates against and the rest of
+  // the catalog. Buying a Scandinavian render no longer silently maps to the
+  // generic style fallback.
+  "Scandinavian":      "white walls, pale birch and pine wood furniture, functional Shaker-style pieces, cozy chunky knit wool throws, hygge candle clusters, simple linen Roman blinds",
 };
 
 const FINE_TUNE_OPTIONS = {
@@ -781,8 +785,14 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           setDesignId(record.id);
           update({ design_id: record.id });
         }
-      } catch {
-        // Auto-save failure is silent — user can still manually Save & Shop
+      } catch (err) {
+        // Day 11 — auto-save failure used to be totally silent, which is what
+        // produced the "/Projects shows 0 designs while user has generated
+        // many" QA-9 finding. We still don't block the user (they have their
+        // render on screen), but log the underlying error so RLS / schema
+        // mismatches surface in Sentry instead of vanishing.
+        // eslint-disable-next-line no-console
+        console.error('[Studio] auto-save to room_designs failed', err);
       }
     } catch (err) {
       clearInterval(timerRef.current);

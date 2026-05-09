@@ -17,6 +17,7 @@ import PrivacyPolicy from '@/pages/PrivacyPolicy';
 import TermsOfService from '@/pages/TermsOfService';
 import Login from '@/pages/Login';
 import Try from '@/pages/Try';
+import Help from '@/pages/Help';
 
 // Lazy — admin only, also bigger Stripe / sharing flows
 const AdminEmail   = lazy(() => import('@/pages/AdminEmail'));
@@ -96,6 +97,8 @@ const AuthenticatedApp = () => {
         <Route path="/unsubscribe" element={<Unsubscribe />} />
         <Route path="/Try" element={<LayoutWrapper currentPageName="Try"><Try /></LayoutWrapper>} />
         <Route path="/try" element={<LayoutWrapper currentPageName="Try"><Try /></LayoutWrapper>} />
+        <Route path="/Help" element={<LayoutWrapper currentPageName="Help"><Help /></LayoutWrapper>} />
+        <Route path="/help" element={<LayoutWrapper currentPageName="Help"><Help /></LayoutWrapper>} />
         <Route path="*" element={
           <LayoutWrapper currentPageName="NotFound">
             <PageNotFound />

@@ -1,8 +1,12 @@
-import { useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Sparkles, Upload, Loader2, ArrowRight, Check } from "lucide-react";
 import { apiClient } from "@/api/apiClient";
 import { createPageUrl } from "@/utils";
+import { useAuth } from "@/lib/AuthContext";
+// Day 11 — single style catalog so /Try advertises exactly the styles
+// the rest of the app supports.
+import { STYLES as CANON_STYLES } from "@/lib/styles";
 
 /**
  * /Try — public, no-auth landing page for the email-gated free render.
@@ -22,16 +26,9 @@ import { createPageUrl } from "@/utils";
  * sign-up, which is the activation funnel we're optimizing for.
  */
 
-const STYLES = [
-  { id: "Japandi",            label: "Japandi" },
-  { id: "Scandinavian",       label: "Scandi" },
-  { id: "Mid-Century Modern", label: "Mid-Century" },
-  { id: "Industrial",         label: "Industrial" },
-  { id: "Boho",               label: "Boho" },
-  { id: "Modern Minimal",     label: "Modern Minimal" },
-  { id: "Cottagecore",        label: "Cottagecore" },
-  { id: "Art Deco",           label: "Art Deco" },
-];
+// Day 11 — derived from the canonical catalog so additions/removals here
+// require no code changes.
+const STYLES = CANON_STYLES.map((s) => ({ id: s.id, label: s.label }));
 
 /**
  * Resize an image File to a max edge of `maxEdge` px and return a base64
@@ -78,6 +75,19 @@ async function fileToResizedBase64(file, maxEdge = 1600, quality = 0.88) {
 
 export default function Try() {
   const fileInputRef = useRef(null);
+  // Day 11 — if a logged-in user lands on /Try (e.g. via a marketing link),
+  // bounce them to /Studio. The free-preview flow is only meaningful for
+  // logged-out visitors; logged-in users have credits already, and /Try
+  // would otherwise harvest their email a second time and deduct from the
+  // anonymous IP quota.
+  const navigate = useNavigate();
+  const { user, isLoadingAuth } = useAuth();
+  useEffect(() => {
+    if (!isLoadingAuth && user) {
+      navigate(createPageUrl("Studio"), { replace: true });
+    }
+  }, [user, isLoadingAuth, navigate]);
+
   // Day 9.12 — `photoBase64` is the resized data URL we'll send to
   // /api/tryFree. `photoPreviewUrl` is just a blob URL for the local <img>
   // preview so we don't render the (potentially large) base64 string.

@@ -1,63 +1,12 @@
 import { Check, Blend } from "lucide-react";
+// Day 11 — single source of truth for style catalog.
+// Previously this file had its own STYLES list with `name: "Scandi"` while
+// the server's VALID_STYLES expected "Scandinavian"; that mismatch broke
+// /api/generateVariants for any user who picked "Scandi". Now everyone
+// imports from src/lib/styles.js.
+import { STYLES as CANON_STYLES } from "@/lib/styles";
 
-const STYLES = [
-  {
-    name: "Japandi",
-    desc: "Calm · Natural · Wabi-sabi",
-    palette: "Sage greens, warm whites, natural oak",
-    img: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=400&q=80",
-    accent: "#B8A88A",
-  },
-  {
-    name: "Industrial",
-    desc: "Raw · Steel · Utilitarian",
-    palette: "Gunmetal, rust, weathered wood",
-    img: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=400&q=80",
-    accent: "#8B6555",
-  },
-  {
-    name: "Boho",
-    desc: "Layered · Rattan · Global",
-    palette: "Terracotta, burnt orange, cream",
-    img: "https://images.unsplash.com/photo-1616137466211-f939a420be84?auto=format&fit=crop&w=400&q=80",
-    accent: "#C07858",
-  },
-  {
-    name: "Modern Minimal",
-    desc: "Clean · Negative space · Purpose",
-    palette: "White, greige, matte black",
-    img: "https://images.unsplash.com/photo-1615529182904-14819c35db37?auto=format&fit=crop&w=400&q=80",
-    accent: "#D0D0D0",
-  },
-  {
-    name: "Cottagecore",
-    desc: "Floral · Soft light · Comfort",
-    palette: "Blush, dusty rose, sage",
-    img: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=400&q=80",
-    accent: "#D4A0A0",
-  },
-  {
-    name: "Mid-Century Modern",
-    desc: "Organic · Walnut · Vintage",
-    palette: "Mustard, avocado, warm brown",
-    img: "https://images.unsplash.com/photo-1567016432779-094069958ea5?auto=format&fit=crop&w=400&q=80",
-    accent: "#C9A040",
-  },
-  {
-    name: "Art Deco",
-    desc: "Geometric · Gold · Glamour",
-    palette: "Black, gold, emerald",
-    img: "https://images.unsplash.com/photo-1631679706909-1844bbd07221?auto=format&fit=crop&w=400&q=80",
-    accent: "#C9A96E",
-  },
-  {
-    name: "Scandi",
-    desc: "Hygge · Birch · Simplicity",
-    palette: "White, birch, soft blues",
-    img: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=400&q=80",
-    accent: "#9090B0",
-  },
-];
+const STYLES = CANON_STYLES;
 
 const PALETTES = [
   { label: "Neutral & Warm",   dot: "#C9A96E" },
@@ -96,11 +45,14 @@ export default function StepStyle({ data, update, onNext, onBack }) {
       {/* Style image grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {STYLES.map((s) => {
-          const isSelected = data.style === s.name;
+          // Day 11 — `data.style` is the canonical id (e.g. "Scandinavian"),
+          // sent verbatim to the server. `s.label` is the short user-facing
+          // text on the card.
+          const isSelected = data.style === s.id;
           return (
             <button
-              key={s.name}
-              onClick={() => update({ style: s.name, color_palette: s.palette })}
+              key={s.id}
+              onClick={() => update({ style: s.id, color_palette: s.palette })}
               className="relative rounded-2xl overflow-hidden cursor-pointer group text-left"
               style={{
                 aspectRatio: "3/4",
@@ -113,7 +65,7 @@ export default function StepStyle({ data, update, onNext, onBack }) {
             >
               <img
                 src={s.img}
-                alt={s.name}
+                alt={s.label}
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
@@ -128,7 +80,7 @@ export default function StepStyle({ data, update, onNext, onBack }) {
               )}
 
               <div className="absolute bottom-0 left-0 right-0 p-3">
-                <div className="text-sm font-bold text-white leading-tight tracking-tight">{s.name}</div>
+                <div className="text-sm font-bold text-white leading-tight tracking-tight">{s.label}</div>
                 <div
                   className="text-[10px] mt-0.5 leading-snug transition-colors"
                   style={{ color: isSelected ? s.accent : "rgba(255,255,255,0.5)" }}
@@ -148,7 +100,7 @@ export default function StepStyle({ data, update, onNext, onBack }) {
           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
         >
           <span className="text-white/35 text-xs font-medium flex-shrink-0">Active palette:</span>
-          <span className="text-white/65 text-xs">{STYLES.find((s) => s.name === data.style)?.palette}</span>
+          <span className="text-white/65 text-xs">{STYLES.find((s) => s.id === data.style)?.palette}</span>
         </div>
       )}
 
@@ -175,7 +127,7 @@ export default function StepStyle({ data, update, onNext, onBack }) {
                   update({ secondary_style: null, style_blend_pct: null });
                 } else {
                   // Default to next style in the list, 50/50 blend
-                  const next = STYLES.find((s) => s.name !== data.style)?.name;
+                  const next = STYLES.find((s) => s.id !== data.style)?.id;
                   update({ secondary_style: next, style_blend_pct: 50 });
                 }
               }}
@@ -194,12 +146,12 @@ export default function StepStyle({ data, update, onNext, onBack }) {
             <div className="mt-4 space-y-3">
               {/* Secondary style picker — compact chip list */}
               <div className="flex flex-wrap gap-2">
-                {STYLES.filter((s) => s.name !== data.style).map((s) => {
-                  const active = data.secondary_style === s.name;
+                {STYLES.filter((s) => s.id !== data.style).map((s) => {
+                  const active = data.secondary_style === s.id;
                   return (
                     <button
-                      key={s.name}
-                      onClick={() => update({ secondary_style: s.name })}
+                      key={s.id}
+                      onClick={() => update({ secondary_style: s.id })}
                       className="text-xs px-3 py-1.5 rounded-full border transition-all"
                       style={
                         active
@@ -207,7 +159,7 @@ export default function StepStyle({ data, update, onNext, onBack }) {
                           : { borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.55)" }
                       }
                     >
-                      {s.name}
+                      {s.label}
                     </button>
                   );
                 })}

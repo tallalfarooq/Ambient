@@ -172,6 +172,10 @@ export default function Layout({ children, currentPageName }) {
               <Link to={createPageUrl("Studio")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Studio</Link>
               <Link to={createPageUrl("Projects")} className="text-white/25 hover:text-white/50 text-xs transition-colors">My Designs</Link>
               <Link to={createPageUrl("Pricing")} className="text-white/25 hover:text-white/50 text-xs transition-colors">Pricing</Link>
+              {/* Day 11 — added Help & FAQ link to footer so support questions
+                  have a public surface (QA-9 finding: no help reachable from
+                  inside the app). */}
+              <Link to="/Help" className="text-white/25 hover:text-white/50 text-xs transition-colors">Help & FAQ</Link>
               <Link to="/privacy-policy" className="text-white/25 hover:text-white/50 text-xs transition-colors">Privacy Policy</Link>
               <Link to="/terms-of-service" className="text-white/25 hover:text-white/50 text-xs transition-colors">Terms of Service</Link>
             </div>

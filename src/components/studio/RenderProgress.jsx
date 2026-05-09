@@ -81,7 +81,10 @@ const STYLE_REFERENCES = {
     "https://images.unsplash.com/photo-1565182999561-18d7dc61c393?auto=format&fit=crop&w=1200&q=80",
     "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=1200&q=80",
   ],
-  Scandi: [
+  // Day 11 — keyed under the canonical id "Scandinavian" instead of the
+  // legacy "Scandi" label so RenderProgress finds the right gallery for
+  // selections coming from the unified style catalog.
+  Scandinavian: [
     "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80",
     "https://images.unsplash.com/photo-1615529182904-14819c35db37?auto=format&fit=crop&w=1200&q=80",
     "https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&w=1200&q=80",

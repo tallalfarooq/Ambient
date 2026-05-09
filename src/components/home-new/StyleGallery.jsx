@@ -1,4 +1,8 @@
 import { DisplayHeading, EyebrowText, MotionSection } from "@/components/ds";
+// Day 11 — pull from canonical catalog so Home advertises the same 8 styles
+// the server actually accepts. Removed "Coastal" (was advertised but not
+// implemented) and added "Cottagecore" (was implemented but not advertised).
+import { STYLES as CANON_STYLES } from "@/lib/styles";
 
 /**
  * StyleGallery — 8-tile grid showing every supported design style.
@@ -8,57 +12,12 @@ import { DisplayHeading, EyebrowText, MotionSection } from "@/components/ds";
  * descriptor text fades in. The whole grid is the "look at how diverse the
  * outputs are" proof point.
  */
-
-const STYLES = [
-  {
-    name: "Japandi",
-    descriptor: "Minimal · Organic · Serene",
-    image:
-      "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Mid-Century",
-    descriptor: "Retro · Warm · Timeless",
-    image:
-      "https://images.unsplash.com/photo-1567016432779-094069958ea5?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Scandinavian",
-    descriptor: "Light · Airy · Functional",
-    image:
-      "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Modern Minimal",
-    descriptor: "Clean · Bold · Functional",
-    image:
-      "https://images.unsplash.com/photo-1615529182904-14819c35db37?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Industrial",
-    descriptor: "Raw · Urban · Textured",
-    image:
-      "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Bohemian",
-    descriptor: "Warm · Layered · Earthy",
-    image:
-      "https://images.unsplash.com/photo-1616137466211-f939a420be84?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Art Deco",
-    descriptor: "Glamorous · Bold · Geometric",
-    image:
-      "https://images.unsplash.com/photo-1631679706909-1844bbd07221?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    name: "Coastal",
-    descriptor: "Breezy · Soft · Natural",
-    image:
-      "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=800&q=80",
-  },
-];
+const STYLES = CANON_STYLES.map((s) => ({
+  name: s.label,
+  descriptor: s.desc,
+  // Galleries want larger thumbnails than the wizard does, so swap w=400→w=800.
+  image: s.img.replace(/[?&]w=\d+/, '?auto=format&fit=crop&w=800&q=80'),
+}));
 
 function StyleTile({ name, descriptor, image }) {
   return (

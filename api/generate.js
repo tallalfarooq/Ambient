@@ -803,6 +803,16 @@ function rewritePromptForFurnish(originalPrompt, colorClauses = {}) {
     colorClauses
   );
 
+  // Day 11 — see rewritePromptForRedesign for rationale on the final-line
+  // reinforcement when vision colors are detected. Same idea applied here:
+  // empty rooms with strong style descriptors (Industrial, Cottagecore) had
+  // the same wall-drift problem as redesign.
+  const wallHexFurnish = colorClauses?.wallClause?.match(/#[0-9A-F]{6}/i)?.[0];
+  const floorHexFurnish = colorClauses?.floorClause?.match(/#[0-9A-F]{6}/i)?.[0];
+  const finalLockFurnish = wallHexFurnish || floorHexFurnish
+    ? `FINAL CHECK before rendering: empty room walls remain ${wallHexFurnish || 'their source color'}${floorHexFurnish ? `, floor remains ${floorHexFurnish}` : ''}. Style applies to FURNITURE AND DECOR ONLY, never to architecture.`
+    : null;
+
   const parts = [
     `Edit this exact empty ${room} photo.`,
     preservationClause,
@@ -812,6 +822,7 @@ function rewritePromptForFurnish(originalPrompt, colorClauses = {}) {
     furnitureList ? `Suggested pieces: ${furnitureList}.` : null,
     palette ? `Use ${palette} as accent colors on furniture, upholstery, and decor only — never on walls or floor.` : null,
     mood ? `Mood: ${mood.toLowerCase()}.` : null,
+    finalLockFurnish,
     'photorealistic interior photograph, natural light, magazine quality.',
   ].filter(Boolean);
 
@@ -879,6 +890,18 @@ function rewritePromptForRedesign(originalPrompt, colorClauses = {}) {
     colorClauses
   );
 
+  // Day 11 — final-line reinforcement when vision detected concrete colors.
+  // Repetition matters for FLUX prompt adherence; a single mention of the
+  // wall hex earlier in the prompt was getting overridden by warmer
+  // descriptors ("burnt orange accents", "cream walls") that came later in
+  // the chain. Reasserting the source colors AFTER all style/palette text
+  // demonstrably reduces wall drift in our test cases.
+  const wallHexMatch = colorClauses?.wallClause?.match(/#[0-9A-F]{6}/i)?.[0];
+  const floorHexMatch = colorClauses?.floorClause?.match(/#[0-9A-F]{6}/i)?.[0];
+  const finalLock = wallHexMatch || floorHexMatch
+    ? `FINAL CHECK before rendering: walls remain ${wallHexMatch || 'their source color'}${floorHexMatch ? `, floor remains ${floorHexMatch}` : ''}. Style applies to FURNITURE AND DECOR ONLY, never to architecture.`
+    : null;
+
   const parts = [
     `Edit this exact ${room} photo.`,
     preservationClause,
@@ -887,6 +910,7 @@ function rewritePromptForRedesign(originalPrompt, colorClauses = {}) {
     descriptors ? `${descriptors}.` : null,
     furnitureList ? `Suggested pieces: ${furnitureList}.` : null,
     palette ? `Use ${palette} as accent colors on furniture, upholstery, and decor only — never on walls, floor, or ceiling unless the user instructed otherwise.` : null,
+    finalLock,
     'photorealistic interior photograph, natural light, magazine quality.',
   ].filter(Boolean);
 
