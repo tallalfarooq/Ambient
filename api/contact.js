@@ -29,6 +29,11 @@ const redis =
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@ambientspace.ai';
+// Day 9.9 — `from` address. Defaults to Resend's onboarding sender, which
+// works WITHOUT domain verification. To send from your own domain, verify
+// it in the Resend dashboard (Settings → Domains → Add) and set:
+//   RESEND_FROM="Ambient Space <noreply@ambientspace.ai>"
+const RESEND_FROM = process.env.RESEND_FROM || 'Ambient Space <onboarding@resend.dev>';
 
 const VALID_SOURCES = new Set([
   'home_real_estate',
@@ -142,20 +147,28 @@ export default async function handler(req, res) {
         <pre style="white-space:pre-wrap;font-family:inherit">${message.replace(/[<>]/g, (c) => ({ '<': '&lt;', '>': '&gt;' }[c]))}</pre>
         <p style="color:#666;font-size:11px">Lead ID: ${row?.id}</p>
       `;
-      await fetch('https://api.resend.com/emails', {
+      // Day 9.9 — surface Resend HTTP errors in logs. fetch() doesn't throw
+      // on 4xx (e.g. unverified domain → 403, invalid key → 401), so previously
+      // any failure was silent. Now the error JSON shows in Vercel logs.
+      const resendRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${RESEND_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'Ambient Space <noreply@ambientspace.ai>',
+          from: RESEND_FROM,
           to: SUPPORT_EMAIL,
           reply_to: email,
           subject,
           html,
         }),
       });
+      if (!resendRes.ok) {
+        const detail = await resendRes.text();
+        // eslint-disable-next-line no-console
+        console.error('[api/contact] Resend HTTP', resendRes.status, detail);
+      }
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[api/contact] Resend send failed (non-fatal):', err);
