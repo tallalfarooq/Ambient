@@ -81,7 +81,6 @@ export default async function handler(req, res) {
 
   const body = await readJson(req);
   const email = (body?.email || '').toString().trim().toLowerCase();
-  const sourceUrl = (body?.source_url || '').toString();
   const styleInput = (body?.style || '').toString();
   const modeInput = (body?.mode || '').toString();
   const style = VALID_STYLES.includes(styleInput) ? styleInput : STYLE_DEFAULT;
@@ -90,8 +89,53 @@ export default async function handler(req, res) {
   if (!EMAIL_RE.test(email)) {
     return json(res, 400, { error: 'Please provide a valid email address.' });
   }
-  if (!sourceUrl || !/^https?:\/\//i.test(sourceUrl)) {
-    return json(res, 400, { error: 'Please provide a valid source_url (http/https).' });
+
+  // Day 9.12 — accept image two ways:
+  //   1. `image_base64` (data URL or raw base64) — for /Try anonymous flow,
+  //      since the Supabase Storage `uploads` bucket RLS blocks anon writes.
+  //      We upload server-side using the service role.
+  //   2. `source_url` (http/https) — for B2B partners or future callers
+  //      who already have the file hosted somewhere.
+  // At least one must be present.
+  let sourceUrl = (body?.source_url || '').toString();
+  const imageB64 = (body?.image_base64 || '').toString();
+
+  if (!sourceUrl && !imageB64) {
+    return json(res, 400, { error: 'Please provide image_base64 or source_url.' });
+  }
+
+  // If client sent a data URL or raw base64, decode and upload to Storage
+  // server-side. The `renders` bucket has a public read policy and the
+  // service role key bypasses RLS for the write.
+  if (imageB64) {
+    try {
+      const m = imageB64.match(/^data:(image\/[a-z+]+);base64,(.+)$/);
+      const mimeType = m ? m[1] : 'image/jpeg';
+      const b64 = m ? m[2] : imageB64;
+      const buf = Buffer.from(b64, 'base64');
+      // 8MB cap on decoded bytes — generous for compressed jpegs but bounded.
+      if (buf.byteLength > 8 * 1024 * 1024) {
+        return json(res, 413, { error: 'Image too large — please use one under 8MB.' });
+      }
+      const ext = mimeType.split('/')[1]?.replace('+xml', '') || 'jpg';
+      const objectKey = `try-uploads/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: uploadErr } = await supabaseAdmin.storage
+        .from('renders')
+        .upload(objectKey, buf, {
+          contentType: mimeType,
+          cacheControl: '3600',
+          upsert: false,
+        });
+      if (uploadErr) throw uploadErr;
+      const { data: pub } = supabaseAdmin.storage.from('renders').getPublicUrl(objectKey);
+      sourceUrl = pub.publicUrl;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[api/tryFree] base64 upload failed:', err);
+      return json(res, 400, { error: 'Could not process the uploaded image. Please try a different file.' });
+    }
+  } else if (!/^https?:\/\//i.test(sourceUrl)) {
+    return json(res, 400, { error: 'source_url must be http(s).' });
   }
 
   // 1. DB-level dedup — return cached result if this email already used the try.

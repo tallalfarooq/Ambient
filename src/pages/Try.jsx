@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Sparkles, Upload, Loader2, ArrowRight, Check } from "lucide-react";
-import { supabase } from "@/api/supabase";
 import { apiClient } from "@/api/apiClient";
 import { createPageUrl } from "@/utils";
 
@@ -34,9 +33,56 @@ const STYLES = [
   { id: "Art Deco",           label: "Art Deco" },
 ];
 
+/**
+ * Resize an image File to a max edge of `maxEdge` px and return a base64
+ * data URL. Day 9.12 — phone photos are commonly 5–10MB; Vercel's serverless
+ * function body limit is ~4.5MB, so we pre-shrink before sending. 1600px is
+ * plenty of detail for the AI redesign which renders at 1024–1280 anyway.
+ */
+async function fileToResizedBase64(file, maxEdge = 1600, quality = 0.88) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        let { width, height } = img;
+        if (width > maxEdge || height > maxEdge) {
+          if (width >= height) {
+            height = Math.round((height / width) * maxEdge);
+            width = maxEdge;
+          } else {
+            width = Math.round((width / height) * maxEdge);
+            height = maxEdge;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        URL.revokeObjectURL(url);
+        resolve(dataUrl);
+      } catch (err) {
+        URL.revokeObjectURL(url);
+        reject(err);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read image"));
+    };
+    img.src = url;
+  });
+}
+
 export default function Try() {
   const fileInputRef = useRef(null);
-  const [photoUrl, setPhotoUrl]     = useState(null);
+  // Day 9.12 — `photoBase64` is the resized data URL we'll send to
+  // /api/tryFree. `photoPreviewUrl` is just a blob URL for the local <img>
+  // preview so we don't render the (potentially large) base64 string.
+  const [photoBase64, setPhotoBase64] = useState(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState(null);
   const [photoFile, setPhotoFile]   = useState(null);
   const [uploading, setUploading]   = useState(false);
   const [style, setStyle]           = useState("Japandi");
@@ -57,27 +103,30 @@ export default function Try() {
     setPhotoFile(file);
     setUploading(true);
     try {
-      // Use the public 'try-uploads' bucket — anyone can read these. We
-      // accept the privacy trade because /Try is a logged-out flow and the
-      // photos uploaded here should be considered shareable (the user is
-      // doing this expecting a public preview).
-      const fileName = `try-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${file.name.replace(/[^\w.-]/g, "_")}`;
-      const { error: uploadErr } = await supabase.storage
-        .from("uploads")
-        .upload(fileName, file, { cacheControl: "3600", upsert: false });
-      if (uploadErr) throw uploadErr;
-      const { data: pub } = supabase.storage.from("uploads").getPublicUrl(fileName);
-      setPhotoUrl(pub.publicUrl);
+      // Day 9.12 — resize client-side to keep the request body under
+      // Vercel's 4.5MB cap. The base64 then gets sent to /api/tryFree where
+      // the server uploads it to Supabase Storage with the service role
+      // (bypassing RLS that blocks anon uploads in the public bucket).
+      const dataUrl = await fileToResizedBase64(file, 1600, 0.88);
+      setPhotoBase64(dataUrl);
+      setPhotoPreviewUrl(URL.createObjectURL(file));
     } catch (err) {
-      setError("Upload failed. Please try a different photo or smaller file.");
+      setError("Could not process that image. Please try a different file.");
       setPhotoFile(null);
     } finally {
       setUploading(false);
     }
   };
 
+  const clearPhoto = () => {
+    if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+    setPhotoPreviewUrl(null);
+    setPhotoBase64(null);
+    setPhotoFile(null);
+  };
+
   const submit = async () => {
-    if (!photoUrl || !email.trim() || generating) return;
+    if (!photoBase64 || !email.trim() || generating) return;
     setError(null);
     setGenerating(true);
     try {
@@ -86,7 +135,7 @@ export default function Try() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim(),
-          source_url: photoUrl,
+          image_base64: photoBase64,
           style,
           mode,
         }),
@@ -134,21 +183,20 @@ export default function Try() {
           /* Day 9.3 — all four steps are always visible (with a numbered
               indicator) so users see the full commitment upfront. Steps 2-4
               are visually muted-but-readable until the photo is uploaded,
-              avoiding the "is this all there is?" bounce risk that came
-              from hiding fields behind {photoUrl &&}. */
+              avoiding the "is this all there is?" bounce risk. */
           <div className="max-w-2xl mx-auto space-y-6">
             {/* Step 1 — Upload */}
-            <Step number={1} label="Upload your room photo" active={!photoUrl} done={!!photoUrl}>
+            <Step number={1} label="Upload your room photo" active={!photoBase64} done={!!photoBase64}>
               <div
-                onClick={() => !uploading && !photoUrl && fileInputRef.current?.click()}
+                onClick={() => !uploading && !photoBase64 && fileInputRef.current?.click()}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => { e.preventDefault(); onFile(e.dataTransfer.files?.[0]); }}
-                className={`relative rounded-3xl overflow-hidden transition-all ${photoUrl ? "" : "cursor-pointer hover:bg-white/5"}`}
+                className={`relative rounded-3xl overflow-hidden transition-all ${photoBase64 ? "" : "cursor-pointer hover:bg-white/5"}`}
                 style={{
-                  background: photoUrl ? "transparent" : "rgba(255,255,255,0.03)",
-                  border: `1px ${photoUrl ? "solid" : "dashed"} rgba(255,255,255,${photoUrl ? "0.1" : "0.15"})`,
-                  aspectRatio: photoUrl ? "auto" : "16/9",
-                  minHeight: photoUrl ? 0 : 200,
+                  background: photoBase64 ? "transparent" : "rgba(255,255,255,0.03)",
+                  border: `1px ${photoBase64 ? "solid" : "dashed"} rgba(255,255,255,${photoBase64 ? "0.1" : "0.15"})`,
+                  aspectRatio: photoBase64 ? "auto" : "16/9",
+                  minHeight: photoBase64 ? 0 : 200,
                 }}
               >
                 <input
@@ -158,11 +206,11 @@ export default function Try() {
                   onChange={(e) => onFile(e.target.files?.[0])}
                   className="hidden"
                 />
-                {photoUrl ? (
+                {photoBase64 ? (
                   <div className="relative">
-                    <img src={photoUrl} alt="Your room" className="w-full h-auto object-contain max-h-[420px]" />
+                    <img src={photoPreviewUrl} alt="Your room" className="w-full h-auto object-contain max-h-[420px]" />
                     <button
-                      onClick={() => { setPhotoUrl(null); setPhotoFile(null); }}
+                      onClick={clearPhoto}
                       className="absolute top-3 right-3 text-xs px-3 py-1.5 rounded-xl bg-black/60 text-white/80 hover:text-white backdrop-blur-sm border border-white/10"
                     >
                       Replace
@@ -191,7 +239,7 @@ export default function Try() {
             </Step>
 
             {/* Step 2 — Mode + Style */}
-            <Step number={2} label="Pick a style" active={!!photoUrl && !style} done={!!photoUrl && !!style} disabled={!photoUrl}>
+            <Step number={2} label="Pick a style" active={!!photoBase64 && !style} done={!!photoBase64 && !!style} disabled={!photoBase64}>
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   {[
@@ -202,7 +250,7 @@ export default function Try() {
                       key={m.id}
                       type="button"
                       onClick={() => setMode(m.id)}
-                      disabled={!photoUrl}
+                      disabled={!photoBase64}
                       className="text-left px-4 py-3 rounded-2xl border transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       style={
                         mode === m.id
@@ -221,7 +269,7 @@ export default function Try() {
                       key={s.id}
                       type="button"
                       onClick={() => setStyle(s.id)}
-                      disabled={!photoUrl}
+                      disabled={!photoBase64}
                       className="text-xs px-3 py-1.5 rounded-full border transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       style={
                         style === s.id
@@ -237,13 +285,13 @@ export default function Try() {
             </Step>
 
             {/* Step 3 — Email */}
-            <Step number={3} label="Where should we send your design?" active={!!photoUrl && !email.trim()} done={!!email.trim()} disabled={!photoUrl}>
+            <Step number={3} label="Where should we send your design?" active={!!photoBase64 && !email.trim()} done={!!email.trim()} disabled={!photoBase64}>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                disabled={!photoUrl}
+                disabled={!photoBase64}
                 className="w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#1B8FA0]/60 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <p className="text-[11px] text-white/30 mt-2">
@@ -260,7 +308,7 @@ export default function Try() {
             {/* Step 4 — Generate */}
             <button
               onClick={submit}
-              disabled={!photoUrl || !email.trim() || generating}
+              disabled={!photoBase64 || !email.trim() || generating}
               className="w-full flex items-center justify-center gap-2 font-bold px-7 py-4 rounded-2xl text-[#0A0A12] transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg, #1B8FA0, #C9963A)" }}
             >
