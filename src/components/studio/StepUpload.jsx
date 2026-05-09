@@ -323,7 +323,7 @@ function SignInPromptModal({ onClose }) {
         >
           <Sparkles className="w-7 h-7" style={{ color: "#1B8FA0" }} />
         </div>
-        <h3 className="text-xl font-bold text-white mb-2">Sign in to start designing</h3>
+        <h3 className="text-xl font-bold text-white mb-2">Sign in to use Studio</h3>
         <p className="text-white/55 text-sm mb-6 leading-relaxed">
           Free to start — your <strong className="text-white/80">first design is on us</strong>.
           Save your designs and shop the furniture from any render.
@@ -335,12 +335,18 @@ function SignInPromptModal({ onClose }) {
         >
           <LogIn className="w-4 h-4" /> Sign in / Sign up — free
         </button>
-        <button
-          onClick={onClose}
-          className="text-white/40 text-sm hover:text-white/70 transition-colors"
+        {/* Day 9.10 — "Maybe later" was misleading. Studio truly needs an
+            authenticated user to generate (credit balance, RLS, save flow).
+            Closing the modal just left users stuck on a dead screen. Now we
+            route them to /Try — the public no-signup flow that gives them
+            one watermarked render in exchange for an email. Clear path out
+            instead of a soft dead-end. */}
+        <a
+          href="/Try"
+          className="block text-center text-white/55 text-sm hover:text-white transition-colors mt-2"
         >
-          Maybe later
-        </button>
+          Try one render without signing up →
+        </a>
       </div>
     </div>
   );
