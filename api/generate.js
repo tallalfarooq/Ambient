@@ -23,6 +23,7 @@ import { fal } from '@fal-ai/client';
 import { allow, getUserFromRequest, json, readJson, supabaseAdmin } from './_lib/auth.js';
 import { checkRateLimit } from './_lib/ratelimit.js';
 import { runInpaintingPipeline, buildInpaintingPrompt } from './_lib/inpaint.js';
+import { detectRoomColors, colorsToPromptClauses } from './_lib/vision.js';
 
 const PROVIDER = (process.env.IMAGE_PROVIDER || 'huggingface').toLowerCase();
 const CREDITS_PER_GENERATION = 1;
@@ -189,6 +190,21 @@ export default async function handler(req, res) {
   // working range — AI swaps furniture without altering the architecture.
   const isFurnish = mode === 'furnish';
 
+  // === Vision pre-step: detect actual room colors ===========================
+  // Day 10.7 — the previous "if grey, output grey" wording wasn't concrete
+  // enough; Kontext kept overriding it with style-trained priors (Industrial
+  // → cream walls, Boho → warm earth tones). We now pre-read the source
+  // photo's actual hex colors and bake them in literally.
+  //
+  // Only worth running for Kontext models (where prompt fidelity matters).
+  // Failures are silent — we fall through to the older prompt phrasing.
+  const isKontext = /kontext/i.test(model || DEFAULT_MODELS[PROVIDER] || '');
+  let detectedColors = null;
+  if (isKontext && PROVIDER === 'fal') {
+    detectedColors = await detectRoomColors(image_url);
+  }
+  const colorClauses = colorsToPromptClauses(detectedColors);
+
   // === Prompt rewrite for FLUX (both modes) ================================
   // The frontend's buildPrompt was tuned for SDXL — heavy on "DO NOT change"
   // instructions, all-caps "EXACTLY", "CRITICAL ARCHITECTURE LOCK", etc.
@@ -201,14 +217,13 @@ export default async function handler(req, res) {
   //
   // We use Kontext model? Apply the rewrite. Otherwise (HF/SDXL) the long
   // preservation prompt actually helps SDXL stay close to the source.
-  const isKontext = /kontext/i.test(model || DEFAULT_MODELS[PROVIDER] || '');
   let finalPrompt;
   if (isKontext) {
     finalPrompt = isFurnish
-      ? rewritePromptForFurnish(prompt)
-      : rewritePromptForRedesign(prompt);
+      ? rewritePromptForFurnish(prompt, colorClauses)
+      : rewritePromptForRedesign(prompt, colorClauses);
   } else {
-    finalPrompt = isFurnish ? rewritePromptForFurnish(prompt) : prompt;
+    finalPrompt = isFurnish ? rewritePromptForFurnish(prompt, colorClauses) : prompt;
   }
 
   const minStrength = isFurnish ? 0.85 : 0.4;
@@ -347,6 +362,9 @@ export default async function handler(req, res) {
     credits_remaining: newBalance,
     provider: PROVIDER,
     pipeline: pipelineUsed,
+    // Surfaced for debugging — the user / a tester can compare these against
+    // the result image to see whether Kontext honoured the detected colors.
+    detected_colors: detectedColors,
   });
 }
 
@@ -670,8 +688,9 @@ function extractUserOverrides(originalPrompt) {
  * set an override field, MOVE that element from the preserve list to the
  * change list with the user's specific value.
  */
-function buildPreservationAndChangeClauses(overrides, mode = 'redesign') {
+function buildPreservationAndChangeClauses(overrides, mode = 'redesign', colorClauses = {}) {
   const { wallColor, sofaColor, floorType, ceilingDesign, customNote } = overrides;
+  const { wallClause: detectedWallClause, floorClause: detectedFloorClause, ceilingClause: detectedCeilingClause } = colorClauses || {};
 
   // Preservation list — items only included when no override is set for them.
   const preserveItems = ['windows (count, positions, sizes)', 'doors (count, positions)', 'camera angle', 'perspective', 'room dimensions'];
@@ -680,23 +699,35 @@ function buildPreservationAndChangeClauses(overrides, mode = 'redesign') {
   if (!floorType) preserveItems.push('floor material and floor color');
   if (!ceilingDesign) preserveItems.push('ceiling');
 
-  // Day 10.1 — hard negative phrasing. Kontext was still drifting wall
-  // paint to warm/orange tones at guidance_scale=6, especially when style
-  // descriptors mentioned warm colors. Adding explicit "wall paint MUST
-  // be the SAME color" + worked counter-examples ("if grey, output grey")
-  // measurably reduces drift in our testing. Combined with guidance=7,
-  // this is our strongest preservation signal short of mask-based inpainting.
+  // Day 10.7 — concrete color anchors from Gemini Vision pre-step.
+  // Priority order:
+  //   1. User override (e.g. "Sage Green") — wins.
+  //   2. Vision-detected hex + name — used when no override.
+  //   3. Generic "if grey, output grey" fallback (Day 10.1) — only if
+  //      detection failed entirely.
+  // Concrete hex/named color phrasing is materially harder for Kontext to
+  // drift away from than vague "if grey, output grey" wording.
   const wallColorLock = wallColor
     ? `Repaint walls in ${wallColor} ONLY — match this color exactly.`
+    : detectedWallClause
+    ? detectedWallClause
     : `Wall paint color MUST be EXACTLY THE SAME as the source photo. If source walls are grey, output walls are grey. If source walls are white, output walls are white. DO NOT introduce orange, warm, accent, or any new wall color.`;
 
   const floorColorLock = floorType
     ? `Replace flooring with ${floorType}.`
+    : detectedFloorClause
+    ? detectedFloorClause
     : `Floor material and color MUST be EXACTLY THE SAME as the source photo. Do not change wood tone, tile color, or floor finish.`;
+
+  const ceilingColorLock = ceilingDesign
+    ? null // ceiling is being intentionally redesigned; skip color lock
+    : detectedCeilingClause
+    ? detectedCeilingClause
+    : null;
 
   const preservationClause =
     `PRESERVE — keep these IDENTICAL to the source photo: ${preserveItems.join(', ')}. ` +
-    `${wallColorLock} ${floorColorLock} ` +
+    `${wallColorLock} ${floorColorLock}${ceilingColorLock ? ' ' + ceilingColorLock : ''} ` +
     `Do not add, remove, or relocate any window or door. Do not change room shape, room dimensions, or perspective.`;
 
   // Change list — what the AI is allowed/expected to change.
@@ -731,7 +762,7 @@ function buildPreservationAndChangeClauses(overrides, mode = 'redesign') {
  * verbose prompt are preserved; we just lead with preservation + change
  * clauses so Kontext stays anchored to the source.
  */
-function rewritePromptForFurnish(originalPrompt) {
+function rewritePromptForFurnish(originalPrompt, colorClauses = {}) {
   const p = originalPrompt;
 
   // Pull the style: "Apply <Style> interior design" or "<Style>-style furniture"
@@ -763,10 +794,13 @@ function rewritePromptForFurnish(originalPrompt) {
 
   // Day 6.8 — extract user override fields from the verbose prompt and
   // build structured preserve/change clauses that honor them.
+  // Day 10.7 — also feed Gemini-detected hex colors so the preservation
+  // clause names the actual source colors instead of generic "if grey…".
   const overrides = extractUserOverrides(p);
   const { preservationClause, changeClause } = buildPreservationAndChangeClauses(
     overrides,
-    'furnish'
+    'furnish',
+    colorClauses
   );
 
   const parts = [
@@ -803,7 +837,7 @@ function rewritePromptForFurnish(originalPrompt) {
  *   - We pair this with a higher guidance_scale (~6) in callsite so Kontext
  *     follows the preservation instructions more literally.
  */
-function rewritePromptForRedesign(originalPrompt) {
+function rewritePromptForRedesign(originalPrompt, colorClauses = {}) {
   const p = originalPrompt;
 
   // Pull the style. Order: explicit "Apply <Style>" form, then known styles.
@@ -836,10 +870,13 @@ function rewritePromptForRedesign(originalPrompt) {
   // core of the structure-preservation spec: every architectural element
   // not explicitly overridden by the user (wall_color, floor_type,
   // ceiling_design, custom_note) MUST stay identical to the source photo.
+  // Day 10.7 — also feed Gemini-detected hex colors so the preservation
+  // clause names the actual source colors instead of generic "if grey…".
   const overrides = extractUserOverrides(p);
   const { preservationClause, changeClause } = buildPreservationAndChangeClauses(
     overrides,
-    'redesign'
+    'redesign',
+    colorClauses
   );
 
   const parts = [
