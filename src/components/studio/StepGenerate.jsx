@@ -930,11 +930,64 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
     }
   };
 
-  const handleShare = () => {
-    const url = designId
-      ? `${window.location.origin}/Design?id=${designId}`
-      : window.location.origin;
-    setShareLink(url);
+  // Day 9.8 — produce a real PUBLIC share link, not a /Design?id=... URL.
+  // The /Design route requires the viewer to be the owner of the design
+  // (RLS on room_designs blocks non-owners), so when users shared the
+  // /Design?id= URL anonymously they saw a blank page.
+  //
+  // The correct pattern is /SharedDesign?token=<random> backed by the
+  // saved_designs row's share_token + is_public flag. Projects.jsx already
+  // does this pattern; we replicate it here so Studio's Share button
+  // produces the same URL shape.
+  const handleShare = async () => {
+    if (!designId || !authUser?.email) {
+      // Fallback for the rare case where the design hasn't been auto-saved
+      // yet — share the home page so the user at least gets a working link.
+      setShareLink(window.location.origin);
+      setShowShareModal(true);
+      return;
+    }
+    try {
+      // Find or create a SavedDesign row for this design and ensure it has
+      // a share_token + is_public=true. Same logic as Projects.handleShare.
+      const existing = await apiClient.entities.SavedDesign.filter({
+        design_id: designId,
+        user_email: authUser.email,
+      });
+      const newToken = () =>
+        Math.random().toString(36).substring(2, 15) +
+        Math.random().toString(36).substring(2, 15);
+
+      let token;
+      if (existing.length > 0) {
+        token = existing[0].share_token;
+        if (!token) {
+          token = newToken();
+          await apiClient.entities.SavedDesign.update(existing[0].id, {
+            share_token: token,
+            is_public: true,
+          });
+        } else if (!existing[0].is_public) {
+          await apiClient.entities.SavedDesign.update(existing[0].id, {
+            is_public: true,
+          });
+        }
+      } else {
+        token = newToken();
+        await apiClient.entities.SavedDesign.create({
+          design_id: designId,
+          user_email: authUser.email,
+          share_token: token,
+          is_public: true,
+        });
+      }
+      setShareLink(`${window.location.origin}/SharedDesign?token=${token}`);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Share failed:', err);
+      // Last-resort fallback — at least don't break the button.
+      setShareLink(`${window.location.origin}/Design?id=${designId}`);
+    }
     setShowShareModal(true);
   };
 
