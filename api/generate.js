@@ -22,6 +22,7 @@ import { HfInference } from '@huggingface/inference';
 import { fal } from '@fal-ai/client';
 import { allow, getUserFromRequest, json, readJson, supabaseAdmin } from './_lib/auth.js';
 import { checkRateLimit } from './_lib/ratelimit.js';
+import { runInpaintingPipeline, buildInpaintingPrompt } from './_lib/inpaint.js';
 
 const PROVIDER = (process.env.IMAGE_PROVIDER || 'huggingface').toLowerCase();
 const CREDITS_PER_GENERATION = 1;
@@ -55,13 +56,14 @@ if (FAL_KEY) fal.config({ credentials: FAL_KEY });
 
 const DEFAULT_MODELS = {
   huggingface: 'stabilityai/stable-diffusion-xl-refiner-1.0', // free, SDXL img2img
-  // FLUX Kontext-MAX — newer, more prompt-faithful variant of Kontext.
-  // Day 10.5: switched from `fal-ai/flux-pro/kontext` after persistent
-  // wall-color drift (e.g. grey → brick under "Industrial" style). Max
-  // costs ~2x per call ($0.08 vs $0.04) but follows preservation
-  // instructions noticeably better. The next escalation if this still
-  // drifts is mask-based inpainting (separate task).
-  fal: 'fal-ai/flux-pro/kontext/max',
+  // Day 10.6: rolled back from `kontext/max` after testing — Max ran a bit
+  // faster but produced LESS faithful preservation than base Kontext on our
+  // brick/grey/pink wall test cases. Base Kontext stays the prompt-mode
+  // default. The structural drift problem is now addressed at a different
+  // layer entirely: see api/_lib/inpaint.js for the mask-based inpainting
+  // pipeline (gated behind USE_INPAINTING=true). When the mask path is on,
+  // architecture preservation becomes a hard guarantee instead of a prompt.
+  fal: 'fal-ai/flux-pro/kontext',
   together: 'black-forest-labs/FLUX.1-schnell-Free', // free with $5 trial
 };
 
@@ -220,9 +222,43 @@ export default async function handler(req, res) {
   );
 
   // 3. Generate via the configured provider.
+  //
+  // Day 10.6 — Path B (mask-based inpainting) runs as an opt-in pre-step.
+  // When `USE_INPAINTING=true` (or the request body sets `use_inpainting`),
+  // we segment the source for architecture, then FLUX-inpaint only the
+  // furniture region. Architecture preservation becomes a hard guarantee
+  // instead of a prompt the model can ignore.
+  //
+  // Any failure in the mask or inpaint step (model 404, mask polarity,
+  // download error, etc.) falls through to the prompt-based Kontext path
+  // below — the user always gets a render even if the new pipeline trips.
+  const useInpainting =
+    PROVIDER === 'fal' &&
+    !!FAL_KEY &&
+    (body?.use_inpainting === true || process.env.USE_INPAINTING === 'true');
+
   let imageBuffer;
+  let pipelineUsed = 'kontext'; // overwritten below if Path B ran
+  if (useInpainting) {
+    try {
+      const inpaintPrompt = buildInpaintingPrompt(prompt, mode);
+      imageBuffer = await runInpaintingPipeline({
+        imageUrl: image_url,
+        prompt: inpaintPrompt,
+      });
+      pipelineUsed = 'inpaint';
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[api/generate] inpainting failed, falling back to Kontext:', err?.message || err);
+      imageBuffer = null;
+      pipelineUsed = 'kontext-fallback';
+    }
+  }
+
   try {
-    if (PROVIDER === 'huggingface') {
+    if (imageBuffer) {
+      // Already generated via Path B — nothing to do here.
+    } else if (PROVIDER === 'huggingface') {
       imageBuffer = await generateWithHuggingFace({
         model: model || DEFAULT_MODELS.huggingface,
         prompt: finalPrompt,
@@ -310,6 +346,7 @@ export default async function handler(req, res) {
     generated_url: publicUrl,
     credits_remaining: newBalance,
     provider: PROVIDER,
+    pipeline: pipelineUsed,
   });
 }
 

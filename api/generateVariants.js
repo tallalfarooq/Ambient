@@ -27,9 +27,11 @@ export const config = { maxDuration: 300 }; // four 60s generations could overla
 const FAL_KEY = process.env.FAL_KEY;
 if (FAL_KEY) fal.config({ credentials: FAL_KEY });
 
-// Day 10.5 — kontext-max for better preservation. ~2x per call.
-// Path uses the sub-path slug `kontext/max`, not the hyphenated form.
-const KONTEXT_MODEL = 'fal-ai/flux-pro/kontext/max';
+// Day 10.6 — back to base Kontext after kontext/max produced LESS faithful
+// preservation in side-by-side testing (faster but worse on wall colors).
+// Variants use the prompt-based path; the new mask-based pipeline is wired
+// into /api/generate only for now (see api/_lib/inpaint.js).
+const KONTEXT_MODEL = 'fal-ai/flux-pro/kontext';
 
 const VALID_STYLES = ['Japandi', 'Scandinavian', 'Mid-Century Modern', 'Industrial', 'Boho', 'Modern Minimal', 'Cottagecore', 'Art Deco'];
 const CREDITS_PER_VARIANT = 2;

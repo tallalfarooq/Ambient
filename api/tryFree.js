@@ -26,9 +26,10 @@ export const config = { maxDuration: 120 };
 const FAL_KEY = process.env.FAL_KEY;
 if (FAL_KEY) fal.config({ credentials: FAL_KEY });
 
-// Day 10.5 — kontext-max for better preservation on /Try renders too.
-// Path uses the sub-path slug `kontext/max`, not the hyphenated form.
-const KONTEXT_MODEL = 'fal-ai/flux-pro/kontext/max';
+// Day 10.6 — back to base Kontext after kontext/max produced LESS faithful
+// preservation in side-by-side testing. /Try is a public single-shot demo,
+// so we keep the prompt-based path (no mask inpainting) for cost predictability.
+const KONTEXT_MODEL = 'fal-ai/flux-pro/kontext';
 
 const redis =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
