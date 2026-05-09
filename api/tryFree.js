@@ -27,7 +27,8 @@ const FAL_KEY = process.env.FAL_KEY;
 if (FAL_KEY) fal.config({ credentials: FAL_KEY });
 
 // Day 10.5 — kontext-max for better preservation on /Try renders too.
-const KONTEXT_MODEL = 'fal-ai/flux-pro/kontext-max';
+// Path uses the sub-path slug `kontext/max`, not the hyphenated form.
+const KONTEXT_MODEL = 'fal-ai/flux-pro/kontext/max';
 
 const redis =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN

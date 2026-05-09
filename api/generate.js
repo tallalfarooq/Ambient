@@ -61,7 +61,7 @@ const DEFAULT_MODELS = {
   // costs ~2x per call ($0.08 vs $0.04) but follows preservation
   // instructions noticeably better. The next escalation if this still
   // drifts is mask-based inpainting (separate task).
-  fal: 'fal-ai/flux-pro/kontext-max',
+  fal: 'fal-ai/flux-pro/kontext/max',
   together: 'black-forest-labs/FLUX.1-schnell-Free', // free with $5 trial
 };
 

@@ -28,7 +28,8 @@ const FAL_KEY = process.env.FAL_KEY;
 if (FAL_KEY) fal.config({ credentials: FAL_KEY });
 
 // Day 10.5 — kontext-max for better preservation. ~2x per call.
-const KONTEXT_MODEL = 'fal-ai/flux-pro/kontext-max';
+// Path uses the sub-path slug `kontext/max`, not the hyphenated form.
+const KONTEXT_MODEL = 'fal-ai/flux-pro/kontext/max';
 
 const VALID_STYLES = ['Japandi', 'Scandinavian', 'Mid-Century Modern', 'Industrial', 'Boho', 'Modern Minimal', 'Cottagecore', 'Art Deco'];
 const CREDITS_PER_VARIANT = 2;
