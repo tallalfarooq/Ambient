@@ -28,6 +28,10 @@ export const config = { maxDuration: 15 };
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const RESEND_FROM = process.env.RESEND_FROM || 'Ambient Space <onboarding@resend.dev>';
+// Support inbox the user can REPLY to. Defaults to the same address as the
+// `from` so replies land somewhere a human reads. Set SUPPORT_EMAIL in env
+// to route replies to a different address (e.g. founder inbox during beta).
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || null;
 const APP_URL = process.env.APP_URL || 'https://www.ambientspace.ai';
 
 function buildEmail({ name, planType, credits }) {
@@ -69,27 +73,124 @@ function buildEmail({ name, planType, credits }) {
     `${APP_URL}/Help · ${APP_URL}/Pricing · Reply to this email for support`,
   ].join('\n');
 
+  // Email HTML in 2026 still needs to look right in Gmail, Outlook, Apple
+  // Mail, and the built-in iOS Mail. That means table-based layout, inline
+  // styles, no flexbox/grid, websafe fonts, and a max width of 600px.
+  // The logo is served from the production app at /logo.png — that URL has
+  // long-lived caching and resolves whether or not the recipient is signed
+  // in (it's a public asset).
+  const logoUrl = `${APP_URL}/logo.png`;
+  const previewText = isPro
+    ? `100 credits ready to spend. Open Studio when you're ready.`
+    : `Your 2 free credits are ready. Open Studio when you are.`;
+
   const html = `<!doctype html>
-<html><body style="margin:0;background:#0A0A0B;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-  <div style="max-width:560px;margin:0 auto;padding:48px 28px">
-    <div style="background:linear-gradient(135deg,#1B8FA0,#C9963A);width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;margin-bottom:32px">
-      <span style="font-size:32px">✦</span>
-    </div>
-    <h1 style="font-size:32px;line-height:1.15;font-weight:700;margin:0 0 12px;letter-spacing:-0.02em">${headline}</h1>
-    <p style="color:rgba(255,255,255,0.65);font-size:16px;line-height:1.55;margin:0 0 32px">Hi ${escapeHtml(friendlyName)} — ${subhead}</p>
-    <a href="${cta}" style="display:inline-block;background:linear-gradient(135deg,#1B8FA0,#C9963A);color:#fff;font-weight:600;text-decoration:none;padding:14px 28px;border-radius:14px;margin-bottom:36px">Open Studio →</a>
-    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:22px 24px;margin-bottom:36px">
-      <p style="color:rgba(255,255,255,0.4);font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 14px">Quick start</p>
-      <ol style="color:rgba(255,255,255,0.75);font-size:14px;line-height:1.7;margin:0;padding-left:20px">
-        <li>Upload a photo of any room (empty rooms work too).</li>
-        <li>Pick a style — Japandi, Industrial, Boho, Modern Minimal…</li>
-        <li>Watch your space transform in 25–35 seconds.</li>
-      </ol>
-    </div>
-    <p style="color:rgba(255,255,255,0.45);font-size:13px;line-height:1.6;margin:0 0 24px">Render didn't quite land? Click <strong style="color:rgba(255,255,255,0.7)">Retry at no cost</strong> on the result page — re-runs are free. Or just reply to this email; a real human reads everything.</p>
-    <p style="color:rgba(255,255,255,0.3);font-size:12px;line-height:1.5;margin:32px 0 0">— The Ambient Space team<br/><a href="${APP_URL}/Help" style="color:rgba(255,255,255,0.4);text-decoration:none">Help &amp; FAQ</a> · <a href="${APP_URL}/Pricing" style="color:rgba(255,255,255,0.4);text-decoration:none">Pricing</a></p>
-  </div>
-</body></html>`;
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="supported-color-schemes" content="dark light" />
+  <title>${escapeHtml(headline)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0A0A0B;color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <!-- preview text shown in inbox preview pane (Gmail / Apple Mail) -->
+  <div style="display:none;max-height:0;overflow:hidden;color:transparent;line-height:0;mso-hide:all;">${escapeHtml(previewText)}</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0A0A0B;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#0F0F11;border:1px solid rgba(255,255,255,0.06);border-radius:20px;overflow:hidden;">
+
+          <!-- Header: logo + wordmark, left-aligned -->
+          <tr>
+            <td style="padding:28px 32px 24px 32px;border-bottom:1px solid rgba(255,255,255,0.06);">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td valign="middle" style="padding-right:12px;">
+                    <img src="${logoUrl}" alt="Ambient Space" width="36" height="36" style="display:block;border:0;border-radius:9px;" />
+                  </td>
+                  <td valign="middle">
+                    <span style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:18px;font-weight:700;color:#ffffff;letter-spacing:-0.01em;">Ambient</span>
+                    <span style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:18px;font-weight:700;color:#6EC6C6;letter-spacing:-0.01em;">&nbsp;Space</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Hero -->
+          <tr>
+            <td style="padding:40px 32px 8px 32px;">
+              <h1 style="margin:0 0 14px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:30px;line-height:1.2;font-weight:700;color:#ffffff;letter-spacing:-0.02em;">${escapeHtml(headline)}</h1>
+              <p style="margin:0 0 28px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.55;color:rgba(255,255,255,0.65);">Hi ${escapeHtml(friendlyName)} — ${escapeHtml(subhead)}</p>
+            </td>
+          </tr>
+
+          <!-- CTA button. Bulletproof button (table + role=presentation) so
+               Outlook desktop renders the rounded background. -->
+          <tr>
+            <td style="padding:0 32px 36px 32px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" bgcolor="#1B8FA0" style="border-radius:12px;background-image:linear-gradient(135deg,#1B8FA0,#C9963A);">
+                    <a href="${cta}" style="display:inline-block;padding:14px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:12px;">Open Studio &rarr;</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Quick start card -->
+          <tr>
+            <td style="padding:0 32px 36px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.07);border-radius:16px;">
+                <tr>
+                  <td style="padding:22px 24px;">
+                    <p style="margin:0 0 12px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:0.1em;text-transform:uppercase;">Quick start</p>
+                    <ol style="margin:0;padding:0 0 0 20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.7;color:rgba(255,255,255,0.78);">
+                      <li>Upload a photo of any room (empty rooms work too).</li>
+                      <li>Pick a style — Japandi, Industrial, Boho, Modern Minimal&hellip;</li>
+                      <li>Watch your space transform in 25&ndash;35 seconds.</li>
+                    </ol>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Support note -->
+          <tr>
+            <td style="padding:0 32px 28px 32px;">
+              <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;color:rgba(255,255,255,0.5);">Render didn&rsquo;t quite land? Click <strong style="color:rgba(255,255,255,0.78);font-weight:600;">Retry at no cost</strong> on the result page &mdash; re-runs are free. Or just reply to this email and a real human will read it.</p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 32px 30px 32px;border-top:1px solid rgba(255,255,255,0.06);">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:rgba(255,255,255,0.4);">
+                    <a href="${APP_URL}/Studio" style="color:rgba(255,255,255,0.55);text-decoration:none;">Studio</a>&nbsp;&middot;&nbsp;<a href="${APP_URL}/Help" style="color:rgba(255,255,255,0.55);text-decoration:none;">Help &amp; FAQ</a>&nbsp;&middot;&nbsp;<a href="${APP_URL}/Pricing" style="color:rgba(255,255,255,0.55);text-decoration:none;">Pricing</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-top:14px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;line-height:1.6;color:rgba(255,255,255,0.28);">
+                    Sent because you signed up for Ambient Space. Reply to this email any time &mdash; we read everything.<br />
+                    &copy; 2026 Ambient Space. <a href="${APP_URL}" style="color:rgba(255,255,255,0.4);text-decoration:none;">ambientspace.ai</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
   return {
     subject: isPro ? 'Your Ambient Space Pro plan is active' : 'Welcome to Ambient Space',
@@ -158,9 +259,18 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         from: RESEND_FROM,
         to: [user.email],
+        // Reply-To routes "Reply" in the user's mail client to the support
+        // inbox even when From is a `noreply@` style address. Falls back to
+        // the From address (Resend default) if SUPPORT_EMAIL isn't set.
+        ...(SUPPORT_EMAIL ? { reply_to: SUPPORT_EMAIL } : {}),
         subject,
         text,
         html,
+        // Light tags so we can filter in the Resend dashboard later.
+        tags: [
+          { name: 'category',  value: 'welcome' },
+          { name: 'plan_type', value: planType },
+        ],
       }),
     });
     if (!r.ok) {
