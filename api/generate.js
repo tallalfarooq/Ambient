@@ -260,7 +260,13 @@ export default async function handler(req, res) {
   const isLocked = body?.structure_locked === true;
   let minStrength, maxStrength, defaultStrength;
   if (isFurnish) {
-    minStrength = 0.65; maxStrength = isLocked ? 0.75 : 0.85; defaultStrength = 0.75;
+    // Day 14c — bumped floor 0.65 → 0.75 after QA-13 saw a strength=0.78
+    // run produce minimal furniture. SDXL on fal has visible seed variance:
+    // sometimes 0.78 paints a full bedroom, sometimes barely touches the
+    // empty room. Raising the floor to 0.75 ensures even the worst-seed
+    // path gets enough denoising headroom; default 0.82 lands square in
+    // "consistently produces furniture" territory based on test runs.
+    minStrength = 0.75; maxStrength = isLocked ? 0.80 : 0.90; defaultStrength = 0.82;
   } else if (isLocked) {
     minStrength = 0.15; maxStrength = 0.28; defaultStrength = 0.22;
   } else {
