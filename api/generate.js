@@ -549,6 +549,60 @@ async function generateWithFal({
 }) {
   const isKontext = /kontext/i.test(model);
   const isFlux = /flux/i.test(model);
+  const isControlNet = /controlnet/i.test(model);
+
+  // ---- ControlNet path (Day 17) -------------------------------------------
+  // ControlNet preserves structure via a SPATIAL CONDITIONING signal (canny
+  // edge map of the source) rather than img2img's pixel-noise strength.
+  // The model literally cannot drift away from the canny outline of the
+  // input — windows, doors, wall edges, perspective lines all get traced
+  // and the diffusion is constrained to fit within them.
+  //
+  // API requirements specific to ControlNet endpoints:
+  //   - control_image (or image_url, depending on endpoint) is the source
+  //     whose edges to extract. We send the user's room photo.
+  //   - controlnet_conditioning_scale (0-1): how strongly to honor the
+  //     edge map. 0.7 = "follow the edges firmly but leave room for the
+  //     prompt to fill in textures/colors."
+  //   - controlnet_type: canny / depth / pose. Canny is right for rooms
+  //     (we want to lock the geometry/edges, not 3D depth which can shift
+  //     under different lighting).
+  //   - num_inference_steps capped at 20 so the request fits in Vercel's
+  //     120s function timeout. ControlNet at 30+ steps was reliably
+  //     timing out at the 120s wall.
+  if (isControlNet) {
+    const result = await fal.subscribe(model, {
+      input: {
+        prompt,
+        image_url: imageUrl,
+        // ControlNet-specific:
+        controlnet_type: 'canny',
+        controlnet_conditioning_scale: 0.75,
+        control_image_url: imageUrl,        // some fal endpoints expect this name
+        // Standard SDXL params:
+        guidance_scale: clamp(
+          typeof guidanceScale === 'number' ? guidanceScale : 7.5,
+          3,
+          15
+        ),
+        num_inference_steps: clamp(
+          typeof numInferenceSteps === 'number' ? numInferenceSteps : 20,
+          12,
+          25
+        ),
+        num_images: 1,
+        image_size: 'square_hd', // 1024x1024 — matches OLD Base44
+        enable_safety_checker: true,
+        ...(negativePrompt ? { negative_prompt: negativePrompt } : {}),
+      },
+      logs: false,
+    });
+    const url = result?.data?.images?.[0]?.url;
+    if (!url) throw new Error('fal.ai (ControlNet) returned no image');
+    const fetchRes = await fetch(url);
+    if (!fetchRes.ok) throw new Error(`Download failed (${fetchRes.status})`);
+    return Buffer.from(await fetchRes.arrayBuffer());
+  }
 
   // ---- FLUX Kontext path ---------------------------------------------------
   if (isKontext) {
