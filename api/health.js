@@ -50,20 +50,26 @@ export default async function handler(req, res) {
     supabase: present(process.env.SUPABASE_SERVICE_ROLE_KEY) === 'configured'
       && present(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL) === 'configured'
       ? 'configured' : 'missing',
-    fal:    present(process.env.FAL_KEY),
-    gemini: present(process.env.GEMINI_API_KEY),
-    stripe: present(process.env.STRIPE_SECRET_KEY),
-    redis:  present(process.env.UPSTASH_REDIS_REST_URL) === 'configured'
+    fal:       present(process.env.FAL_KEY),
+    replicate: present(process.env.REPLICATE_API_TOKEN),
+    nvidia:    present(process.env.NVIDIA_API_KEY),
+    gemini:    present(process.env.GEMINI_API_KEY),
+    stripe:    present(process.env.STRIPE_SECRET_KEY),
+    redis:     present(process.env.UPSTASH_REDIS_REST_URL) === 'configured'
       && present(process.env.UPSTASH_REDIS_REST_TOKEN) === 'configured'
       ? 'configured' : 'missing',
-    resend: present(process.env.RESEND_API_KEY),
+    resend:    present(process.env.RESEND_API_KEY),
   };
 
-  // The product is "OK" only if the three things a render needs are wired.
-  // Stripe / Resend / Redis missing is degraded but not down — record on
-  // the response, but still return ok=true so the uptime probe doesn't
-  // page the on-call for a missing optional integration.
-  const critical = ['supabase', 'fal', 'gemini'];
+  // Day 16 — "OK" requires Supabase + Gemini + WHICHEVER image provider is
+  // currently active. fal / replicate / nvidia are interchangeable; only the
+  // active one needs to be configured.
+  const provider = (process.env.IMAGE_PROVIDER || 'huggingface').toLowerCase();
+  const providerKey =
+    provider === 'replicate' ? 'replicate'
+    : provider === 'nvidia'  ? 'nvidia'
+    : 'fal';
+  const critical = ['supabase', 'gemini', providerKey];
   const ok = critical.every((k) => services[k] === 'configured');
 
   res.status(ok ? 200 : 503).json({
@@ -72,12 +78,11 @@ export default async function handler(req, res) {
     services,
     image_provider: (process.env.IMAGE_PROVIDER || 'huggingface').toLowerCase(),
     pipeline: {
-      // Day 14 — migrated off Kontext to SDXL img2img. The OLD Base44 pipeline
-      // had `strength` clamps + `negative_prompt` support, both of which
-      // Kontext lacks; that combination is what reliably preserved structure.
-      // FAL_MODEL env var can override at deploy time (e.g. flip back to
-      // Kontext for an A/B test) without code changes.
+      // Day 16 — pipeline reflects the ACTIVE provider's default model.
       fal_model: process.env.FAL_MODEL || 'fal-ai/fast-sdxl/image-to-image',
+      replicate_model: process.env.REPLICATE_MODEL ||
+        'lucataco/sdxl-img2img:fbef6aaae9b4e1d6845f95e2f06d0afcd96f63eee87e9bef97b7c8c3877f5e57',
+      nvidia_model: process.env.NVIDIA_MODEL || 'qwen/qwen-image-edit',
       mode: 'sdxl-img2img',
       preservation: 'strength-clamp + negative-prompt + verbose-prompt',
     },

@@ -42,6 +42,8 @@ export const config = { maxDuration: 120 };
 const HF_TOKEN = process.env.HUGGINGFACE_API_KEY;
 const FAL_KEY = process.env.FAL_KEY;
 const TOGETHER_API_KEY = process.env.TOGETHER_API_KEY;
+const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
+const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
 
 if (PROVIDER === 'huggingface' && !HF_TOKEN) {
   // eslint-disable-next-line no-console
@@ -54,6 +56,14 @@ if (PROVIDER === 'fal' && !FAL_KEY) {
 if (PROVIDER === 'together' && !TOGETHER_API_KEY) {
   // eslint-disable-next-line no-console
   console.error('[api/generate] IMAGE_PROVIDER=together but TOGETHER_API_KEY is missing');
+}
+if (PROVIDER === 'replicate' && !REPLICATE_API_TOKEN) {
+  // eslint-disable-next-line no-console
+  console.error('[api/generate] IMAGE_PROVIDER=replicate but REPLICATE_API_TOKEN is missing');
+}
+if (PROVIDER === 'nvidia' && !NVIDIA_API_KEY) {
+  // eslint-disable-next-line no-console
+  console.error('[api/generate] IMAGE_PROVIDER=nvidia but NVIDIA_API_KEY is missing');
 }
 
 const hf = HF_TOKEN ? new HfInference(HF_TOKEN) : null;
@@ -84,6 +94,18 @@ const DEFAULT_MODELS = {
   // SDXL endpoint name is needed later, override via FAL_MODEL env var.
   fal: process.env.FAL_MODEL || 'fal-ai/fast-sdxl/image-to-image',
   together: 'black-forest-labs/FLUX.1-schnell-Free', // free with $5 trial
+  // Day 15 — Replicate's most-used SDXL img2img endpoint. Honors
+  // strength + num_inference_steps + negative_prompt as documented.
+  // Async predictions API: we POST to start, poll until succeeded.
+  // Override slug via REPLICATE_MODEL env var if needed.
+  replicate: process.env.REPLICATE_MODEL ||
+    'lucataco/sdxl-img2img:fbef6aaae9b4e1d6845f95e2f06d0afcd96f63eee87e9bef97b7c8c3877f5e57',
+  // Day 16 — NVIDIA Build's hosted catalog. OpenAI-compatible API at
+  // integrate.api.nvidia.com/v1. Free tier for prototyping. Default to
+  // qwen-image-edit which is purpose-built for image editing tasks (good
+  // structure preservation by architecture, not just prompt). Override
+  // via NVIDIA_MODEL env var.
+  nvidia: process.env.NVIDIA_MODEL || 'qwen/qwen-image-edit',
 };
 
 // === Handler =================================================================
@@ -325,6 +347,23 @@ export default async function handler(req, res) {
         prompt: finalPrompt,
         imageUrl: image_url,
         strength: safeStrength,
+      });
+    } else if (PROVIDER === 'replicate') {
+      imageBuffer = await generateWithReplicate({
+        model: model || DEFAULT_MODELS.replicate,
+        prompt: finalPrompt,
+        imageUrl: image_url,
+        strength: safeStrength,
+        guidanceScale: guidance_scale,
+        numInferenceSteps: num_inference_steps,
+        negativePrompt: negative_prompt,
+      });
+    } else if (PROVIDER === 'nvidia') {
+      imageBuffer = await generateWithNvidia({
+        model: model || DEFAULT_MODELS.nvidia,
+        prompt: finalPrompt,
+        imageUrl: image_url,
+        numInferenceSteps: num_inference_steps,
       });
     } else {
       throw new Error(`Unknown IMAGE_PROVIDER: ${PROVIDER}`);
@@ -659,6 +698,218 @@ async function generateWithTogether({ model, prompt, imageUrl, strength }) {
   const json = await response.json();
   const b64 = json?.data?.[0]?.b64_json;
   if (!b64) throw new Error('Together returned no image');
+  return Buffer.from(b64, 'base64');
+}
+
+/**
+ * Replicate — paid (~$0.005/render), $0.50 free at signup.
+ *
+ * Day 15. Replaces the fal-ai/fast-sdxl path which silently capped inference
+ * at ~8 LCM steps, producing renders nearly identical to the source. The
+ * `lucataco/sdxl-img2img` model is a full-fidelity SDXL img2img — strength
+ * and num_inference_steps are honored as documented, so a strength of 0.78
+ * actually allows enough denoising headroom to paint furniture into empty
+ * rooms while keeping walls anchored to the source.
+ *
+ * API shape:
+ *   1. POST /v1/predictions  → returns a prediction with id + status='starting'.
+ *   2. Poll GET /v1/predictions/{id} every ~1.5s until status === 'succeeded'
+ *      or 'failed'. Typical render: 15–25 seconds end-to-end.
+ *   3. `output` is an array of URLs; we download the first one.
+ *
+ * Errors surface concretely: status 'failed' includes `error` text, network
+ * errors throw, and a hard 60-poll cap (~90s) prevents Vercel timeout.
+ */
+async function generateWithReplicate({
+  model,
+  prompt,
+  imageUrl,
+  strength,
+  guidanceScale,
+  numInferenceSteps,
+  negativePrompt,
+}) {
+  if (!REPLICATE_API_TOKEN) throw new Error('REPLICATE_API_TOKEN is not configured');
+
+  // Replicate model identifiers come in two flavours:
+  //   - "owner/name:version"   (pinned version)
+  //   - "owner/name"           (latest version)
+  // We default to a pinned version (above) so behaviour is reproducible.
+  // Either form is accepted by the Predictions API via the `version` field
+  // (everything after the colon, OR the latest version if no colon).
+  const colonIdx = model.indexOf(':');
+  const version = colonIdx > -1 ? model.slice(colonIdx + 1) : null;
+
+  const startBody = {
+    input: {
+      prompt,
+      image: imageUrl,
+      // Replicate calls strength `prompt_strength` on this model. Value
+      // semantics match SDXL: 0 = identical to input, 1 = ignore input.
+      prompt_strength: strength,
+      guidance_scale:
+        typeof guidanceScale === 'number' ? clamp(guidanceScale, 1, 20) : 7.5,
+      num_inference_steps:
+        typeof numInferenceSteps === 'number'
+          ? clamp(numInferenceSteps, 10, 50)
+          : 30,
+      negative_prompt: negativePrompt || '',
+      num_outputs: 1,
+      // SDXL trained on 1024² square. Our tests confirmed Base44 used 1024².
+      // Replicate's lucataco/sdxl-img2img will downscale/upscale to fit.
+      width: 1024,
+      height: 1024,
+      scheduler: 'K_EULER_ANCESTRAL', // matches the OLD Base44 sampler
+    },
+    ...(version ? { version } : {}),
+  };
+
+  // 1. Start prediction
+  const startRes = await fetch('https://api.replicate.com/v1/predictions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Token ${REPLICATE_API_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(startBody),
+  });
+  const startText = await startRes.text();
+  let pred;
+  try { pred = JSON.parse(startText); } catch { pred = null; }
+  if (!startRes.ok || !pred?.id) {
+    const err = new Error(`Replicate start failed: ${startRes.status}`);
+    err.status = startRes.status;
+    err.body = pred ?? startText.slice(0, 500);
+    throw err;
+  }
+
+  // 2. Poll for completion. Cap at 60 polls × 1.5s = 90s.
+  const pollUrl = pred.urls?.get || `https://api.replicate.com/v1/predictions/${pred.id}`;
+  let current = pred;
+  for (let i = 0; i < 60 && current.status !== 'succeeded' && current.status !== 'failed' && current.status !== 'canceled'; i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    const pollRes = await fetch(pollUrl, {
+      headers: { Authorization: `Token ${REPLICATE_API_TOKEN}` },
+    });
+    if (!pollRes.ok) {
+      // Transient — continue polling unless the response is 4xx (auth issue).
+      if (pollRes.status >= 400 && pollRes.status < 500) {
+        const errBody = await pollRes.text();
+        const err = new Error(`Replicate poll auth/4xx: ${pollRes.status}`);
+        err.status = pollRes.status;
+        err.body = errBody.slice(0, 500);
+        throw err;
+      }
+      continue;
+    }
+    current = await pollRes.json();
+  }
+
+  if (current.status !== 'succeeded') {
+    const err = new Error(`Replicate prediction ${current.status}`);
+    err.status = 502;
+    err.body = current?.error || current?.logs?.slice(-500) || 'unknown';
+    throw err;
+  }
+
+  // 3. Download the output. Single output → string; multi-output → array.
+  const outputUrl = Array.isArray(current.output) ? current.output[0] : current.output;
+  if (!outputUrl || typeof outputUrl !== 'string') {
+    throw new Error('Replicate succeeded but returned no image URL');
+  }
+  const dlRes = await fetch(outputUrl);
+  if (!dlRes.ok) throw new Error(`Replicate download failed (${dlRes.status})`);
+  return Buffer.from(await dlRes.arrayBuffer());
+}
+
+/**
+ * NVIDIA Build hosted catalog — OpenAI-compatible API.
+ *
+ * Day 16. NVIDIA exposes their NIM models at https://integrate.api.nvidia.com/v1
+ * with an OpenAI-compatible schema. For image editing (img2img-style), the
+ * canonical endpoint is `/v1/images/edits` with a base64-encoded source image
+ * + prompt. The default model qwen-image-edit was purpose-built for editing
+ * tasks (it feeds the input through both Qwen2.5-VL for semantic control
+ * and a VAE encoder for visual appearance — strong subject consistency by
+ * architecture, not just prompt).
+ *
+ * Free tier on NVIDIA's developer program covers prototyping. After that,
+ * billed per image at competitive rates.
+ *
+ * API differences from SDXL img2img:
+ *   - No `strength` parameter (the model handles preservation internally).
+ *   - No `negative_prompt` (Qwen-Image-Edit's training handles this).
+ *   - No `num_inference_steps` exposed (model picks internally).
+ * Effectively: send `prompt + image`, get back an edited image. Simpler API,
+ * more guardrails baked in. Tradeoff: less low-level tuning.
+ */
+async function generateWithNvidia({
+  model,
+  prompt,
+  imageUrl,
+  numInferenceSteps,
+}) {
+  if (!NVIDIA_API_KEY) throw new Error('NVIDIA_API_KEY is not configured');
+
+  // 1. Pull the source image and base64-encode it. NVIDIA's hosted edit
+  //    endpoint accepts data URLs in the `image` field.
+  const srcRes = await fetch(imageUrl);
+  if (!srcRes.ok) throw new Error(`Source image fetch failed (${srcRes.status})`);
+  const mimeType = srcRes.headers.get('content-type') || 'image/jpeg';
+  const srcBuf = Buffer.from(await srcRes.arrayBuffer());
+  const dataUrl = `data:${mimeType};base64,${srcBuf.toString('base64')}`;
+
+  // 2. POST to /v1/images/edits in OpenAI-compatible shape.
+  //    The model id passed in the body is the NVIDIA catalog slug.
+  const body = {
+    model,
+    image: dataUrl,
+    prompt,
+    n: 1,
+    response_format: 'b64_json',
+  };
+  // Some NVIDIA endpoints accept additional params like `seed` and `steps`.
+  // Pass them when present; the API ignores unknown fields cleanly.
+  if (typeof numInferenceSteps === 'number') {
+    body.steps = clamp(numInferenceSteps, 4, 50);
+  }
+
+  const resp = await fetch('https://integrate.api.nvidia.com/v1/images/edits', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${NVIDIA_API_KEY}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  const text = await resp.text();
+  let parsed = null;
+  try { parsed = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
+
+  if (!resp.ok) {
+    const err = new Error(`NVIDIA returned ${resp.status}`);
+    err.status = resp.status;
+    err.body = parsed?.detail || parsed?.error || text.slice(0, 500);
+    throw err;
+  }
+
+  // 3. Response shape (OpenAI-compatible): { data: [{ b64_json: "..." }] }
+  //    Some NVIDIA endpoints return { artifacts: [{ base64: "..." }] } instead
+  //    (the older NIM shape) — handle both for forward compatibility.
+  const b64 =
+    parsed?.data?.[0]?.b64_json ||
+    parsed?.artifacts?.[0]?.base64 ||
+    parsed?.images?.[0]?.b64_json ||
+    null;
+
+  if (!b64) {
+    // Surface the response keys to the logs so we can diagnose schema drift.
+    // eslint-disable-next-line no-console
+    console.warn('[nvidia] response had no recognizable image field. keys:', Object.keys(parsed || {}));
+    throw new Error('NVIDIA returned no image (unrecognized response shape)');
+  }
   return Buffer.from(b64, 'base64');
 }
 
