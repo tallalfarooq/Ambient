@@ -685,6 +685,10 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
         // 'furnish' = empty room → high strength (add furniture)
         // 'redesign' = furnished room → mid strength (change style, keep structure)
         mode: data.room_mode || 'redesign',
+        // Day 14 — server-side strength clamp uses this flag. Locked tightens
+        // redesign max strength from 0.38 → 0.28 so the SDXL img2img stays
+        // even closer to the source pixels.
+        structure_locked: !!data.structure_locked,
         design_id: designId,
         // Day 10.3 — server-side credit-skip flag for auto-retries on low score.
         is_free_retry: isFreeRetry,

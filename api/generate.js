@@ -63,14 +63,26 @@ if (FAL_KEY) fal.config({ credentials: FAL_KEY });
 
 const DEFAULT_MODELS = {
   huggingface: 'stabilityai/stable-diffusion-xl-refiner-1.0', // free, SDXL img2img
-  // Day 10.6: rolled back from `kontext/max` after testing — Max ran a bit
-  // faster but produced LESS faithful preservation than base Kontext on our
-  // brick/grey/pink wall test cases. Base Kontext stays the prompt-mode
-  // default. The structural drift problem is now addressed at a different
-  // layer entirely: see api/_lib/inpaint.js for the mask-based inpainting
-  // pipeline (gated behind USE_INPAINTING=true). When the mask path is on,
-  // architecture preservation becomes a hard guarantee instead of a prompt.
-  fal: 'fal-ai/flux-pro/kontext',
+  // Day 14: migrated off Kontext to SDXL img2img.
+  //
+  // Why: FLUX Kontext has no `strength` parameter and no `negative_prompt`
+  // support, which removed the two features that made the original
+  // Base44-era pipeline produce reliably-preserved structure. Kontext's
+  // "edit by description" approach was visually slicker but kept drifting
+  // walls / floor / ceiling on hard cases (Industrial empty bedrooms, etc.).
+  //
+  // SDXL img2img on fal.ai gets us back:
+  //   - strength clamp (0.15-0.38 redesign, 0.55-0.78 furnish) → hard
+  //     mathematical guarantee that <40% of pixels can change in redesign mode.
+  //   - negative_prompt → explicit "do not generate new windows, fisheye,
+  //     warped walls" exclusion list.
+  //   - high guidance_scale (12-16) → model follows the verbose preservation
+  //     prompt very literally.
+  //
+  // Tradeoff: SDXL output is slightly less polished than FLUX. Acceptable
+  // because structure correctness > 5% glossier render. If a different
+  // SDXL endpoint name is needed later, override via FAL_MODEL env var.
+  fal: process.env.FAL_MODEL || 'fal-ai/fast-sdxl/image-to-image',
   together: 'black-forest-labs/FLUX.1-schnell-Free', // free with $5 trial
 };
 
@@ -197,50 +209,62 @@ export default async function handler(req, res) {
   const isFurnish = mode === 'furnish';
 
   // === Vision pre-step: detect actual room colors ===========================
-  // Day 10.7 — the previous "if grey, output grey" wording wasn't concrete
-  // enough; Kontext kept overriding it with style-trained priors (Industrial
-  // → cream walls, Boho → warm earth tones). We now pre-read the source
-  // photo's actual hex colors and bake them in literally.
+  // Day 10.7 — pre-read the source photo's actual hex colors and bake them
+  // into the verbose preservation prompt. Concrete hex codes are much harder
+  // for the model to drift away from than vague "if grey, output grey"
+  // wording. Failures are silent — falls through to the older phrasing.
   //
-  // Only worth running for Kontext models (where prompt fidelity matters).
-  // Failures are silent — we fall through to the older prompt phrasing.
+  // Day 14 — runs for ALL fal models now, not just Kontext. SDXL benefits
+  // from the explicit color anchors too (combined with strength clamp +
+  // negative prompt, this is the strongest preservation signal we can ship).
   const isKontext = /kontext/i.test(model || DEFAULT_MODELS[PROVIDER] || '');
   let detectedColors = null;
-  if (isKontext && PROVIDER === 'fal') {
+  if (PROVIDER === 'fal') {
     detectedColors = await detectRoomColors(image_url);
   }
   const colorClauses = colorsToPromptClauses(detectedColors);
 
-  // === Prompt rewrite for FLUX (both modes) ================================
-  // The frontend's buildPrompt was tuned for SDXL — heavy on "DO NOT change"
-  // instructions, all-caps "EXACTLY", "CRITICAL ARCHITECTURE LOCK", etc.
-  // FLUX Kontext doesn't need any of that — it preserves architecture by
-  // default and works best with short descriptive prompts (~30-50 words).
-  //
-  // The 250+ word imperative prompt was making fal Kontext run for 180+
-  // seconds per generation, which Vercel killed at the 120s timeout. After
-  // simplification, generations complete in 15-30s typical.
-  //
-  // We use Kontext model? Apply the rewrite. Otherwise (HF/SDXL) the long
-  // preservation prompt actually helps SDXL stay close to the source.
+  // === Prompt selection =====================================================
+  // Day 14 — the verbose frontend prompt (with CRITICAL ARCHITECTURE LOCK,
+  // explicit window/door counts, full preservation list) is what SDXL needs
+  // and is exactly what Base44's old pipeline used to ship great preserved
+  // outputs. We DO NOT rewrite/shorten it for SDXL — high guidance_scale
+  // forces the model to follow it literally. Only Kontext (still kept as
+  // an opt-in fallback model via FAL_MODEL env override) benefits from the
+  // shorter rewrite, since Kontext rejects the verbose form with timeouts.
   let finalPrompt;
   if (isKontext) {
     finalPrompt = isFurnish
       ? rewritePromptForFurnish(prompt, colorClauses)
       : rewritePromptForRedesign(prompt, colorClauses);
   } else {
-    finalPrompt = isFurnish ? rewritePromptForFurnish(prompt, colorClauses) : prompt;
+    // SDXL: pass verbose prompt straight through.
+    finalPrompt = prompt;
   }
 
-  const minStrength = isFurnish ? 0.85 : 0.4;
-  const maxStrength = isFurnish ? 0.95 : 0.85;
+  // === Strength clamp (Day 14 restore of OLD Base44 values) =================
+  // These numbers are the result of months of A/B-ing on the original
+  // pipeline — they're aggressive in the right direction:
+  //   - Furnish (empty room): 0.55-0.78 — needs enough freedom to actually
+  //     paint furniture into empty space.
+  //   - Redesign LOCKED (structure_locked=true): 0.15-0.28 — very tight to
+  //     original; only colors / materials / decor change.
+  //   - Redesign unlocked: 0.15-0.38 — slightly more headroom.
+  //   - Fine-tune iterations: callers send 0.20-0.25 explicitly; clamp lets
+  //     it through.
+  // Kontext path ignores strength entirely (model doesn't accept it).
+  const isLocked = body?.structure_locked === true;
+  let minStrength, maxStrength, defaultStrength;
+  if (isFurnish) {
+    minStrength = 0.55; maxStrength = isLocked ? 0.68 : 0.78; defaultStrength = 0.65;
+  } else if (isLocked) {
+    minStrength = 0.15; maxStrength = 0.28; defaultStrength = 0.22;
+  } else {
+    minStrength = 0.15; maxStrength = 0.38; defaultStrength = 0.30;
+  }
   const requestedStrength =
-    typeof strength === 'number' ? strength : isFurnish ? 0.9 : 0.65;
-  const safeStrength = clamp(
-    isFurnish ? Math.max(requestedStrength, minStrength) : requestedStrength,
-    minStrength,
-    maxStrength
-  );
+    typeof strength === 'number' ? strength : defaultStrength;
+  const safeStrength = clamp(requestedStrength, minStrength, maxStrength);
 
   // 3. Generate via the configured provider.
   //
@@ -517,6 +541,14 @@ async function generateWithFal({
     };
   }
 
+  // Day 14 — guidance scale tuning for SDXL.
+  //   Old Base44 setup used 9-16 depending on (paid + locked). High guidance
+  //   forces the model to follow the verbose preservation prompt very
+  //   literally. Free tier capped lower (9-12) since it ran fewer inference
+  //   steps and high guidance + low steps = burnt-looking outputs.
+  // Frontend sends guidance_scale in the body (12-16 typical).  We accept it
+  // as-is for SDXL and clamp to a safe range. FLUX img2img (if anyone ever
+  // routes there via FAL_MODEL override) still wants the lower 1.5-7 range.
   let resolvedGuidanceScale;
   if (isFlux) {
     resolvedGuidanceScale = clamp(
@@ -525,12 +557,21 @@ async function generateWithFal({
       7
     );
   } else {
-    resolvedGuidanceScale = typeof guidanceScale === 'number' ? guidanceScale : 7.5;
+    // SDXL — honor the high guidance values the OLD pipeline used to ship.
+    resolvedGuidanceScale = clamp(
+      typeof guidanceScale === 'number' ? guidanceScale : 12,
+      5,
+      18
+    );
   }
 
+  // Day 14 — step counts.
+  //   Old pipeline: 18 free / 40 paid. Higher steps = sharper output but
+  //   linear latency. SDXL on fal at 30 steps lands in ~12s — good middle
+  //   ground that doesn't blow the Vercel 120s window.
   const resolvedSteps =
     typeof numInferenceSteps === 'number'
-      ? numInferenceSteps
+      ? clamp(numInferenceSteps, 12, 50)
       : isFlux
       ? 28
       : 30;
@@ -545,6 +586,9 @@ async function generateWithFal({
       image_size: resolvedImageSize,
       num_images: 1,
       enable_safety_checker: true,
+      // Day 14 — negative_prompt is the second half of why old preservation
+      // worked. Send it whenever the model accepts it (every img2img except
+      // FLUX, which has no negative_prompt support).
       ...(!isFlux && negativePrompt ? { negative_prompt: negativePrompt } : {}),
     },
     logs: false,

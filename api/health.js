@@ -72,11 +72,14 @@ export default async function handler(req, res) {
     services,
     image_provider: (process.env.IMAGE_PROVIDER || 'huggingface').toLowerCase(),
     pipeline: {
-      // Day 12 — locked to base Kontext. The USE_INPAINTING env var is no
-      // longer read by /api/generate; reflected here as a hint to ops that
-      // any value set on the dashboard is dead config.
-      kontext_model: 'fal-ai/flux-pro/kontext',
-      mode: 'prompt-only',
+      // Day 14 — migrated off Kontext to SDXL img2img. The OLD Base44 pipeline
+      // had `strength` clamps + `negative_prompt` support, both of which
+      // Kontext lacks; that combination is what reliably preserved structure.
+      // FAL_MODEL env var can override at deploy time (e.g. flip back to
+      // Kontext for an A/B test) without code changes.
+      fal_model: process.env.FAL_MODEL || 'fal-ai/fast-sdxl/image-to-image',
+      mode: 'sdxl-img2img',
+      preservation: 'strength-clamp + negative-prompt + verbose-prompt',
     },
     version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 'dev',
   });
