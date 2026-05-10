@@ -851,66 +851,146 @@ async function generateWithNvidia({
 }) {
   if (!NVIDIA_API_KEY) throw new Error('NVIDIA_API_KEY is not configured');
 
-  // 1. Pull the source image and base64-encode it. NVIDIA's hosted edit
-  //    endpoint accepts data URLs in the `image` field.
+  // Pull and base64-encode the source image.
   const srcRes = await fetch(imageUrl);
   if (!srcRes.ok) throw new Error(`Source image fetch failed (${srcRes.status})`);
   const mimeType = srcRes.headers.get('content-type') || 'image/jpeg';
   const srcBuf = Buffer.from(await srcRes.arrayBuffer());
-  const dataUrl = `data:${mimeType};base64,${srcBuf.toString('base64')}`;
+  const b64src = srcBuf.toString('base64');
+  const dataUrl = `data:${mimeType};base64,${b64src}`;
 
-  // 2. POST to /v1/images/edits in OpenAI-compatible shape.
-  //    The model id passed in the body is the NVIDIA catalog slug.
-  const body = {
-    model,
-    image: dataUrl,
-    prompt,
-    n: 1,
-    response_format: 'b64_json',
-  };
-  // Some NVIDIA endpoints accept additional params like `seed` and `steps`.
-  // Pass them when present; the API ignores unknown fields cleanly.
-  if (typeof numInferenceSteps === 'number') {
-    body.steps = clamp(numInferenceSteps, 4, 50);
-  }
-
-  const resp = await fetch('https://integrate.api.nvidia.com/v1/images/edits', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${NVIDIA_API_KEY}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
+  // NVIDIA's hosted catalog exposes models at multiple URL patterns
+  // depending on age + integration tier. Day 16: first attempt was at
+  // /v1/images/edits and returned 404, so try the patterns in order
+  // until one returns a 2xx. On every probe we log the response body so
+  // we can spot schema drift in production logs.
+  //
+  // Patterns (in order of likelihood for image-edit models):
+  //   A. NIM-style:    https://ai.api.nvidia.com/v1/genai/{model}
+  //   B. Integrate ID: https://integrate.api.nvidia.com/v1/genai/{model}
+  //   C. OpenAI edits: https://integrate.api.nvidia.com/v1/images/edits
+  //   D. OpenAI gen:   https://integrate.api.nvidia.com/v1/images/generations
+  // Most NVIDIA hosted image-gen models in 2026 are on pattern A.
+  const candidates = [
+    {
+      name: 'genai-catalog',
+      url: `https://ai.api.nvidia.com/v1/genai/${model}`,
+      body: {
+        prompt,
+        image: dataUrl,
+        seed: 0,
+        ...(typeof numInferenceSteps === 'number'
+          ? { steps: clamp(numInferenceSteps, 4, 50) }
+          : {}),
+      },
     },
-    body: JSON.stringify(body),
-  });
+    {
+      name: 'integrate-genai',
+      url: `https://integrate.api.nvidia.com/v1/genai/${model}`,
+      body: {
+        prompt,
+        image: dataUrl,
+        seed: 0,
+        ...(typeof numInferenceSteps === 'number'
+          ? { steps: clamp(numInferenceSteps, 4, 50) }
+          : {}),
+      },
+    },
+    {
+      name: 'openai-images-edits',
+      url: 'https://integrate.api.nvidia.com/v1/images/edits',
+      body: {
+        model,
+        image: dataUrl,
+        prompt,
+        n: 1,
+        response_format: 'b64_json',
+      },
+    },
+    {
+      name: 'openai-images-generations',
+      url: 'https://integrate.api.nvidia.com/v1/images/generations',
+      body: {
+        model,
+        prompt,
+        image: dataUrl,
+        n: 1,
+        response_format: 'b64_json',
+      },
+    },
+  ];
 
-  const text = await resp.text();
-  let parsed = null;
-  try { parsed = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
+  let lastErr = null;
+  for (const candidate of candidates) {
+    try {
+      const resp = await fetch(candidate.url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${NVIDIA_API_KEY}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(candidate.body),
+      });
+      const text = await resp.text();
+      let parsed = null;
+      try { parsed = text ? JSON.parse(text) : null; } catch { /* not JSON */ }
 
-  if (!resp.ok) {
-    const err = new Error(`NVIDIA returned ${resp.status}`);
-    err.status = resp.status;
-    err.body = parsed?.detail || parsed?.error || text.slice(0, 500);
-    throw err;
+      if (!resp.ok) {
+        // Log the full response so we can read it in Vercel function logs.
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[nvidia ${candidate.name}] ${resp.status}`,
+          text.slice(0, 400)
+        );
+        lastErr = { status: resp.status, body: parsed || text.slice(0, 400), name: candidate.name };
+        // 404 = wrong URL, try next. 4xx other = auth/payload issue, also try next
+        // (in case another endpoint expects a different payload). 5xx = NVIDIA
+        // problem, stop.
+        if (resp.status >= 500) break;
+        continue;
+      }
+
+      // Success! Try every known response shape for the b64 image.
+      const b64 =
+        parsed?.data?.[0]?.b64_json ||
+        parsed?.artifacts?.[0]?.base64 ||
+        parsed?.images?.[0]?.b64_json ||
+        parsed?.b64_json ||
+        null;
+
+      if (!b64) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[nvidia ${candidate.name}] 200 but no recognized image field`,
+          'keys:', Object.keys(parsed || {}),
+          'sample:', text.slice(0, 300)
+        );
+        lastErr = {
+          status: 200,
+          body: 'no image in response',
+          name: candidate.name,
+          response_keys: Object.keys(parsed || {}),
+        };
+        continue;
+      }
+
+      // eslint-disable-next-line no-console
+      console.log(`[nvidia ${candidate.name}] success`);
+      return Buffer.from(b64, 'base64');
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn(`[nvidia ${candidate.name}] threw:`, e?.message);
+      lastErr = { status: 0, body: String(e), name: candidate.name };
+      continue;
+    }
   }
 
-  // 3. Response shape (OpenAI-compatible): { data: [{ b64_json: "..." }] }
-  //    Some NVIDIA endpoints return { artifacts: [{ base64: "..." }] } instead
-  //    (the older NIM shape) — handle both for forward compatibility.
-  const b64 =
-    parsed?.data?.[0]?.b64_json ||
-    parsed?.artifacts?.[0]?.base64 ||
-    parsed?.images?.[0]?.b64_json ||
-    null;
-
-  if (!b64) {
-    // Surface the response keys to the logs so we can diagnose schema drift.
-    // eslint-disable-next-line no-console
-    console.warn('[nvidia] response had no recognizable image field. keys:', Object.keys(parsed || {}));
-    throw new Error('NVIDIA returned no image (unrecognized response shape)');
-  }
-  return Buffer.from(b64, 'base64');
+  // None of the patterns worked — surface details to the caller.
+  const err = new Error(`NVIDIA: all endpoints failed (last: ${lastErr?.name} ${lastErr?.status})`);
+  err.status = lastErr?.status || 502;
+  err.body = lastErr;
+  throw err;
 }
 
 function clamp(n, min, max) {
