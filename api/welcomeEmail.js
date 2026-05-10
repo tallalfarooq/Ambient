@@ -209,19 +209,52 @@ export default async function handler(req, res) {
   const user = await getUserFromRequest(req);
   if (!user) return json(res, 401, { error: 'Not authenticated' });
 
-  // 1. Profile lookup — also gives us the dedup flag.
-  const { data: profile } = await supabaseAdmin
+  // 1. Atomic claim — stamp `welcome_email_sent_at` BEFORE doing any work
+  //    that has visible side effects (sending the email). Two browser tabs,
+  //    a `getSession()` poll racing with the `onAuthStateChange`
+  //    INITIAL_SESSION event, and a TOKEN_REFRESHED event 50 minutes later
+  //    will all hit this endpoint concurrently. The previous "read → check
+  //    null → send → stamp" flow let multiple of those calls slip past the
+  //    null check and fire 3–5 emails. The CAS update fixes that: only the
+  //    request whose UPDATE actually flips a NULL to a timestamp wins;
+  //    everyone else gets back zero rows and bails.
+  //
+  //    We pull `full_name` in the same query so the email template knows the
+  //    user's name without a second round-trip.
+  const claimedAt = new Date().toISOString();
+  const { data: claimed, error: claimErr } = await supabaseAdmin
     .from('profiles')
-    .select('id, full_name, welcome_email_sent_at')
+    .update({ welcome_email_sent_at: claimedAt })
     .eq('id', user.id)
+    .is('welcome_email_sent_at', null)
+    .select('id, full_name')
     .maybeSingle();
 
-  // Idempotent — already sent? Return success without touching Resend.
-  if (profile?.welcome_email_sent_at) {
+  if (claimErr) {
+    // eslint-disable-next-line no-console
+    console.error('[welcomeEmail] claim update failed', claimErr);
+    return json(res, 500, { error: 'Could not check welcome state' });
+  }
+  if (!claimed) {
+    // Someone else already claimed the welcome slot — either a previous
+    // session or a parallel call from another tab. Idempotent success.
     return json(res, 200, { sent: false, reason: 'already_sent' });
   }
+  const profile = claimed;
 
-  // 2. Pull current credits + plan to tailor copy.
+  // 2. Rollback helper — if Resend fails after we've claimed, we must
+  //    re-clear the column so a future retry can succeed. Otherwise the
+  //    user gets zero welcome emails because we marked-as-sent before the
+  //    actual send.
+  const rollbackClaim = async () => {
+    await supabaseAdmin
+      .from('profiles')
+      .update({ welcome_email_sent_at: null })
+      .eq('id', user.id)
+      .eq('welcome_email_sent_at', claimedAt);
+  };
+
+  // 3. Pull current credits + plan to tailor copy.
   const { data: credits } = await supabaseAdmin
     .from('user_credits')
     .select('credits_remaining, plan_type')
@@ -231,18 +264,15 @@ export default async function handler(req, res) {
   const planType = credits?.plan_type || 'free';
   const creditCount = credits?.credits_remaining ?? 2;
 
-  // 3. No Resend key? Mark as sent so we don't keep retrying, but log it.
+  // 4. No Resend key? Stamp is already in place from the claim, so we just
+  //    log and return — future calls hit the "already_sent" path naturally.
   if (!RESEND_API_KEY) {
     // eslint-disable-next-line no-console
     console.warn('[welcomeEmail] RESEND_API_KEY missing — skipping send for', user.email);
-    await supabaseAdmin
-      .from('profiles')
-      .update({ welcome_email_sent_at: new Date().toISOString() })
-      .eq('id', user.id);
     return json(res, 200, { sent: false, reason: 'resend_not_configured' });
   }
 
-  // 4. Send.
+  // 5. Send.
   const { subject, text, html } = buildEmail({
     name: profile?.full_name,
     planType,
@@ -277,20 +307,19 @@ export default async function handler(req, res) {
       const body = await r.text();
       // eslint-disable-next-line no-console
       console.error('[welcomeEmail] Resend rejected', r.status, body.slice(0, 300));
-      // DON'T stamp welcome_email_sent_at on failure — let it retry next session.
+      // Roll back the claim so the next session can retry. Without this the
+      // user gets ZERO welcome emails because the claim already stamped.
+      await rollbackClaim();
       return json(res, 502, { error: 'Email provider rejected the send', detail: body.slice(0, 200) });
     }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[welcomeEmail] Resend fetch threw', err);
+    await rollbackClaim();
     return json(res, 502, { error: 'Email provider unreachable' });
   }
 
-  // 5. Stamp dedup so we never send again for this user.
-  await supabaseAdmin
-    .from('profiles')
-    .update({ welcome_email_sent_at: new Date().toISOString() })
-    .eq('id', user.id);
-
+  // 6. Send succeeded. The claim already stamped welcome_email_sent_at; no
+  //    second update needed.
   return json(res, 200, { sent: true, plan_type: planType, credits: creditCount });
 }

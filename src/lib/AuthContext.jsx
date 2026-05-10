@@ -17,6 +17,18 @@ export const AuthProvider = ({ children }) => {
   // No race between hydrate and onAuthStateChange because there's only one path.
   useEffect(() => {
     let mounted = true;
+    // Day 13d — per-user-per-mount dedup for the post-signup hooks
+    // (invite redemption + welcome email). Without this, applySession()
+    // gets called multiple times for one logical login: the explicit
+    // getSession() poll, the INITIAL_SESSION event, the SIGNED_IN event,
+    // and any TOKEN_REFRESHED in between. The server-side claim-first
+    // pattern catches that race for the email send, but firing 4–5
+    // duplicate POSTs is still wasteful — and the tests in QA showed
+    // even with the server fix, racing fetches crossed the wire faster
+    // than Supabase could persist the column update. So: client-side
+    // tracks whichever user IDs we've already kicked off the post-signup
+    // hooks for in this React mount, and short-circuits.
+    const postSignupKickedOff = new Set();
 
     // Generic timeout helper — bounded waits for both getSession() and the
     // profile lookup. Hanging promises inside applySession() were the cause
@@ -95,17 +107,23 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       setAuthError(null);
 
-      // Day 13 / 13b — post-signup side effects.
+      // Day 13 / 13b / 13d — post-signup side effects.
       //
       // Two pieces of work, ORDER MATTERS:
       //   1. Redeem any pending invite code (grants Pro + credits).
       //   2. THEN send the welcome email (so the email reflects the
       //      granted plan, not the pre-redemption free tier).
       //
-      // Both endpoints are idempotent server-side, so re-firing on
-      // TOKEN_REFRESHED is harmless. We don't await this for UI
-      // unblock — the user state is already set above, this runs in
-      // the background.
+      // Day 13d — DEDUP. applySession() runs more than once per logical
+      // login (INITIAL_SESSION + SIGNED_IN + getSession poll + later
+      // TOKEN_REFRESHED). Without the early-return below, every one of
+      // those calls fired both endpoints — which produced 3+ welcome
+      // emails until the server-side claim caught up. Track per-mount
+      // which user IDs we've already kicked off the post-signup hooks for
+      // and bail.
+      if (postSignupKickedOff.has(sessionUser.id)) return;
+      postSignupKickedOff.add(sessionUser.id);
+
       (async () => {
         try {
           // Lazy-import apiClient to avoid a cycle (apiClient → supabase →
@@ -130,9 +148,10 @@ export const AuthProvider = ({ children }) => {
             } catch { /* transient network blip — keep stashed for retry */ }
           }
 
-          // ── 2. Welcome email (idempotent server-side via
-          //       profiles.welcome_email_sent_at). Fires for every signed-in
-          //       session; the server bails fast if it's already been sent. ──
+          // ── 2. Welcome email. Idempotent server-side via the
+          //       claim-first CAS update on profiles.welcome_email_sent_at;
+          //       this client-side guard plus that CAS makes duplicates
+          //       physically impossible across tabs and refreshes. ──
           try {
             await apiClient.functions.invoke('welcomeEmail', {});
           } catch { /* welcome email is polish, never blocks */ }
