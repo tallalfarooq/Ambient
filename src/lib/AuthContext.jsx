@@ -94,6 +94,38 @@ export const AuthProvider = ({ children }) => {
       });
       setIsAuthenticated(true);
       setAuthError(null);
+
+      // Day 13 — beta invite auto-redeem.
+      // The /invite/:code page stashes the code in localStorage before
+      // sending the visitor to /login. Once the session lands here, fire
+      // the redemption in the background so the user gets Pro+credits
+      // without having to remember to click anything. Idempotent on the
+      // server (unique(invite_code_id, user_id) prevents double-grant), so
+      // re-firing on TOKEN_REFRESHED is harmless. We clear localStorage
+      // only on success or non-retriable failure (404/410), not on transient
+      // network errors — that way a flaky first call still gets retried.
+      try {
+        const stashed = window.localStorage?.getItem('pending_invite_code');
+        if (stashed) {
+          // Lazy-import apiClient to avoid a cycle (apiClient imports supabase
+          // which imports AuthContext indirectly via shared utilities).
+          const { apiClient } = await import('@/api/apiClient');
+          apiClient.functions
+            .invoke('redeemInvite', { code: stashed })
+            .then((response) => {
+              const payload = response?.data ?? response;
+              const status = response?.status;
+              if (payload?.error && status && status !== 500 && status !== 502 && status !== 503) {
+                // Permanent failure (404 unknown code, 410 expired/full).
+                // Clear so we don't keep retrying forever.
+                window.localStorage.removeItem('pending_invite_code');
+              } else if (payload && !payload.error) {
+                window.localStorage.removeItem('pending_invite_code');
+              }
+            })
+            .catch(() => { /* transient — keep stashed for retry */ });
+        }
+      } catch { /* localStorage unavailable; nothing to do */ }
     };
 
     // Belt-and-suspenders: kick off an explicit getSession() so we still

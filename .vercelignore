@@ -10,3 +10,8 @@
 
 api/scoreStructure.js
 api/embed/
+# Day 13 — admin email tools are stubs (501-not-implemented). Skip
+# deployment so the function count stays under the Hobby 12-function cap
+# and we can fit /api/redeemInvite without re-architecting.
+api/sendMarketingNewsletter.js
+api/syncResendContacts.js

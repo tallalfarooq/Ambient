@@ -18,6 +18,7 @@ import TermsOfService from '@/pages/TermsOfService';
 import Login from '@/pages/Login';
 import Try from '@/pages/Try';
 import Help from '@/pages/Help';
+import Invite from '@/pages/Invite';
 
 // Lazy — admin only, also bigger Stripe / sharing flows
 const AdminEmail   = lazy(() => import('@/pages/AdminEmail'));
@@ -99,6 +100,11 @@ const AuthenticatedApp = () => {
         <Route path="/try" element={<LayoutWrapper currentPageName="Try"><Try /></LayoutWrapper>} />
         <Route path="/Help" element={<LayoutWrapper currentPageName="Help"><Help /></LayoutWrapper>} />
         <Route path="/help" element={<LayoutWrapper currentPageName="Help"><Help /></LayoutWrapper>} />
+        {/* Day 13 — beta invite flow. Both /invite/:code and /invite?code=… work. */}
+        <Route path="/invite/:code" element={<Invite />} />
+        <Route path="/invite"       element={<Invite />} />
+        <Route path="/Invite/:code" element={<Invite />} />
+        <Route path="/Invite"       element={<Invite />} />
         <Route path="*" element={
           <LayoutWrapper currentPageName="NotFound">
             <PageNotFound />
