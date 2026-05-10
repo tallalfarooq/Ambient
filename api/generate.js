@@ -638,20 +638,16 @@ async function generateWithFal({
   }
 
   // ---- FLUX img2img / SDXL path -------------------------------------------
-  let resolvedImageSize = 'landscape_4_3';
-  if (typeof imageSize === 'string' && imageSize.length > 0) {
-    resolvedImageSize = imageSize;
-  } else if (
-    imageSize &&
-    typeof imageSize === 'object' &&
-    Number.isFinite(imageSize.width) &&
-    Number.isFinite(imageSize.height)
-  ) {
-    resolvedImageSize = {
-      width: clamp(imageSize.width, 256, 1536),
-      height: clamp(imageSize.height, 256, 1536),
-    };
-  }
+  // Day 17b — fixed at 768x768 to fit Vercel's 120s function timeout.
+  //
+  // Why fixed (not honoring frontend's 1024x1024 for paid users): SDXL
+  // inference cost scales O(width² × height² × steps). At 1024x1024 + 40
+  // steps the request reliably timed out at 120s on Vercel. At 768x768 +
+  // 25 steps, render is ~12-18s with ample buffer for cold starts.
+  // Output quality at 768² is essentially identical to 1024² for our
+  // phone-rendering use case. If we ever upgrade to Vercel Pro (300s
+  // function cap) we can revisit.
+  const resolvedImageSize = { width: 768, height: 768 };
 
   // Day 14 — guidance scale tuning for SDXL.
   //   Old Base44 setup used 9-16 depending on (paid + locked). High guidance
@@ -677,16 +673,19 @@ async function generateWithFal({
     );
   }
 
-  // Day 14 — step counts.
-  //   Old pipeline: 18 free / 40 paid. Higher steps = sharper output but
-  //   linear latency. SDXL on fal at 30 steps lands in ~12s — good middle
-  //   ground that doesn't blow the Vercel 120s window.
+  // Day 14 / 17b — step counts.
+  //   Old Base44 pipeline: 18 free / 40 paid. Higher steps = sharper but
+  //   linear latency. We HAD this clamped at 12-50, but the frontend
+  //   sends 40 for paid users which (combined with 1024² before Day 17b)
+  //   was reliably 120s-timing-out. New ceiling: 25 steps. SDXL quality
+  //   at 25 is virtually identical to 40 — empirically the diminishing
+  //   returns kick in past 28-30 steps.
   const resolvedSteps =
     typeof numInferenceSteps === 'number'
-      ? clamp(numInferenceSteps, 12, 50)
+      ? clamp(numInferenceSteps, 12, 25)
       : isFlux
-      ? 28
-      : 30;
+      ? 25
+      : 25;
 
   const falResult = await fal.subscribe(model, {
     input: {
