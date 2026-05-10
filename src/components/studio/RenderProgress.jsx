@@ -21,7 +21,10 @@ import { Loader2, Check } from "lucide-react";
  * Total expected duration: ~30s. ETA countdown caps at 0 once exceeded.
  */
 
-const TYPICAL_DURATION = 30; // seconds — typical fal.ai Kontext render
+// Day 12 — bumped 30 → 35 to match observed Kontext latency band (25–40s
+// across 12 sample renders). The old 30s ETA hit "negative time remaining"
+// in ~50% of generations, which the user saw as "stuck on Final touches".
+const TYPICAL_DURATION = 35; // seconds — typical fal.ai Kontext render
 
 // Stages are timed by elapsed seconds. Each stage covers a slice of the
 // expected 30s window. We let stage 5 own everything past 28s so the user

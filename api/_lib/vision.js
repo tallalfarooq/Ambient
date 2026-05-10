@@ -39,16 +39,51 @@ Elements to score:
 
 Be precise. The hex code matters more than the name.`;
 
+// Day 12 — flat schema. Gemini's `responseSchema` dialect rejects deeply
+// nested objects-of-objects with required arrays — in QA-10 the live
+// /api/generate response showed `detected_colors: null` for every render
+// because the previous nested shape never validated. Flat keys
+// (walls_hex, walls_name, …) all serialize cleanly. The clause-builder
+// downstream re-assembles the structure.
 const COLOR_SCHEMA = {
   type: 'object',
   properties: {
-    walls:   { type: 'object', properties: { hex: { type: 'string' }, name: { type: 'string' }, confidence: { type: 'string' } }, required: ['hex', 'name', 'confidence'] },
-    ceiling: { type: 'object', properties: { hex: { type: 'string' }, name: { type: 'string' }, confidence: { type: 'string' } }, required: ['hex', 'name', 'confidence'] },
-    floor:   { type: 'object', properties: { hex: { type: 'string' }, name: { type: 'string' }, confidence: { type: 'string' } }, required: ['hex', 'name', 'confidence'] },
-    trim:    { type: 'object', properties: { hex: { type: 'string' }, name: { type: 'string' }, confidence: { type: 'string' } }, required: ['hex', 'name', 'confidence'] },
+    walls_hex:        { type: 'string' },
+    walls_name:       { type: 'string' },
+    walls_confidence: { type: 'string' },
+    ceiling_hex:        { type: 'string' },
+    ceiling_name:       { type: 'string' },
+    ceiling_confidence: { type: 'string' },
+    floor_hex:        { type: 'string' },
+    floor_name:       { type: 'string' },
+    floor_confidence: { type: 'string' },
+    trim_hex:        { type: 'string' },
+    trim_name:       { type: 'string' },
+    trim_confidence: { type: 'string' },
   },
-  required: ['walls', 'ceiling', 'floor', 'trim'],
+  required: [
+    'walls_hex', 'walls_name', 'walls_confidence',
+    'ceiling_hex', 'ceiling_name', 'ceiling_confidence',
+    'floor_hex', 'floor_name', 'floor_confidence',
+    'trim_hex', 'trim_name', 'trim_confidence',
+  ],
 };
+
+// Re-shape Gemini's flat response back into the {walls:{hex,name,confidence}…}
+// structure the rest of the codebase expects.
+function unflatten(flat) {
+  if (!flat) return null;
+  const els = ['walls', 'ceiling', 'floor', 'trim'];
+  const out = {};
+  for (const el of els) {
+    out[el] = {
+      hex: flat[`${el}_hex`] || null,
+      name: flat[`${el}_name`] || null,
+      confidence: flat[`${el}_confidence`] || 'low',
+    };
+  }
+  return out;
+}
 
 /**
  * Detect the architectural colors of a room photo. Returns
@@ -99,7 +134,9 @@ export async function detectRoomColors(imageUrl) {
     const parsed = JSON.parse(text);
     const candidateText = parsed?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
     if (!candidateText) throw new Error('empty response');
-    return JSON.parse(candidateText);
+    // Day 12 — the schema is flat now (walls_hex / walls_name / …); reshape
+    // back to the nested form the prompt clause builder expects.
+    return unflatten(JSON.parse(candidateText));
   } catch (err) {
     // Non-fatal — caller falls back to the older preservation phrasing.
     // eslint-disable-next-line no-console

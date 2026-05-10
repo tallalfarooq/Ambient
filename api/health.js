@@ -72,8 +72,11 @@ export default async function handler(req, res) {
     services,
     image_provider: (process.env.IMAGE_PROVIDER || 'huggingface').toLowerCase(),
     pipeline: {
-      use_inpainting: process.env.USE_INPAINTING === 'true',
-      kontext_model: 'fal-ai/flux-pro/kontext', // see api/generate.js DEFAULT_MODELS
+      // Day 12 — locked to base Kontext. The USE_INPAINTING env var is no
+      // longer read by /api/generate; reflected here as a hint to ops that
+      // any value set on the dashboard is dead config.
+      kontext_model: 'fal-ai/flux-pro/kontext',
+      mode: 'prompt-only',
     },
     version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 'dev',
   });

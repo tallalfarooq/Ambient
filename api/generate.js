@@ -22,7 +22,13 @@ import { HfInference } from '@huggingface/inference';
 import { fal } from '@fal-ai/client';
 import { allow, getUserFromRequest, json, readJson, supabaseAdmin } from './_lib/auth.js';
 import { checkRateLimit } from './_lib/ratelimit.js';
-import { runInpaintingPipeline, buildInpaintingPrompt } from './_lib/inpaint.js';
+// Day 12 — locked to base fal-ai/flux-pro/kontext per directive. Path B
+// (mask-based inpainting via segmentation + flux inpaint) was removed: it
+// cost 2 fal calls per render (~2x spend) and produced visibly worse
+// quality on the test cases we tried. The inpaint helpers stay on disk in
+// _lib/inpaint.js for reference / quick rollback but are no longer imported.
+// The Gemini vision color anchors (Day 10.7) also stay imported because
+// they're free-tier and only run on Kontext, where they help.
 import { detectRoomColors, colorsToPromptClauses } from './_lib/vision.js';
 
 const PROVIDER = (process.env.IMAGE_PROVIDER || 'huggingface').toLowerCase();
@@ -238,42 +244,17 @@ export default async function handler(req, res) {
 
   // 3. Generate via the configured provider.
   //
-  // Day 10.6 — Path B (mask-based inpainting) runs as an opt-in pre-step.
-  // When `USE_INPAINTING=true` (or the request body sets `use_inpainting`),
-  // we segment the source for architecture, then FLUX-inpaint only the
-  // furniture region. Architecture preservation becomes a hard guarantee
-  // instead of a prompt the model can ignore.
-  //
-  // Any failure in the mask or inpaint step (model 404, mask polarity,
-  // download error, etc.) falls through to the prompt-based Kontext path
-  // below — the user always gets a render even if the new pipeline trips.
-  const useInpainting =
-    PROVIDER === 'fal' &&
-    !!FAL_KEY &&
-    (body?.use_inpainting === true || process.env.USE_INPAINTING === 'true');
-
+  // Day 12 — Path B (mask-based inpainting) was removed. The single supported
+  // pipeline is now base fal-ai/flux-pro/kontext with the prompt-based
+  // preservation block. Simpler, cheaper (1 fal call vs 2), and the quality
+  // delta from inpainting wasn't worth the 2x cost in our testing. The
+  // vision color anchors (Day 10.7, free Gemini call) still run as the
+  // single non-Kontext upgrade that helps preservation.
   let imageBuffer;
-  let pipelineUsed = 'kontext'; // overwritten below if Path B ran
-  if (useInpainting) {
-    try {
-      const inpaintPrompt = buildInpaintingPrompt(prompt, mode);
-      imageBuffer = await runInpaintingPipeline({
-        imageUrl: image_url,
-        prompt: inpaintPrompt,
-      });
-      pipelineUsed = 'inpaint';
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn('[api/generate] inpainting failed, falling back to Kontext:', err?.message || err);
-      imageBuffer = null;
-      pipelineUsed = 'kontext-fallback';
-    }
-  }
+  const pipelineUsed = 'kontext';
 
   try {
-    if (imageBuffer) {
-      // Already generated via Path B — nothing to do here.
-    } else if (PROVIDER === 'huggingface') {
+    if (PROVIDER === 'huggingface') {
       imageBuffer = await generateWithHuggingFace({
         model: model || DEFAULT_MODELS.huggingface,
         prompt: finalPrompt,
