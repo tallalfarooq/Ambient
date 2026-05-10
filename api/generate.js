@@ -242,21 +242,25 @@ export default async function handler(req, res) {
     finalPrompt = prompt;
   }
 
-  // === Strength clamp (Day 14 restore of OLD Base44 values) =================
-  // These numbers are the result of months of A/B-ing on the original
-  // pipeline — they're aggressive in the right direction:
-  //   - Furnish (empty room): 0.55-0.78 — needs enough freedom to actually
-  //     paint furniture into empty space.
-  //   - Redesign LOCKED (structure_locked=true): 0.15-0.28 — very tight to
-  //     original; only colors / materials / decor change.
-  //   - Redesign unlocked: 0.15-0.38 — slightly more headroom.
-  //   - Fine-tune iterations: callers send 0.20-0.25 explicitly; clamp lets
-  //     it through.
+  // === Strength clamp =======================================================
+  // Day 14 restored the OLD Base44 values; Day 14b found via QA-12 that
+  // fal's SDXL endpoint runs HOTTER than Base44's — i.e. strength 0.65 on
+  // fal is closer to 0.45 on Base44 (preserves too aggressively, doesn't
+  // paint furniture into empty rooms). Bumping the furnish floor to 0.65
+  // and default to 0.75 fixes the empty-render failure mode without
+  // breaking the tested 0.78 case (which still scored 95/100).
+  //
+  //   - Furnish (empty room): 0.65-0.85 — needs significant freedom to
+  //     actually paint furniture. Lower bound was 0.55 on Day 14, raised
+  //     to 0.65 because below that fal's SDXL just preserves the empty room.
+  //   - Redesign LOCKED: 0.15-0.28 — very tight; only colors/decor change.
+  //   - Redesign unlocked: 0.15-0.38.
+  //   - Fine-tune: callers send 0.20-0.25; clamp lets it through.
   // Kontext path ignores strength entirely (model doesn't accept it).
   const isLocked = body?.structure_locked === true;
   let minStrength, maxStrength, defaultStrength;
   if (isFurnish) {
-    minStrength = 0.55; maxStrength = isLocked ? 0.68 : 0.78; defaultStrength = 0.65;
+    minStrength = 0.65; maxStrength = isLocked ? 0.75 : 0.85; defaultStrength = 0.75;
   } else if (isLocked) {
     minStrength = 0.15; maxStrength = 0.28; defaultStrength = 0.22;
   } else {
@@ -275,7 +279,16 @@ export default async function handler(req, res) {
   // vision color anchors (Day 10.7, free Gemini call) still run as the
   // single non-Kontext upgrade that helps preservation.
   let imageBuffer;
-  const pipelineUsed = 'kontext';
+  // Day 14b — pipeline label reflects the actual model family. Was
+  // hardcoded to "kontext" since Day 12 even after the SDXL migration,
+  // which made QA-12 confusing. Now derives from the model name.
+  const pipelineUsed = isKontext
+    ? 'kontext'
+    : /sdxl/i.test(model || DEFAULT_MODELS[PROVIDER] || '')
+    ? 'sdxl-img2img'
+    : /flux/i.test(model || DEFAULT_MODELS[PROVIDER] || '')
+    ? 'flux-img2img'
+    : (PROVIDER || 'unknown');
 
   try {
     if (PROVIDER === 'huggingface') {

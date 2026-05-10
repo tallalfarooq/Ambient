@@ -648,12 +648,16 @@ export default function StepGenerate({ data, update, onBack, onComplete }) {
           ? `${fullPrompt}, avoid: ${feedbackNote}`
           : fullPrompt;
       if (data.room_mode === "furnish") {
-        // Furnish: placing furniture into an empty room — needs moderate-high strength.
-        // Map intensity 0–100 → strength 0.55–0.78; tighten slightly when locked.
-        const furnishBase = 0.55 + (intensity / 100) * 0.23;
+        // Furnish: placing furniture into an empty room — needs higher
+        // strength than redesign mode because there's no existing furniture
+        // for the diffusion to anchor to.
+        // Day 14b — bumped range 0.55-0.78 → 0.65-0.85 after QA-12 found
+        // fal.ai's SDXL endpoint runs hotter than Base44's; below 0.65 the
+        // model just preserves the empty room without painting anything in.
+        const furnishBase = 0.65 + (intensity / 100) * 0.20;
         strength = data.structure_locked
-          ? Math.min(furnishBase, 0.68)
-          : Math.min(furnishBase, 0.78);
+          ? Math.min(furnishBase, 0.75)
+          : Math.min(furnishBase, 0.85);
       } else {
         // Redesign: change style/materials ONLY — structure must stay intact.
         // Map intensity 0–100 → strength 0.15–0.38 so the model never wanders far
