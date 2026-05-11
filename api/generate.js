@@ -790,21 +790,20 @@ async function generateWithReplicate({
 }) {
   if (!REPLICATE_API_TOKEN) throw new Error('REPLICATE_API_TOKEN is not configured');
 
-  // Day 17c — two ways to invoke a Replicate model:
-  //   1. POST /v1/predictions with { version: "<hash>", input }  — pinned
-  //   2. POST /v1/models/{owner}/{name}/predictions with { input }  — latest
+  // Day 17d — Replicate's predictions API has three call patterns:
+  //   1. POST /v1/predictions { version: "<hash>", input }   — old style, pinned
+  //   2. POST /v1/models/{owner}/{name}/predictions { input } — model-scoped (some 404s)
+  //   3. POST /v1/predictions { model: "owner/name", input }  — modern, no version
   //
-  // We use #2 because it doesn't require us to maintain a version hash
-  // (which drifts every time the model is updated). The model slug stays
-  // human-readable. If a caller passes `owner/name:version`, we split and
-  // fall through to #1 for reproducibility.
-  let url, startBody;
+  // Day 17c tried #2 and got 404 ("resource could not be found"). Switching
+  // to #3 which is the current official Replicate pattern. Falls through to
+  // #1 if the caller pinned a `:version` suffix.
+  let startBody;
   const colonIdx = model.indexOf(':');
   const input = {
     prompt,
     image: imageUrl,
-    // Replicate / stability-ai/sdxl param names:
-    prompt_strength: strength,         // 0 = identical to input, 1 = ignore
+    prompt_strength: strength,         // SDXL strength: 0 identical, 1 ignore source
     guidance_scale:
       typeof guidanceScale === 'number' ? clamp(guidanceScale, 1, 20) : 7.5,
     num_inference_steps:
@@ -816,21 +815,19 @@ async function generateWithReplicate({
     width: 1024,
     height: 1024,
     scheduler: 'K_EULER_ANCESTRAL', // matches the OLD Base44 sampler
-    refine: 'no_refiner',           // SDXL refiner adds time; output is fine without it
+    refine: 'no_refiner',           // refiner adds latency; output is fine without
   };
 
   if (colonIdx > -1) {
-    // Pinned-version path (#1)
-    url = 'https://api.replicate.com/v1/predictions';
+    // Pattern #1: pinned version hash
     startBody = { input, version: model.slice(colonIdx + 1) };
   } else {
-    // Latest-version path (#2) — owner/name in URL
-    url = `https://api.replicate.com/v1/models/${model}/predictions`;
-    startBody = { input };
+    // Pattern #3: model slug in body (modern, no version pinning needed)
+    startBody = { input, model };
   }
 
   // 1. Start prediction
-  const startRes = await fetch(url, {
+  const startRes = await fetch('https://api.replicate.com/v1/predictions', {
     method: 'POST',
     headers: {
       Authorization: `Token ${REPLICATE_API_TOKEN}`,
@@ -842,7 +839,11 @@ async function generateWithReplicate({
   let pred;
   try { pred = JSON.parse(startText); } catch { pred = null; }
   if (!startRes.ok || !pred?.id) {
-    const err = new Error(`Replicate start failed: ${startRes.status}`);
+    // eslint-disable-next-line no-console
+    console.error('[replicate] start failed', startRes.status, 'body:', startText.slice(0, 600), 'sent:', JSON.stringify(startBody).slice(0, 300));
+    const err = new Error(
+      `Replicate ${startRes.status}: ${pred?.detail || pred?.title || startText.slice(0, 200)}`
+    );
     err.status = startRes.status;
     err.body = pred ?? startText.slice(0, 500);
     throw err;
