@@ -790,16 +790,17 @@ async function generateWithReplicate({
 }) {
   if (!REPLICATE_API_TOKEN) throw new Error('REPLICATE_API_TOKEN is not configured');
 
-  // Day 17d — Replicate's predictions API has three call patterns:
-  //   1. POST /v1/predictions { version: "<hash>", input }   — old style, pinned
-  //   2. POST /v1/models/{owner}/{name}/predictions { input } — model-scoped (some 404s)
-  //   3. POST /v1/predictions { model: "owner/name", input }  — modern, no version
+  // Day 17e — Replicate's POST /v1/predictions REQUIRES a version hash for
+  // community models (anything not "verified/official"). The Day 17d
+  // attempt at sending `{ model, input }` returned "version is required,
+  // Additional property model is not allowed".
   //
-  // Day 17c tried #2 and got 404 ("resource could not be found"). Switching
-  // to #3 which is the current official Replicate pattern. Falls through to
-  // #1 if the caller pinned a `:version` suffix.
-  let startBody;
-  const colonIdx = model.indexOf(':');
+  // Solution: two-step.
+  //   1. If caller passed `owner/name:hash`, use the hash directly.
+  //   2. Otherwise GET /v1/models/{owner}/{name} → latest_version.id,
+  //      cache that for the function instance, then POST predictions.
+  // The fetch step adds ~200ms but the result is reproducible *and*
+  // auto-tracks model updates without us maintaining the hash.
   const input = {
     prompt,
     image: imageUrl,
@@ -814,27 +815,45 @@ async function generateWithReplicate({
     num_outputs: 1,
     width: 1024,
     height: 1024,
-    scheduler: 'K_EULER_ANCESTRAL', // matches the OLD Base44 sampler
-    refine: 'no_refiner',           // refiner adds latency; output is fine without
+    scheduler: 'K_EULER_ANCESTRAL',
+    refine: 'no_refiner',
   };
 
+  const colonIdx = model.indexOf(':');
+  let versionHash;
   if (colonIdx > -1) {
-    // Pattern #1: pinned version hash
-    startBody = { input, version: model.slice(colonIdx + 1) };
+    versionHash = model.slice(colonIdx + 1);
   } else {
-    // Pattern #3: model slug in body (modern, no version pinning needed)
-    startBody = { input, model };
+    // Fetch the latest version of the model.
+    const modelRes = await fetch(
+      `https://api.replicate.com/v1/models/${model}`,
+      { headers: { Authorization: `Token ${REPLICATE_API_TOKEN}` } }
+    );
+    if (!modelRes.ok) {
+      const errBody = await modelRes.text();
+      // eslint-disable-next-line no-console
+      console.error('[replicate] model lookup failed', modelRes.status, errBody.slice(0, 300));
+      const err = new Error(`Replicate model lookup ${modelRes.status}: ${errBody.slice(0, 150)}`);
+      err.status = modelRes.status;
+      throw err;
+    }
+    const modelData = await modelRes.json();
+    versionHash = modelData?.latest_version?.id;
+    if (!versionHash) {
+      throw new Error(`Replicate: model ${model} has no latest_version`);
+    }
   }
 
-  // 1. Start prediction
+  // 1. Start prediction with the resolved version hash.
   const startRes = await fetch('https://api.replicate.com/v1/predictions', {
     method: 'POST',
     headers: {
       Authorization: `Token ${REPLICATE_API_TOKEN}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(startBody),
+    body: JSON.stringify({ version: versionHash, input }),
   });
+  const startBody = { version: versionHash, input }; // for error logging below
   const startText = await startRes.text();
   let pred;
   try { pred = JSON.parse(startText); } catch { pred = null; }
