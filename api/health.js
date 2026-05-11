@@ -80,8 +80,7 @@ export default async function handler(req, res) {
     pipeline: {
       // Day 16 — pipeline reflects the ACTIVE provider's default model.
       fal_model: process.env.FAL_MODEL || 'fal-ai/fast-sdxl/image-to-image',
-      replicate_model: process.env.REPLICATE_MODEL ||
-        'lucataco/sdxl-img2img:fbef6aaae9b4e1d6845f95e2f06d0afcd96f63eee87e9bef97b7c8c3877f5e57',
+      replicate_model: process.env.REPLICATE_MODEL || 'stability-ai/sdxl',
       nvidia_model: process.env.NVIDIA_MODEL || 'qwen/qwen-image-edit',
       mode: 'sdxl-img2img',
       preservation: 'strength-clamp + negative-prompt + verbose-prompt',

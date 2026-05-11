@@ -94,12 +94,18 @@ const DEFAULT_MODELS = {
   // SDXL endpoint name is needed later, override via FAL_MODEL env var.
   fal: process.env.FAL_MODEL || 'fal-ai/fast-sdxl/image-to-image',
   together: 'black-forest-labs/FLUX.1-schnell-Free', // free with $5 trial
-  // Day 15 — Replicate's most-used SDXL img2img endpoint. Honors
-  // strength + num_inference_steps + negative_prompt as documented.
-  // Async predictions API: we POST to start, poll until succeeded.
-  // Override slug via REPLICATE_MODEL env var if needed.
-  replicate: process.env.REPLICATE_MODEL ||
-    'lucataco/sdxl-img2img:fbef6aaae9b4e1d6845f95e2f06d0afcd96f63eee87e9bef97b7c8c3877f5e57',
+  // Day 15 / 17c — Replicate's official Stability AI SDXL endpoint.
+  // Honors strength + num_inference_steps + negative_prompt + image (img2img)
+  // as documented. Async predictions API: we POST to start, poll until
+  // succeeded. Override slug via REPLICATE_MODEL env var.
+  //
+  // Day 17c — switched from `lucataco/sdxl-img2img` with a pinned (and
+  // mistakenly fabricated) version hash to `stability-ai/sdxl` without a
+  // version. The /v1/models/{owner}/{name}/predictions endpoint pattern
+  // (used below) auto-resolves to the latest version, so we don't have
+  // to maintain a hash. stability-ai/sdxl is also the official SDXL
+  // implementation — no surprises.
+  replicate: process.env.REPLICATE_MODEL || 'stability-ai/sdxl',
   // Day 16 — NVIDIA Build's hosted catalog. OpenAI-compatible API at
   // integrate.api.nvidia.com/v1. Free tier for prototyping. Default to
   // qwen-image-edit which is purpose-built for image editing tasks (good
@@ -784,41 +790,47 @@ async function generateWithReplicate({
 }) {
   if (!REPLICATE_API_TOKEN) throw new Error('REPLICATE_API_TOKEN is not configured');
 
-  // Replicate model identifiers come in two flavours:
-  //   - "owner/name:version"   (pinned version)
-  //   - "owner/name"           (latest version)
-  // We default to a pinned version (above) so behaviour is reproducible.
-  // Either form is accepted by the Predictions API via the `version` field
-  // (everything after the colon, OR the latest version if no colon).
+  // Day 17c — two ways to invoke a Replicate model:
+  //   1. POST /v1/predictions with { version: "<hash>", input }  — pinned
+  //   2. POST /v1/models/{owner}/{name}/predictions with { input }  — latest
+  //
+  // We use #2 because it doesn't require us to maintain a version hash
+  // (which drifts every time the model is updated). The model slug stays
+  // human-readable. If a caller passes `owner/name:version`, we split and
+  // fall through to #1 for reproducibility.
+  let url, startBody;
   const colonIdx = model.indexOf(':');
-  const version = colonIdx > -1 ? model.slice(colonIdx + 1) : null;
-
-  const startBody = {
-    input: {
-      prompt,
-      image: imageUrl,
-      // Replicate calls strength `prompt_strength` on this model. Value
-      // semantics match SDXL: 0 = identical to input, 1 = ignore input.
-      prompt_strength: strength,
-      guidance_scale:
-        typeof guidanceScale === 'number' ? clamp(guidanceScale, 1, 20) : 7.5,
-      num_inference_steps:
-        typeof numInferenceSteps === 'number'
-          ? clamp(numInferenceSteps, 10, 50)
-          : 30,
-      negative_prompt: negativePrompt || '',
-      num_outputs: 1,
-      // SDXL trained on 1024² square. Our tests confirmed Base44 used 1024².
-      // Replicate's lucataco/sdxl-img2img will downscale/upscale to fit.
-      width: 1024,
-      height: 1024,
-      scheduler: 'K_EULER_ANCESTRAL', // matches the OLD Base44 sampler
-    },
-    ...(version ? { version } : {}),
+  const input = {
+    prompt,
+    image: imageUrl,
+    // Replicate / stability-ai/sdxl param names:
+    prompt_strength: strength,         // 0 = identical to input, 1 = ignore
+    guidance_scale:
+      typeof guidanceScale === 'number' ? clamp(guidanceScale, 1, 20) : 7.5,
+    num_inference_steps:
+      typeof numInferenceSteps === 'number'
+        ? clamp(numInferenceSteps, 10, 50)
+        : 25,
+    negative_prompt: negativePrompt || '',
+    num_outputs: 1,
+    width: 1024,
+    height: 1024,
+    scheduler: 'K_EULER_ANCESTRAL', // matches the OLD Base44 sampler
+    refine: 'no_refiner',           // SDXL refiner adds time; output is fine without it
   };
 
+  if (colonIdx > -1) {
+    // Pinned-version path (#1)
+    url = 'https://api.replicate.com/v1/predictions';
+    startBody = { input, version: model.slice(colonIdx + 1) };
+  } else {
+    // Latest-version path (#2) — owner/name in URL
+    url = `https://api.replicate.com/v1/models/${model}/predictions`;
+    startBody = { input };
+  }
+
   // 1. Start prediction
-  const startRes = await fetch('https://api.replicate.com/v1/predictions', {
+  const startRes = await fetch(url, {
     method: 'POST',
     headers: {
       Authorization: `Token ${REPLICATE_API_TOKEN}`,
