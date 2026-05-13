@@ -1158,6 +1158,15 @@ async function generateWithLocal({
   const srcBuf = Buffer.from(await srcRes.arrayBuffer());
   const srcBlob = new Blob([srcBuf], { type: srcMime });
 
+  // Day 18c — read source dimensions from JPEG/PNG header so we can scale
+  // proportionally instead of center-cropping to 768×768 square. The square
+  // crop on Day 18b destroyed the aspect ratio of widescreen room photos
+  // (2600×1563 → 768×768 cut off ~30% of room content). Scaling to 1024
+  // on the long side keeps the full frame and stays under SDXL's native
+  // 1MP training resolution to maintain the M5 speed gains.
+  const srcDims = readImageDims(srcBuf);
+  const { width: scaleW, height: scaleH } = computeSdxlDims(srcDims);
+
   // 2. Upload to ComfyUI. ComfyUI expects multipart with field name `image`.
   const uploadName = `ambient_input_${Date.now()}.${srcMime.includes('png') ? 'png' : 'jpg'}`;
   const formData = new FormData();
@@ -1255,17 +1264,18 @@ async function generateWithLocal({
       inputs: { image: uploadedName },
     },
     '12': {
-      // Day 18b — resize source to 768×768 before VAEEncode. ComfyUI's
-      // `ImageScale` does this in one node. center-crop keeps the room
-      // centered (camera-native photos are typically wider than tall;
-      // we lose a bit on either side but the room stays framed).
+      // Day 18c — proportional resize. Computed scaleW × scaleH puts the
+      // long side at 1024 and rounds both axes to multiples of 8 (SDXL
+      // latent requirement). crop='disabled' = no center-crop, full frame
+      // preserved. For a typical 2600×1563 room photo this resolves to
+      // ~1024×616.
       class_type: 'ImageScale',
       inputs: {
         image: ['11', 0],
         upscale_method: 'bilinear',
-        width: 768,
-        height: 768,
-        crop: 'center',
+        width: scaleW,
+        height: scaleH,
+        crop: 'disabled',
       },
     },
   };
@@ -1349,6 +1359,95 @@ async function generateWithLocal({
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
+}
+
+/**
+ * Read PNG/JPEG dimensions from raw bytes — no native deps. Used by the
+ * local ComfyUI path to scale the source proportionally instead of forcing
+ * a square crop. Returns { width, height } or null if header isn't
+ * recognizable.
+ *
+ * PNG: bytes 16-23 hold width then height as big-endian uint32.
+ * JPEG: walk segment markers until we hit an SOFn (Start Of Frame) marker
+ *       (0xc0-0xcf except 0xc4 / 0xc8 / 0xcc) — that segment encodes
+ *       height (uint16 at offset +5) and width (uint16 at offset +7).
+ */
+function readImageDims(buf) {
+  if (!buf || buf.length < 24) return null;
+
+  // PNG: \x89 P N G \r \n \x1a \n
+  if (
+    buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47
+  ) {
+    return {
+      width: buf.readUInt32BE(16),
+      height: buf.readUInt32BE(20),
+    };
+  }
+
+  // JPEG: \xff \xd8 \xff
+  if (buf[0] === 0xff && buf[1] === 0xd8) {
+    let i = 2;
+    while (i < buf.length - 9) {
+      if (buf[i] !== 0xff) { i++; continue; }
+      const marker = buf[i + 1];
+      // Skip standalone markers (no length byte): RSTn, SOI, EOI, TEM
+      if (
+        marker === 0xd8 || marker === 0xd9 ||
+        (marker >= 0xd0 && marker <= 0xd7) || marker === 0x01
+      ) {
+        i += 2;
+        continue;
+      }
+      // SOFn = Start Of Frame (encodes dimensions)
+      if (
+        marker >= 0xc0 && marker <= 0xcf &&
+        marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc
+      ) {
+        return {
+          height: buf.readUInt16BE(i + 5),
+          width: buf.readUInt16BE(i + 7),
+        };
+      }
+      // Other segments — skip via length-prefix
+      if (i + 4 > buf.length) break;
+      const segLen = buf.readUInt16BE(i + 2);
+      if (segLen < 2) break;
+      i += 2 + segLen;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Given source dimensions, compute SDXL-friendly target dimensions:
+ *   - Longest side at 1024 (matches SDXL's ~1MP training resolution).
+ *   - Aspect ratio preserved.
+ *   - Both axes rounded to nearest multiple of 8 (SDXL latent requires it).
+ *   - Bounded to [512, 1280] per axis to keep render time predictable
+ *     on the M5 (extreme aspect ratios → too-skinny latents → garbage).
+ *
+ * Fallback: 1024×768 landscape if dims couldn't be read.
+ */
+function computeSdxlDims(src) {
+  if (!src || !src.width || !src.height) return { width: 1024, height: 768 };
+  const longSide = 1024;
+  const ratio = src.width / src.height;
+  let w, h;
+  if (ratio >= 1) {
+    w = longSide;
+    h = longSide / ratio;
+  } else {
+    h = longSide;
+    w = longSide * ratio;
+  }
+  // Round to multiples of 8.
+  w = Math.round(w / 8) * 8;
+  h = Math.round(h / 8) * 8;
+  w = Math.max(512, Math.min(1280, w));
+  h = Math.max(512, Math.min(1280, h));
+  return { width: w, height: h };
 }
 
 /**
