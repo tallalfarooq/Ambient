@@ -1178,11 +1178,28 @@ async function generateWithLocal({
   const uploadedName = uploaded?.name || uploadName;
 
   // 3. Build the SDXL img2img workflow.
+  //
+  // Day 18b — hard cap steps + resize source to 768×768 before VAE encode.
+  //
+  // First test on M5: 23.79s/it at the source photo's native resolution
+  // (~2600×1563 = 4 MP), with the frontend sending 40 steps → projected
+  // ~16 minutes per render. Way past Vercel's 120s function cap.
+  //
+  // Two fixes here:
+  //   a) Cap steps at 22 (default 18). SDXL is sharp at 18-25 — the 40-step
+  //      ceiling was overkill from the SDXL fal path; on local hardware
+  //      we pay for every step.
+  //   b) Insert an `ImageScale` node between LoadImage and VAEEncode so the
+  //      latent is built from a 768×768 frame instead of the user's
+  //      camera-native resolution. Per-step compute drops ~4×, matches
+  //      SDXL's native training resolution, and final output is up-rendered
+  //      back to the full image by SaveImage (ComfyUI handles this).
+  // Expected total: ~6-8s/step × 18 steps = 110-150s. Tight, but fits.
   const seed = Math.floor(Math.random() * 1e15);
   const steps = clamp(
-    typeof numInferenceSteps === 'number' ? numInferenceSteps : 25,
+    typeof numInferenceSteps === 'number' ? numInferenceSteps : 18,
     12,
-    40,
+    22,
   );
   const cfg = clamp(
     typeof guidanceScale === 'number' ? guidanceScale : 7.5,
@@ -1229,11 +1246,27 @@ async function generateWithLocal({
     },
     '10': {
       class_type: 'VAEEncode',
-      inputs: { pixels: ['11', 0], vae: ['4', 2] },
+      // Day 18b — pixels now come from the resized image (node 12), not
+      // the raw LoadImage output.
+      inputs: { pixels: ['12', 0], vae: ['4', 2] },
     },
     '11': {
       class_type: 'LoadImage',
       inputs: { image: uploadedName },
+    },
+    '12': {
+      // Day 18b — resize source to 768×768 before VAEEncode. ComfyUI's
+      // `ImageScale` does this in one node. center-crop keeps the room
+      // centered (camera-native photos are typically wider than tall;
+      // we lose a bit on either side but the room stays framed).
+      class_type: 'ImageScale',
+      inputs: {
+        image: ['11', 0],
+        upscale_method: 'bilinear',
+        width: 768,
+        height: 768,
+        crop: 'center',
+      },
     },
   };
 
@@ -1256,9 +1289,12 @@ async function generateWithLocal({
     throw new Error('ComfyUI /prompt returned no prompt_id');
   }
 
-  // 5. Poll for completion. 50 × 2s = 100s ceiling.
+  // 5. Poll for completion. Day 18b — bumped from 50 → 56 polls × 2s = 112s
+  // ceiling. Stays under Vercel's 120s function cap (leaving ~8s for the
+  // post-render storage upload + response), but gives the M5 the full
+  // budget after the Day 18b resize+steps cuts.
   let outputs = null;
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 56; i++) {
     await new Promise((r) => setTimeout(r, 2000));
     const histRes = await fetch(`${base}/history/${promptId}`, {
       headers: { ...ngrokHeaders },
