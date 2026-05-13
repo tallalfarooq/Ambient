@@ -1211,19 +1211,25 @@ async function generateWithLocal({
     22,
   );
   // Day 18d — lower CFG default for the local SDXL path.
-  //
-  // SDXL base 1.0 on its own (no refiner) overcooks at CFG 7-8 — that's
-  // what gives the "cartoon / AI render / glossy plastic" look the QA pass
-  // flagged. The frontend sends 12 (calibrated for fal's SDXL endpoint
-  // which runs differently). For the local path we clamp HARD to a 4-7
-  // window and default to 5.5, which empirically lands in photoreal
-  // territory without the model ignoring the prompt.
+  // Day 18e — REVISED. Day 18d's CFG=5.5 + denoise=0.82 ate the room
+  // structure (left windows removed, herringbone floor invented, dark wall
+  // repainted). Real lesson: with DPM++ 2M SDE Karras the model is sharp
+  // enough that we can afford CFG~6.5 without going plastic, AND we need
+  // to hard-cap denoise locally because SDXL base 1.0 has no refiner to
+  // re-anchor structure in the late steps. New clamps:
+  //   - CFG default 6.5, range [5, 8] — middle of the "follows prompt but
+  //     doesn't overcook" sweet spot for DPM++ 2M Karras.
+  //   - denoise hard-capped at 0.72 — even if the frontend slider says
+  //     0.90 (bold furnish), we top out at 0.72 so the source latent
+  //     keeps enough signal to anchor walls / windows / floor.
+  // Tradeoff: at 0.72 we get LESS dramatic furniture variety but the room
+  // stays recognizably the same room. Structure > drama for the BETA50.
   const cfg = clamp(
-    typeof guidanceScale === 'number' ? guidanceScale : 5.5,
-    4,
-    7,
+    typeof guidanceScale === 'number' ? guidanceScale : 6.5,
+    5,
+    8,
   );
-  const denoise = clamp(strength, 0.05, 0.95);
+  const denoise = clamp(strength, 0.05, 0.72);
 
   // Day 18d — boost negative prompt with photorealism anti-terms.
   // SDXL base loves to add: smooth-skin renders, illustration vibes,
