@@ -59,15 +59,18 @@ export default async function handler(req, res) {
       && present(process.env.UPSTASH_REDIS_REST_TOKEN) === 'configured'
       ? 'configured' : 'missing',
     resend:    present(process.env.RESEND_API_KEY),
+    // Day 18 — local ComfyUI via ngrok. "configured" iff LOCAL_SDXL_URL is set.
+    local:     present(process.env.LOCAL_SDXL_URL),
   };
 
   // Day 16 — "OK" requires Supabase + Gemini + WHICHEVER image provider is
-  // currently active. fal / replicate / nvidia are interchangeable; only the
-  // active one needs to be configured.
+  // currently active. fal / replicate / nvidia / local are interchangeable;
+  // only the active one needs to be configured.
   const provider = (process.env.IMAGE_PROVIDER || 'huggingface').toLowerCase();
   const providerKey =
     provider === 'replicate' ? 'replicate'
     : provider === 'nvidia'  ? 'nvidia'
+    : provider === 'local'   ? 'local'
     : 'fal';
   const critical = ['supabase', 'gemini', providerKey];
   const ok = critical.every((k) => services[k] === 'configured');

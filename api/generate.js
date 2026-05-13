@@ -44,6 +44,11 @@ const FAL_KEY = process.env.FAL_KEY;
 const TOGETHER_API_KEY = process.env.TOGETHER_API_KEY;
 const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
+// Day 18 — `local` provider. Points at a ComfyUI instance running on the
+// developer's Mac, exposed via ngrok. No paid API needed for the BETA50
+// soft launch. Trade-off: image generation requires the Mac to be awake
+// and ngrok tunnel running. Suitable for closed beta, not for scale.
+const LOCAL_SDXL_URL = process.env.LOCAL_SDXL_URL;
 
 if (PROVIDER === 'huggingface' && !HF_TOKEN) {
   // eslint-disable-next-line no-console
@@ -64,6 +69,10 @@ if (PROVIDER === 'replicate' && !REPLICATE_API_TOKEN) {
 if (PROVIDER === 'nvidia' && !NVIDIA_API_KEY) {
   // eslint-disable-next-line no-console
   console.error('[api/generate] IMAGE_PROVIDER=nvidia but NVIDIA_API_KEY is missing');
+}
+if (PROVIDER === 'local' && !LOCAL_SDXL_URL) {
+  // eslint-disable-next-line no-console
+  console.error('[api/generate] IMAGE_PROVIDER=local but LOCAL_SDXL_URL is missing');
 }
 
 const hf = HF_TOKEN ? new HfInference(HF_TOKEN) : null;
@@ -112,6 +121,11 @@ const DEFAULT_MODELS = {
   // structure preservation by architecture, not just prompt). Override
   // via NVIDIA_MODEL env var.
   nvidia: process.env.NVIDIA_MODEL || 'qwen/qwen-image-edit',
+  // Day 18 — ComfyUI checkpoint filename. Whatever the user has dropped in
+  // their `ComfyUI/models/checkpoints/` directory. SDXL base 1.0 is the
+  // default; override via LOCAL_SDXL_CHECKPOINT env var for SDXL Lightning,
+  // RealVisXL, etc.
+  local: process.env.LOCAL_SDXL_CHECKPOINT || 'sd_xl_base_1.0.safetensors',
 };
 
 // === Handler =================================================================
@@ -370,6 +384,16 @@ export default async function handler(req, res) {
         prompt: finalPrompt,
         imageUrl: image_url,
         numInferenceSteps: num_inference_steps,
+      });
+    } else if (PROVIDER === 'local') {
+      imageBuffer = await generateWithLocal({
+        checkpoint: model || DEFAULT_MODELS.local,
+        prompt: finalPrompt,
+        imageUrl: image_url,
+        strength: safeStrength,
+        guidanceScale: guidance_scale,
+        numInferenceSteps: num_inference_steps,
+        negativePrompt: negative_prompt,
       });
     } else {
       throw new Error(`Unknown IMAGE_PROVIDER: ${PROVIDER}`);
@@ -1076,6 +1100,215 @@ async function generateWithNvidia({
   err.status = lastErr?.status || 502;
   err.body = lastErr;
   throw err;
+}
+
+/**
+ * Local ComfyUI (Day 18).
+ *
+ * Talks to a ComfyUI instance running on the developer's Mac, exposed to
+ * Vercel via ngrok (`ngrok http 8188`). LOCAL_SDXL_URL points at the public
+ * https://*.ngrok-free.app URL.
+ *
+ * ComfyUI's API is NOT a single POST/response like fal/Replicate. It's a
+ * graph-execution engine with four logical steps:
+ *
+ *   1. POST  /upload/image        — multipart upload of the source photo.
+ *                                   Returns { name, subfolder, type }.
+ *   2. POST  /prompt              — submit a workflow graph (JSON DAG of
+ *                                   nodes). Returns { prompt_id }.
+ *   3. GET   /history/{prompt_id} — poll until the entry appears with an
+ *                                   `outputs` block (one key per output node).
+ *   4. GET   /view?filename=...   — download the rendered image bytes.
+ *
+ * The workflow we send is a classic SDXL img2img graph:
+ *   CheckpointLoaderSimple → CLIPTextEncode (×2 for positive/negative)
+ *                          → KSampler ← VAEEncode ← LoadImage
+ *                          → VAEDecode → SaveImage
+ *
+ * "denoise" on the KSampler is what the rest of the codebase calls
+ * "strength" — same semantics: 0.0 = identical to source, 1.0 = ignore
+ * source. The strength clamp upstream (0.15-0.38 redesign / 0.75-0.90
+ * furnish) maps directly through.
+ *
+ * Polling bounded at 50 × 2s = 100s. Apple Silicon (mps) renders SDXL
+ * img2img at 25 steps in roughly 30-60s on an M-series chip, so 100s
+ * gives comfortable headroom under Vercel's 120s function cap.
+ */
+async function generateWithLocal({
+  checkpoint,
+  prompt,
+  imageUrl,
+  strength,
+  guidanceScale,
+  numInferenceSteps,
+  negativePrompt,
+}) {
+  if (!LOCAL_SDXL_URL) throw new Error('LOCAL_SDXL_URL is not configured');
+  // Strip trailing slash and any /api suffix the user might have copy-pasted.
+  const base = LOCAL_SDXL_URL.replace(/\/$/, '');
+
+  // ngrok free tier injects a "you are about to visit..." HTML interstitial
+  // unless we send a custom header. Without this every POST returns HTML.
+  const ngrokHeaders = { 'ngrok-skip-browser-warning': 'true' };
+
+  // 1. Pull the source image bytes.
+  const srcRes = await fetch(imageUrl);
+  if (!srcRes.ok) throw new Error(`Source image fetch failed (${srcRes.status})`);
+  const srcMime = srcRes.headers.get('content-type') || 'image/jpeg';
+  const srcBuf = Buffer.from(await srcRes.arrayBuffer());
+  const srcBlob = new Blob([srcBuf], { type: srcMime });
+
+  // 2. Upload to ComfyUI. ComfyUI expects multipart with field name `image`.
+  const uploadName = `ambient_input_${Date.now()}.${srcMime.includes('png') ? 'png' : 'jpg'}`;
+  const formData = new FormData();
+  formData.append('image', srcBlob, uploadName);
+  formData.append('overwrite', 'true');
+
+  const uploadRes = await fetch(`${base}/upload/image`, {
+    method: 'POST',
+    headers: { ...ngrokHeaders }, // do NOT set Content-Type — fetch sets the multipart boundary itself
+    body: formData,
+  });
+  if (!uploadRes.ok) {
+    const text = await uploadRes.text();
+    throw new Error(`ComfyUI upload failed (${uploadRes.status}): ${text.slice(0, 200)}`);
+  }
+  let uploaded;
+  try { uploaded = await uploadRes.json(); } catch { uploaded = null; }
+  const uploadedName = uploaded?.name || uploadName;
+
+  // 3. Build the SDXL img2img workflow.
+  const seed = Math.floor(Math.random() * 1e15);
+  const steps = clamp(
+    typeof numInferenceSteps === 'number' ? numInferenceSteps : 25,
+    12,
+    40,
+  );
+  const cfg = clamp(
+    typeof guidanceScale === 'number' ? guidanceScale : 7.5,
+    1,
+    20,
+  );
+  const denoise = clamp(strength, 0.05, 0.95);
+
+  const workflow = {
+    '3': {
+      class_type: 'KSampler',
+      inputs: {
+        seed,
+        steps,
+        cfg,
+        sampler_name: 'euler_ancestral',
+        scheduler: 'normal',
+        denoise,
+        model: ['4', 0],
+        positive: ['6', 0],
+        negative: ['7', 0],
+        latent_image: ['10', 0],
+      },
+    },
+    '4': {
+      class_type: 'CheckpointLoaderSimple',
+      inputs: { ckpt_name: checkpoint },
+    },
+    '6': {
+      class_type: 'CLIPTextEncode',
+      inputs: { text: prompt, clip: ['4', 1] },
+    },
+    '7': {
+      class_type: 'CLIPTextEncode',
+      inputs: { text: negativePrompt || '', clip: ['4', 1] },
+    },
+    '8': {
+      class_type: 'VAEDecode',
+      inputs: { samples: ['3', 0], vae: ['4', 2] },
+    },
+    '9': {
+      class_type: 'SaveImage',
+      inputs: { filename_prefix: 'ambient_out', images: ['8', 0] },
+    },
+    '10': {
+      class_type: 'VAEEncode',
+      inputs: { pixels: ['11', 0], vae: ['4', 2] },
+    },
+    '11': {
+      class_type: 'LoadImage',
+      inputs: { image: uploadedName },
+    },
+  };
+
+  // 4. Queue the workflow.
+  const queueRes = await fetch(`${base}/prompt`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...ngrokHeaders },
+    body: JSON.stringify({ prompt: workflow }),
+  });
+  if (!queueRes.ok) {
+    const text = await queueRes.text();
+    // eslint-disable-next-line no-console
+    console.error('[comfy] queue failed', queueRes.status, text.slice(0, 500));
+    throw new Error(`ComfyUI /prompt failed (${queueRes.status}): ${text.slice(0, 300)}`);
+  }
+  let queueData;
+  try { queueData = await queueRes.json(); } catch { queueData = null; }
+  const promptId = queueData?.prompt_id;
+  if (!promptId) {
+    throw new Error('ComfyUI /prompt returned no prompt_id');
+  }
+
+  // 5. Poll for completion. 50 × 2s = 100s ceiling.
+  let outputs = null;
+  for (let i = 0; i < 50; i++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    const histRes = await fetch(`${base}/history/${promptId}`, {
+      headers: { ...ngrokHeaders },
+    });
+    if (!histRes.ok) continue;
+    let histData;
+    try { histData = await histRes.json(); } catch { continue; }
+    const entry = histData?.[promptId];
+    if (entry?.outputs && Object.keys(entry.outputs).length > 0) {
+      outputs = entry.outputs;
+      break;
+    }
+    // Also detect explicit failure in the status block.
+    if (entry?.status?.status_str === 'error') {
+      // eslint-disable-next-line no-console
+      console.error('[comfy] workflow error', JSON.stringify(entry.status).slice(0, 400));
+      throw new Error('ComfyUI workflow execution failed');
+    }
+  }
+  if (!outputs) {
+    throw new Error('ComfyUI workflow did not complete within 100s');
+  }
+
+  // 6. Find the SaveImage output (node "9" in our graph, but be defensive
+  // and scan every output for the first node that produced an image).
+  let outputImage = null;
+  for (const nodeId of Object.keys(outputs)) {
+    const imgs = outputs[nodeId]?.images;
+    if (Array.isArray(imgs) && imgs.length > 0) {
+      outputImage = imgs[0];
+      break;
+    }
+  }
+  if (!outputImage?.filename) {
+    throw new Error('ComfyUI completed but returned no output image');
+  }
+
+  // 7. Fetch the rendered image bytes.
+  const params = new URLSearchParams({
+    filename: outputImage.filename,
+    subfolder: outputImage.subfolder || '',
+    type: outputImage.type || 'output',
+  });
+  const imgRes = await fetch(`${base}/view?${params.toString()}`, {
+    headers: { ...ngrokHeaders },
+  });
+  if (!imgRes.ok) {
+    throw new Error(`ComfyUI /view failed (${imgRes.status})`);
+  }
+  return Buffer.from(await imgRes.arrayBuffer());
 }
 
 function clamp(n, min, max) {
