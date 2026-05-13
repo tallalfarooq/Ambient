@@ -1210,12 +1210,35 @@ async function generateWithLocal({
     12,
     22,
   );
+  // Day 18d — lower CFG default for the local SDXL path.
+  //
+  // SDXL base 1.0 on its own (no refiner) overcooks at CFG 7-8 — that's
+  // what gives the "cartoon / AI render / glossy plastic" look the QA pass
+  // flagged. The frontend sends 12 (calibrated for fal's SDXL endpoint
+  // which runs differently). For the local path we clamp HARD to a 4-7
+  // window and default to 5.5, which empirically lands in photoreal
+  // territory without the model ignoring the prompt.
   const cfg = clamp(
-    typeof guidanceScale === 'number' ? guidanceScale : 7.5,
-    1,
-    20,
+    typeof guidanceScale === 'number' ? guidanceScale : 5.5,
+    4,
+    7,
   );
   const denoise = clamp(strength, 0.05, 0.95);
+
+  // Day 18d — boost negative prompt with photorealism anti-terms.
+  // SDXL base loves to add: smooth-skin renders, illustration vibes,
+  // hallucinated watermarks/text/logos (e.g. "COOLNNMS PIAUITS" in the
+  // QA-18 render), 3D-software CGI sheen. Listing them as explicit
+  // negatives is the single highest-ROI thing we can do without changing
+  // checkpoints. Appended to whatever the frontend already sent so we
+  // don't lose the existing structure-preservation negatives.
+  const photorealNegBoost =
+    'cartoon, illustration, painting, anime, 3d render, cgi, plastic look, ' +
+    'unrealistic, fake, low quality, blurry, soft focus, oversaturated, ' +
+    'watermark, text, logo, signature, letters, words, signature, frame, border';
+  const fullNegativePrompt = negativePrompt
+    ? `${negativePrompt}, ${photorealNegBoost}`
+    : photorealNegBoost;
 
   const workflow = {
     '3': {
@@ -1224,8 +1247,16 @@ async function generateWithLocal({
         seed,
         steps,
         cfg,
-        sampler_name: 'euler_ancestral',
-        scheduler: 'normal',
+        // Day 18d — switched from euler_ancestral + normal to dpmpp_2m_sde_gpu
+        // + karras. This is the gold-standard SDXL photorealism combo used
+        // by every interior-design SDXL preset on civitai / replicate.
+        // Euler ancestral is a perfectly good general-purpose sampler but
+        // it skews toward the "painterly / illustration" feel that QA-18
+        // flagged. DPM++ 2M SDE with Karras noise schedule produces
+        // measurably sharper textures and better depth fidelity at the
+        // SAME step count.
+        sampler_name: 'dpmpp_2m_sde_gpu',
+        scheduler: 'karras',
         denoise,
         model: ['4', 0],
         positive: ['6', 0],
@@ -1243,7 +1274,8 @@ async function generateWithLocal({
     },
     '7': {
       class_type: 'CLIPTextEncode',
-      inputs: { text: negativePrompt || '', clip: ['4', 1] },
+      // Day 18d — use fullNegativePrompt (with photoreal anti-CGI boost).
+      inputs: { text: fullNegativePrompt, clip: ['4', 1] },
     },
     '8': {
       class_type: 'VAEDecode',
