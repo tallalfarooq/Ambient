@@ -28,3 +28,7 @@ dist-ssr
 *.sw?
 
 .env
+.vercel
+
+# A/B test outputs from scripts/abTest.mjs — large PNGs, don't commit.
+ab_test_output

@@ -29,7 +29,7 @@ import { checkRateLimit } from './_lib/ratelimit.js';
 // _lib/inpaint.js for reference / quick rollback but are no longer imported.
 // The Gemini vision color anchors (Day 10.7) also stay imported because
 // they're free-tier and only run on Kontext, where they help.
-import { detectRoomColors, colorsToPromptClauses } from './_lib/vision.js';
+import { detectRoomColors, colorsToPromptClauses, analyzeScene, sceneToPromptBlock } from './_lib/vision.js';
 
 const PROVIDER = (process.env.IMAGE_PROVIDER || 'huggingface').toLowerCase();
 const CREDITS_PER_GENERATION = 1;
@@ -49,6 +49,17 @@ const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY;
 // soft launch. Trade-off: image generation requires the Mac to be awake
 // and ngrok tunnel running. Suitable for closed beta, not for scale.
 const LOCAL_SDXL_URL = process.env.LOCAL_SDXL_URL;
+// Day 19 — ControlNet Canny SDXL for structure preservation. The
+// .safetensors file must live in `ComfyUI/models/controlnet/`. Default
+// matches the file we install from xinsir/controlnet-canny-sdxl-1.0
+// (renamed on download). Override if you've installed a different one
+// (e.g. depth, union, lineart). Setting to empty disables ControlNet
+// entirely and falls back to plain SDXL img2img (Day 18 behavior).
+const LOCAL_CONTROLNET = process.env.LOCAL_CONTROLNET ?? 'controlnet-canny-sdxl-1.0.safetensors';
+// How hard ControlNet pins the source geometry. 0 = off, 1 = rigid.
+// 0.85 is the sweet spot: walls / windows / door frames stay locked,
+// but the diffusion still has freedom to repaint floor and furniture.
+const LOCAL_CONTROLNET_STRENGTH = Number(process.env.LOCAL_CONTROLNET_STRENGTH ?? 0.85);
 
 if (PROVIDER === 'huggingface' && !HF_TOKEN) {
   // eslint-disable-next-line no-console
@@ -82,26 +93,27 @@ if (FAL_KEY) fal.config({ credentials: FAL_KEY });
 
 const DEFAULT_MODELS = {
   huggingface: 'stabilityai/stable-diffusion-xl-refiner-1.0', // free, SDXL img2img
-  // Day 14: migrated off Kontext to SDXL img2img.
+  // Day 14: migrated Kontext → SDXL img2img.
+  // Day 19e: REVERTED to Kontext. The Day 14 migration was wrong.
   //
-  // Why: FLUX Kontext has no `strength` parameter and no `negative_prompt`
-  // support, which removed the two features that made the original
-  // Base44-era pipeline produce reliably-preserved structure. Kontext's
-  // "edit by description" approach was visually slicker but kept drifting
-  // walls / floor / ceiling on hard cases (Industrial empty bedrooms, etc.).
+  // History of the wrong turn: We migrated off Kontext because SDXL had
+  // explicit `strength` + `negative_prompt` controls. But the side effect was
+  // worse output: SDXL hallucinated watermarks ("Eetors", "PORGE", "PRESVIEXT"),
+  // produced cartoonish/plastic renders, and required compounding hacks
+  // (custom CFG, hand-tuned negatives, anti-CGI lists, swapping samplers,
+  // Day 18 local ComfyUI experiments).
   //
-  // SDXL img2img on fal.ai gets us back:
-  //   - strength clamp (0.15-0.38 redesign, 0.55-0.78 furnish) → hard
-  //     mathematical guarantee that <40% of pixels can change in redesign mode.
-  //   - negative_prompt → explicit "do not generate new windows, fisheye,
-  //     warped walls" exclusion list.
-  //   - high guidance_scale (12-16) → model follows the verbose preservation
-  //     prompt very literally.
+  // The 2026-05-17 A/B comparison crowned fal-ai/flux-pro/kontext as the
+  // winner on the same source room used by Day 11-12. Kontext consistently
+  // preserves walls/windows/doorways AND adds furniture, when given a
+  // concrete prompt with hex colors + scene facts from vision.js.
   //
-  // Tradeoff: SDXL output is slightly less polished than FLUX. Acceptable
-  // because structure correctness > 5% glossier render. If a different
-  // SDXL endpoint name is needed later, override via FAL_MODEL env var.
-  fal: process.env.FAL_MODEL || 'fal-ai/fast-sdxl/image-to-image',
+  // Day 11-12 architecture restored: vision pre-step (detectRoomColors +
+  // analyzeScene) → concrete preserve clauses with hex codes + scene facts
+  // → Kontext follows the instructions literally.
+  //
+  // Override via FAL_MODEL env var if you want to try another endpoint.
+  fal: process.env.FAL_MODEL || 'fal-ai/flux-pro/kontext',
   together: 'black-forest-labs/FLUX.1-schnell-Free', // free with $5 trial
   // Day 15 / 17c — Replicate's official Stability AI SDXL endpoint.
   // Honors strength + num_inference_steps + negative_prompt + image (img2img)
@@ -250,21 +262,29 @@ export default async function handler(req, res) {
   // working range — AI swaps furniture without altering the architecture.
   const isFurnish = mode === 'furnish';
 
-  // === Vision pre-step: detect actual room colors ===========================
-  // Day 10.7 — pre-read the source photo's actual hex colors and bake them
-  // into the verbose preservation prompt. Concrete hex codes are much harder
-  // for the model to drift away from than vague "if grey, output grey"
-  // wording. Failures are silent — falls through to the older phrasing.
-  //
-  // Day 14 — runs for ALL fal models now, not just Kontext. SDXL benefits
-  // from the explicit color anchors too (combined with strength clamp +
-  // negative prompt, this is the strongest preservation signal we can ship).
+  // === Vision pre-step: detect colors AND architectural scene ==============
+  // Day 10.7 — pre-read source hex colors so prompt can anchor "Walls in
+  // source are #3D3D40. Output walls MUST be #3D3D40" instead of "if grey,
+  // output grey".
+  // Day 19e — also pre-read the architectural inventory (windows, doorways,
+  // perspective, lighting, floor, ceiling) so the prompt can anchor specific
+  // facts — "two floor-to-ceiling windows on the right wall with black
+  // aluminum framing" — not just colors. Combined with Kontext's
+  // edit-the-image-per-instructions behavior, this is the Day 11-12 setup
+  // that scored 95/100 in QA.
+  // Both calls run in parallel. Vision provider chain (Groq → Gemini →
+  // Claude) handles failover internally. Failures are silent.
   const isKontext = /kontext/i.test(model || DEFAULT_MODELS[PROVIDER] || '');
   let detectedColors = null;
+  let detectedScene = null;
   if (PROVIDER === 'fal') {
-    detectedColors = await detectRoomColors(image_url);
+    [detectedColors, detectedScene] = await Promise.all([
+      detectRoomColors(image_url).catch(() => null),
+      analyzeScene(image_url).catch(() => null),
+    ]);
   }
   const colorClauses = colorsToPromptClauses(detectedColors);
+  const sceneBlock = sceneToPromptBlock(detectedScene);
 
   // === Prompt selection =====================================================
   // Day 14 — the verbose frontend prompt (with CRITICAL ARCHITECTURE LOCK,
@@ -276,9 +296,19 @@ export default async function handler(req, res) {
   // shorter rewrite, since Kontext rejects the verbose form with timeouts.
   let finalPrompt;
   if (isKontext) {
-    finalPrompt = isFurnish
+    // Day 19e — prepend the architectural scene block (windows, doorways,
+    // perspective, ceiling, floor) ahead of the rewritten style prompt.
+    // Kontext follows concrete instructions much better than vague
+    // preservation language. Format:
+    //   PRESERVE EXACTLY: <scene facts from analyzeScene>
+    //   <hex color clauses from detectRoomColors>
+    //   <style-rewritten Kontext prompt>
+    const rewritten = isFurnish
       ? rewritePromptForFurnish(prompt, colorClauses)
       : rewritePromptForRedesign(prompt, colorClauses);
+    finalPrompt = sceneBlock
+      ? `${sceneBlock}\n\n${rewritten}`
+      : rewritten;
   } else {
     // SDXL: pass verbose prompt straight through.
     finalPrompt = prompt;
@@ -394,6 +424,10 @@ export default async function handler(req, res) {
         guidanceScale: guidance_scale,
         numInferenceSteps: num_inference_steps,
         negativePrompt: negative_prompt,
+        // Day 19 — mode determines ControlNet tightness. Furnish needs a
+        // loose constraint (so the model can invent furniture in the empty
+        // space); Redesign needs tight (preserve existing room shell).
+        mode,
       });
     } else {
       throw new Error(`Unknown IMAGE_PROVIDER: ${PROVIDER}`);
@@ -1142,6 +1176,7 @@ async function generateWithLocal({
   guidanceScale,
   numInferenceSteps,
   negativePrompt,
+  mode,
 }) {
   if (!LOCAL_SDXL_URL) throw new Error('LOCAL_SDXL_URL is not configured');
   // Strip trailing slash and any /api suffix the user might have copy-pasted.
@@ -1212,24 +1247,19 @@ async function generateWithLocal({
   );
   // Day 18d — lower CFG default for the local SDXL path.
   // Day 18e — REVISED. Day 18d's CFG=5.5 + denoise=0.82 ate the room
-  // structure (left windows removed, herringbone floor invented, dark wall
-  // repainted). Real lesson: with DPM++ 2M SDE Karras the model is sharp
-  // enough that we can afford CFG~6.5 without going plastic, AND we need
-  // to hard-cap denoise locally because SDXL base 1.0 has no refiner to
-  // re-anchor structure in the late steps. New clamps:
-  //   - CFG default 6.5, range [5, 8] — middle of the "follows prompt but
-  //     doesn't overcook" sweet spot for DPM++ 2M Karras.
-  //   - denoise hard-capped at 0.72 — even if the frontend slider says
-  //     0.90 (bold furnish), we top out at 0.72 so the source latent
-  //     keeps enough signal to anchor walls / windows / floor.
-  // Tradeoff: at 0.72 we get LESS dramatic furniture variety but the room
-  // stays recognizably the same room. Structure > drama for the BETA50.
+  // structure. With DPM++ 2M SDE Karras the model is sharp enough that we
+  // can afford CFG~6.5 without going plastic.
+  // Day 19 — ControlNet Canny now holds geometry as a HARD constraint
+  // (room edges mathematically locked in the diffusion process), so the
+  // 0.72 denoise cap from Day 18e is no longer needed. Bumped to 0.92 to
+  // let bold-furnish renders actually go bold without losing the walls.
+  // CFG range unchanged.
   const cfg = clamp(
     typeof guidanceScale === 'number' ? guidanceScale : 6.5,
     5,
     8,
   );
-  const denoise = clamp(strength, 0.05, 0.72);
+  const denoise = clamp(strength, 0.05, LOCAL_CONTROLNET ? 0.92 : 0.72);
 
   // Day 18d — boost negative prompt with photorealism anti-terms.
   // SDXL base loves to add: smooth-skin renders, illustration vibes,
@@ -1246,6 +1276,47 @@ async function generateWithLocal({
     ? `${negativePrompt}, ${photorealNegBoost}`
     : photorealNegBoost;
 
+  // Day 19a — mode-dependent ControlNet strength. Day 19's first test
+  // produced a perfectly-preserved EMPTY room when asked to furnish, because
+  // ControlNet@0.85 on a Canny edge map of an empty room contains zero
+  // furniture edges — the model had no permission to invent things in the
+  // void. Fix: relax the constraint for furnish mode.
+  //   - Furnish (empty → furnished):
+  //       strength 0.45, end_percent 0.55
+  //       Walls/windows/floor get pinned for the first half of diffusion
+  //       so they don't drift. After 55% the constraint releases and the
+  //       model has the last 45% of steps to populate furniture freely.
+  //   - Redesign (furnished → restyled):
+  //       strength LOCAL_CONTROLNET_STRENGTH (default 0.85), end_percent 0.85
+  //       Tight constraint throughout — preserve everything including the
+  //       existing furniture layout, just restyle materials/colors.
+  //   - Default (mode unspecified): treat as redesign (safer fallback).
+  const isFurnish = mode === 'furnish';
+  const controlNetStrength = isFurnish ? 0.45 : LOCAL_CONTROLNET_STRENGTH;
+  const controlNetEndPercent = isFurnish ? 0.55 : 0.85;
+
+  // Day 19 — workflow with ControlNet Canny inserted between the CLIP
+  // text encodes and the KSampler:
+  //
+  //   LoadImage(11) → ImageScale(12) → CannyEdgePreprocessor(13)
+  //                                              ↓
+  //                                  ControlNetApplyAdvanced(15)
+  //                                   ↑↑              ↑
+  //          CLIPTextEncode pos(6) ───┘│              │
+  //          CLIPTextEncode neg(7) ────┘              │
+  //          ControlNetLoader(14) ────────────────────┘
+  //                                              ↓
+  //                                          KSampler(3) ← VAEEncode(10) ← ImageScale(12)
+  //                                              ↓
+  //                                          VAEDecode(8)
+  //                                              ↓
+  //                                          SaveImage(9)
+  //
+  // The KSampler now reads positive/negative from node 15 (ControlNet's
+  // outputs), not directly from the text encoders. If LOCAL_CONTROLNET is
+  // disabled (empty string), we fall back to the Day 18 wiring and the
+  // three new nodes are omitted.
+  const useControlNet = !!LOCAL_CONTROLNET;
   const workflow = {
     '3': {
       class_type: 'KSampler',
@@ -1254,19 +1325,20 @@ async function generateWithLocal({
         steps,
         cfg,
         // Day 18d — switched from euler_ancestral + normal to dpmpp_2m_sde_gpu
-        // + karras. This is the gold-standard SDXL photorealism combo used
-        // by every interior-design SDXL preset on civitai / replicate.
-        // Euler ancestral is a perfectly good general-purpose sampler but
-        // it skews toward the "painterly / illustration" feel that QA-18
-        // flagged. DPM++ 2M SDE with Karras noise schedule produces
-        // measurably sharper textures and better depth fidelity at the
-        // SAME step count.
+        // + karras. Gold-standard SDXL photorealism combo used by every
+        // interior-design SDXL preset on civitai / replicate. DPM++ 2M SDE
+        // with Karras produces measurably sharper textures and better depth
+        // fidelity at the same step count.
         sampler_name: 'dpmpp_2m_sde_gpu',
         scheduler: 'karras',
         denoise,
         model: ['4', 0],
-        positive: ['6', 0],
-        negative: ['7', 0],
+        // Day 19 — route conditioning through ControlNet (node 15) when
+        // enabled. The text encoders still produce the prompt conditioning;
+        // ControlNet attaches the Canny edge map to those conditionings
+        // before they reach the sampler.
+        positive: useControlNet ? ['15', 0] : ['6', 0],
+        negative: useControlNet ? ['15', 1] : ['7', 0],
         latent_image: ['10', 0],
       },
     },
@@ -1316,6 +1388,58 @@ async function generateWithLocal({
         crop: 'disabled',
       },
     },
+    // ----- Day 19: ControlNet Canny nodes (only added if enabled) -----
+    ...(useControlNet
+      ? {
+          '13': {
+            // Canny edge preprocessor from comfyui_controlnet_aux. Reads
+            // the resized source image (node 12, ~1024 long-side), runs
+            // OpenCV Canny edge detection, and outputs a black-and-white
+            // edge map. The thresholds below are the SDXL ControlNet
+            // training defaults — lower = more edges (busier), higher =
+            // only strong edges (cleaner). 100/200 captures walls,
+            // window frames, door frames, ceiling/floor lines without
+            // also tracing every furniture wrinkle.
+            class_type: 'CannyEdgePreprocessor',
+            inputs: {
+              image: ['12', 0],
+              low_threshold: 100,
+              high_threshold: 200,
+              resolution: 1024,
+            },
+          },
+          '14': {
+            class_type: 'ControlNetLoader',
+            inputs: { control_net_name: LOCAL_CONTROLNET },
+          },
+          '15': {
+            // ControlNetApplyAdvanced takes the text-encoder conditionings
+            // and the edge-map image, and produces NEW conditionings that
+            // carry the structural constraint into the sampler.
+            //
+            // strength       — how hard the constraint pulls. 0.85 locks
+            //                  walls/windows/doors firmly while still
+            //                  letting the diffusion repaint floor and
+            //                  introduce furniture.
+            // start_percent  — apply from the first denoise step (0%).
+            // end_percent    — release the constraint at 85% of steps so
+            //                  the model has the last 15% to refine
+            //                  textures without fighting the edges.
+            class_type: 'ControlNetApplyAdvanced',
+            inputs: {
+              positive: ['6', 0],
+              negative: ['7', 0],
+              control_net: ['14', 0],
+              image: ['13', 0],
+              // Day 19a — strength and end_percent now depend on mode
+              // (computed above). Furnish loosens, Redesign stays tight.
+              strength: controlNetStrength,
+              start_percent: 0.0,
+              end_percent: controlNetEndPercent,
+            },
+          },
+        }
+      : {}),
   };
 
   // 4. Queue the workflow.
@@ -1337,12 +1461,18 @@ async function generateWithLocal({
     throw new Error('ComfyUI /prompt returned no prompt_id');
   }
 
-  // 5. Poll for completion. Day 18b — bumped from 50 → 56 polls × 2s = 112s
-  // ceiling. Stays under Vercel's 120s function cap (leaving ~8s for the
-  // post-render storage upload + response), but gives the M5 the full
-  // budget after the Day 18b resize+steps cuts.
+  // 5. Poll for completion. Day 18b — 56 polls × 2s = 112s ceiling, sized to
+  // stay under Vercel's 120s production function cap.
+  // Day 19 — ControlNet roughly DOUBLES per-step time on M5 (3.6s/step vs
+  // 1.8s without it), so a 22-step render with ControlNet takes ~130s end
+  // to end. That exceeds 112s. Make the timeout configurable so local dev
+  // (where vercel dev has no maxDuration cap) can wait longer than
+  // production. Default stays at 110s so production behavior is unchanged.
+  // To override locally, set LOCAL_POLL_TIMEOUT_SEC=180 in .env.local.
+  const pollTimeoutSec = Number(process.env.LOCAL_POLL_TIMEOUT_SEC) || 110;
+  const pollCount = Math.ceil(pollTimeoutSec / 2);
   let outputs = null;
-  for (let i = 0; i < 56; i++) {
+  for (let i = 0; i < pollCount; i++) {
     await new Promise((r) => setTimeout(r, 2000));
     const histRes = await fetch(`${base}/history/${promptId}`, {
       headers: { ...ngrokHeaders },
@@ -1363,7 +1493,7 @@ async function generateWithLocal({
     }
   }
   if (!outputs) {
-    throw new Error('ComfyUI workflow did not complete within 100s');
+    throw new Error(`ComfyUI workflow did not complete within ${pollTimeoutSec}s`);
   }
 
   // 6. Find the SaveImage output (node "9" in our graph, but be defensive
