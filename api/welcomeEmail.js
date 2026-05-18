@@ -141,6 +141,62 @@ function buildEmail({ name, planType, credits }) {
             </td>
           </tr>
 
+          <!-- Showcase gallery — Day 13c. Three before/after pairs from the
+               marketing site (RoomVideoShowcase). Drives clicks: signups
+               who SEE what's possible convert to first-generation ~2x
+               better than text-only welcome emails. Built with table-based
+               layout so it survives Gmail/Outlook/Apple Mail. Each pair is
+               a 2-column table with stacked label rows. -->
+          <tr>
+            <td style="padding:0 32px 32px 32px;">
+              <p style="margin:0 0 16px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:0.1em;text-transform:uppercase;">See what's possible</p>
+
+              <!-- Pair 1: Modern Minimal -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;background-color:rgba(255,255,255,0.025);">
+                <tr>
+                  <td width="50%" style="padding:0;">
+                    <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&amp;fit=crop&amp;w=560&amp;q=80" width="260" alt="Empty room before" style="display:block;width:100%;max-width:260px;height:160px;object-fit:cover;border:0;" />
+                    <p style="margin:0;padding:6px 10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);letter-spacing:0.08em;text-transform:uppercase;background:rgba(0,0,0,0.3);">Before</p>
+                  </td>
+                  <td width="50%" style="padding:0;">
+                    <img src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&amp;fit=crop&amp;w=560&amp;q=80" width="260" alt="Modern minimal interior after AI redesign" style="display:block;width:100%;max-width:260px;height:160px;object-fit:cover;border:0;" />
+                    <p style="margin:0;padding:6px 10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:10px;font-weight:700;color:#6EC6C6;letter-spacing:0.08em;text-transform:uppercase;background:rgba(0,0,0,0.3);">Modern Minimal &#10022;</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Pair 2: Scandinavian -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;background-color:rgba(255,255,255,0.025);">
+                <tr>
+                  <td width="50%" style="padding:0;">
+                    <img src="https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&amp;fit=crop&amp;w=560&amp;q=80" width="260" alt="Empty room before" style="display:block;width:100%;max-width:260px;height:160px;object-fit:cover;border:0;" />
+                    <p style="margin:0;padding:6px 10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);letter-spacing:0.08em;text-transform:uppercase;background:rgba(0,0,0,0.3);">Before</p>
+                  </td>
+                  <td width="50%" style="padding:0;">
+                    <img src="https://images.unsplash.com/photo-1615529182904-14819c35db37?auto=format&amp;fit=crop&amp;w=560&amp;q=80" width="260" alt="Scandinavian interior after AI redesign" style="display:block;width:100%;max-width:260px;height:160px;object-fit:cover;border:0;" />
+                    <p style="margin:0;padding:6px 10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:10px;font-weight:700;color:#6EC6C6;letter-spacing:0.08em;text-transform:uppercase;background:rgba(0,0,0,0.3);">Scandinavian &#10022;</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Pair 3: Boho / warm -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;background-color:rgba(255,255,255,0.025);">
+                <tr>
+                  <td width="50%" style="padding:0;">
+                    <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&amp;fit=crop&amp;w=560&amp;q=80" width="260" alt="Empty room before" style="display:block;width:100%;max-width:260px;height:160px;object-fit:cover;border:0;" />
+                    <p style="margin:0;padding:6px 10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:10px;font-weight:700;color:rgba(255,255,255,0.45);letter-spacing:0.08em;text-transform:uppercase;background:rgba(0,0,0,0.3);">Before</p>
+                  </td>
+                  <td width="50%" style="padding:0;">
+                    <img src="https://images.unsplash.com/photo-1616137466211-f939a420be84?auto=format&amp;fit=crop&amp;w=560&amp;q=80" width="260" alt="Boho interior after AI redesign" style="display:block;width:100%;max-width:260px;height:160px;object-fit:cover;border:0;" />
+                    <p style="margin:0;padding:6px 10px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:10px;font-weight:700;color:#6EC6C6;letter-spacing:0.08em;text-transform:uppercase;background:rgba(0,0,0,0.3);">Boho &#10022;</p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:14px 0 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.55;color:rgba(255,255,255,0.55);text-align:center;">All three rendered in under 35 seconds. <a href="${cta}" style="color:#6EC6C6;text-decoration:none;font-weight:600;">Try yours &rarr;</a></p>
+            </td>
+          </tr>
+
           <!-- Quick start card -->
           <tr>
             <td style="padding:0 32px 36px 32px;">
